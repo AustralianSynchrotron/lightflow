@@ -1,0 +1,3 @@
+
+class ImportWorkflowError(RuntimeError):
+    pass

@@ -1,0 +1,32 @@
+
+workflows:
+  - /home/molla/projects/lightflow/dags
+
+celery:
+  broker: redis://localhost:6379/0
+  backend: redis://localhost:6379/0
+
+datastore:
+  host: localhost
+  port: 1234
+  database_name: lightflow_db
+  username: none
+  password: none
+
+logging:
+  version: 1
+  disable_existing_loggers: false
+  formatters:
+    standard:
+      format: '[%(asctime)s][%(levelname)s] %(name)s %(filename)s:%(funcName)s:%(lineno)d | %(message)s'
+      datefmt: '%H:%M:%S'
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: INFO
+      formatter: standard
+
+  root:
+    handlers:
+      - console
+    level: INFO

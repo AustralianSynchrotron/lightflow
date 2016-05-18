@@ -1,11 +1,12 @@
 import collections
 import networkx as nx
+import lightflow.config
 
 
 class Dag:
     def __init__(self, dag_id, params=None):
-        self._dag_id = dag_id
-        self._params = {} if params is None else params
+        self.dag_id = dag_id
+        self.params = {} if params is None else params
 
         self._graph = nx.DiGraph()
         self._task_map = collections.OrderedDict()
@@ -36,7 +37,7 @@ class Dag:
             # TODO: throw exception !!!!
             print('max inputs violated!!!')
 
-    def run(self, start_task=None):
+    def run(self, start_task=None, workflow_id=None):
         if len(self._task_map) == 0:
             # TODO: throw exception
             pass
@@ -66,7 +67,10 @@ class Dag:
 
                     # check whether the task can run and all its predecessor requirements are fulfilled
                     if t.can_run() and t.check_predecessors(self._graph.predecessors(t.id)):
-                        t.run() # TODO: send this call off to an executor class
+                        from lightflow.celery_tasks import task_celery_task
+                        #task_celery_task.delay(t)
+                        task_celery_task(t)
+                        #t.run()
 
         else:
             # TODO: throw exception !!!!

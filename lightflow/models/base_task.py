@@ -17,7 +17,6 @@ class BaseTask:
         self._task_id = self._dag.add_task(self)
         self._running = False
         self._finished = False
-        self._data = {}
 
         # task parameters
         self._max_inputs = 1

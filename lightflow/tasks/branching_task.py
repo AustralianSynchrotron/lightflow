@@ -1,4 +1,4 @@
-from socro.models import BaseTask, run_task
+from lightflow.models import BaseTask, run_task
 
 
 class BranchingTask(BaseTask):
