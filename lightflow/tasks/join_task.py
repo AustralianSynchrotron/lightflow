@@ -1,4 +1,4 @@
-from lightflow.models import BaseTask, run_task
+from lightflow.models import BaseTask
 
 
 class JoinTask(BaseTask):
@@ -15,6 +15,5 @@ class JoinTask(BaseTask):
         else:
             return sum([self._dag.get_task_by_id(n).is_finished() for n in predecessor_ids]) >= self._wait_count
 
-    @run_task
     def run(self):
         print(self._name)

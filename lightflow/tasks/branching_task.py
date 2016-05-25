@@ -1,4 +1,4 @@
-from lightflow.models import BaseTask, run_task
+from lightflow.models import BaseTask
 
 
 class BranchingTask(BaseTask):
@@ -13,6 +13,5 @@ class BranchingTask(BaseTask):
         else:
             return None
 
-    @run_task
     def run(self):
         print(self._name)

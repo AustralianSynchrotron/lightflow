@@ -1,78 +1,45 @@
-import collections
+from time import sleep
 import networkx as nx
+from lightflow.celery_tasks import app, task_celery_task
 
 
 class Dag:
-    def __init__(self, dag_id, params=None):
+    def __init__(self, dag_id):
         self.dag_id = dag_id
-        self.params = {} if params is None else params
-
         self._graph = nx.DiGraph()
-        self._task_map = collections.OrderedDict()
 
     def add_task(self, task):
-        if task.name in self._task_map:
-            # TODO: raise exception !!!!
-            print('PANIC')
-
-        task_id = len(self._task_map)
-        self._graph.add_node(task_id)
-        self._task_map[task.name] = task
-        return task_id
-
-    def get_task_by_id(self, task_id):
-        # TODO: range check and throw exception !!!!
-        return list(self._task_map.values())[task_id]  # TODO: ugly
-
-    def get_task_by_name(self, task_name):
-        # TODO: check whether name exists and throw exception !!!!
-        return self._task_map[task_name]
+        self._graph.add_node(task)
 
     def add_edge(self, from_task, to_task):
-        if (len(self._graph.predecessors(to_task.id)) < to_task.max_inputs) or\
-                (to_task.max_inputs < 0):
-            self._graph.add_edge(from_task.id, to_task.id)
-        else:
-            # TODO: throw exception !!!!
-            print('max inputs violated!!!')
+        self._graph.add_edge(from_task, to_task)
 
-    def run(self, config, start_task=None, workflow_id=None):
-        from lightflow.celery_tasks import task_celery_task
-
-        if len(self._task_map) == 0:
-            # TODO: throw exception
-            pass
+    def run(self, workflow_id=None):
 
         # check whether the start graph is a directed acyclic graph
         if nx.is_directed_acyclic_graph(self._graph):
-            if start_task is None:
-                start_task = self.get_task_by_id(0)
+            running = []
 
-            for n in self._graph:
-                self.get_task_by_id(n).reset()
+            linearised_graph = nx.topological_sort(self._graph)
+            for node in linearised_graph:
+                if len(self._graph.predecessors(node)) == 0:
+                    print(node.name)
+                    running.append(node)
 
-            #running = [start_task]
-            #while running:
-            #    for t in reversed(running):
-            #        if t.is_finished():
-            #            running.remove(t)
-#
-            #            # if the task limits the successor tasks run with those only
-            #            # TODO: check for loops !!!
-            #            if t.limit_successors() is not None:
-            #                # TODO: check whether the tasks are really successors
-            #                running.extend(t.limit_successors())
-            #            else:
-            #                for n in self._graph[t.id]:
-            #                    running.append(self.get_task_by_id(n))
-#
-            #        # check whether the task can run and all its predecessor requirements are fulfilled
-            #        if t.can_run() and t.check_predecessors(self._graph.predecessors(t.id)):
-            #            from lightflow.celery_tasks import task_celery_task
-            #            #task_celery_task.delay(t)
-            #            #task_celery_task(t)
-            #            t.run()
+            while running:
+                sleep(0.5)
+                for t in reversed(running):
+                    print(running)
+                    if not t.is_queued:
+                        t.celery_result = task_celery_task.delay(t)
+                    else:
+                        if t.celery_result.successful():
+                            print(t.name)
+                            for n in self._graph[t]:
+                                if all([pn.celery_result.successful() for pn in self._graph.predecessors(n)]):
+                                    running.append(n)
 
+                            running.remove(t)
         else:
             # TODO: throw exception !!!!
             print("Oh no, loops!")

@@ -18,5 +18,11 @@ b3 = PythonTask(name='b3',
                 python_callable=print_me,
                 dag=d)
 
+b4 = PythonTask(name='b4',
+                python_callable=print_me,
+                dag=d)
+
+
 b2.add_downstream(b1)
+b2.add_downstream(b4)
 b3.add_downstream(b2)

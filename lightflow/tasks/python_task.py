@@ -1,4 +1,4 @@
-from lightflow.models import BaseTask, run_task
+from lightflow.models import BaseTask
 
 
 class PythonTask(BaseTask):
@@ -6,7 +6,6 @@ class PythonTask(BaseTask):
         super().__init__(name, dag)
         self._python_callable = python_callable
 
-    @run_task
     def run(self):
         if self._python_callable is not None:
             self._python_callable(self.name)

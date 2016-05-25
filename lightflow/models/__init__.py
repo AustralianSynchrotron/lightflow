@@ -1,3 +1,3 @@
 from .dag import Dag
-from .base_task import BaseTask, run_task
+from .base_task import BaseTask
 from .datastore import DataStore
