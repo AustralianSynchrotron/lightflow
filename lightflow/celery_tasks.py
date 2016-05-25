@@ -2,7 +2,7 @@ from celery import Celery
 from lightflow.config import Config
 
 
-conf = Config()['celery']
+conf = Config().get('celery')
 app = Celery('lightflow',
              broker=conf['broker'],
              backend=conf['backend'],

@@ -1,5 +1,3 @@
-import sys
-import os
 import logging
 import importlib
 
@@ -38,7 +36,7 @@ class Lightflow:
         pass
 
     def create_datastore_connection(self):
-        data_store_conf = Config()['datastore']
+        data_store_conf = Config().get('datastore')
         data_store = DataStore.create_connection(
                 host=data_store_conf['host'],
                 port=data_store_conf['port'],

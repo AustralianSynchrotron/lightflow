@@ -2,9 +2,7 @@
 
 import click
 import logging
-from celery import Celery
 
-from lightflow.config import Config
 from lightflow.lightflow import Lightflow
 
 logger = logging.getLogger(__name__)
