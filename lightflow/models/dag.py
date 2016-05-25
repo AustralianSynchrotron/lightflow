@@ -1,6 +1,5 @@
 import collections
 import networkx as nx
-import lightflow.config
 
 
 class Dag:
@@ -37,7 +36,9 @@ class Dag:
             # TODO: throw exception !!!!
             print('max inputs violated!!!')
 
-    def run(self, start_task=None, workflow_id=None):
+    def run(self, config, start_task=None, workflow_id=None):
+        from lightflow.celery_tasks import task_celery_task
+
         if len(self._task_map) == 0:
             # TODO: throw exception
             pass
@@ -50,27 +51,27 @@ class Dag:
             for n in self._graph:
                 self.get_task_by_id(n).reset()
 
-            running = [start_task]
-            while running:
-                for t in reversed(running):
-                    if t.is_finished():
-                        running.remove(t)
-
-                        # if the task limits the successor tasks run with those only
-                        # TODO: check for loops !!!
-                        if t.limit_successors() is not None:
-                            # TODO: check whether the tasks are really successors
-                            running.extend(t.limit_successors())
-                        else:
-                            for n in self._graph[t.id]:
-                                running.append(self.get_task_by_id(n))
-
-                    # check whether the task can run and all its predecessor requirements are fulfilled
-                    if t.can_run() and t.check_predecessors(self._graph.predecessors(t.id)):
-                        from lightflow.celery_tasks import task_celery_task
-                        #task_celery_task.delay(t)
-                        task_celery_task(t)
-                        #t.run()
+            #running = [start_task]
+            #while running:
+            #    for t in reversed(running):
+            #        if t.is_finished():
+            #            running.remove(t)
+#
+            #            # if the task limits the successor tasks run with those only
+            #            # TODO: check for loops !!!
+            #            if t.limit_successors() is not None:
+            #                # TODO: check whether the tasks are really successors
+            #                running.extend(t.limit_successors())
+            #            else:
+            #                for n in self._graph[t.id]:
+            #                    running.append(self.get_task_by_id(n))
+#
+            #        # check whether the task can run and all its predecessor requirements are fulfilled
+            #        if t.can_run() and t.check_predecessors(self._graph.predecessors(t.id)):
+            #            from lightflow.celery_tasks import task_celery_task
+            #            #task_celery_task.delay(t)
+            #            #task_celery_task(t)
+            #            t.run()
 
         else:
             # TODO: throw exception !!!!

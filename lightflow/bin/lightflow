@@ -17,62 +17,34 @@ def cli():
 
 @click.command()
 @click.argument('workflow_name')
-@click.option('--config', help='Config filename')
 @click.option('--workflow-id', default=None, help='Unique workflow ID')
-def run(workflow_name, config, workflow_id):
-    lf = Lightflow(config)  # TODO: support template parameters
-
-    conf = Config()['celery']
-    app = Celery('lightflow',
-                 broker=conf['broker'],
-                 backend=conf['backend'],
-                 include=['lightflow.celery_tasks'])
-    app.conf.update(
-            CELERY_TASK_SERIALIZER='pickle',
-            CELERY_ACCEPT_CONTENT=['pickle'],  # Ignore other content
-            CELERY_RESULT_SERIALIZER='pickle',
-            CELERY_TIMEZONE='Australia/Melbourne',
-            CELERY_ENABLE_UTC=True,
-    )
-
+def run(workflow_name, workflow_id):
+    lf = Lightflow()
     lf.run_workflow(workflow_name, workflow_id)
 
 
 @click.command()
 @click.argument('workflow_names', nargs=-1)
 @click.option('--config', help='Config filename')
-def info(workflow_names, config):
-    lf = Lightflow(config)  # TODO: support template parameters
-    if len(workflow_names) > 0:
-        # detail
-        for workflow_name in workflow_names:
-            dags = lf.get_dags(workflow_name)
-            for dag in dags:
-                print(dag.dag_id)
-        pass
-    else:
-        # summary
-        pass
+def info(workflow_names):
+    #lf = Lightflow(config)  # TODO: support template parameters
+    #if len(workflow_names) > 0:
+    #    # detail
+    #    for workflow_name in workflow_names:
+    #        dags = lf.get_dags(workflow_name)
+    #        for dag in dags:
+    #            print(dag.dag_id)
+    #    pass
+    #else:
+    #    # summary
+    #    pass
+    pass
 
 
 @click.command()
-@click.option('--config', help='Config filename')
-def worker(config):
-    Lightflow.load_config(config)  # TODO: support template parameters
-    conf = Config()['celery']
-    app = Celery('lightflow',
-                 broker=conf['broker'],
-                 backend=conf['backend'],
-                 include=['lightflow.celery_tasks'])
-    app.conf.update(
-        CELERY_TASK_SERIALIZER='pickle',
-        CELERY_ACCEPT_CONTENT=['pickle'],  # Ignore other content
-        CELERY_RESULT_SERIALIZER='pickle',
-        CELERY_TIMEZONE='Australia/Melbourne',
-        CELERY_ENABLE_UTC=True,
-    )
-
-    app.start()
+def worker():
+    from lightflow.celery_tasks import run_worker
+    run_worker()
 
 
 cli.add_command(run, 'run')

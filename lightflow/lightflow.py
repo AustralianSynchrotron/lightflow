@@ -3,7 +3,6 @@ import os
 import logging
 import importlib
 
-import lightflow.config as lf_config
 from lightflow.config import Config
 from lightflow.models import Dag, DataStore
 from lightflow.models.exceptions import ImportWorkflowError
@@ -13,20 +12,8 @@ logger = logging.getLogger(__name__)
 
 class Lightflow:
 
-    def __init__(self, config_filename, config_template=None):
-        self.load_config(config_filename, config_template)
-
-    @staticmethod
-    def load_config(config_filename, config_template=None):
-        lf_config.read(config_filename, config_template)
-
-        # append the workflow paths to the PYTHONPATH
-        for workflow_path in Config()['workflows']:
-            if os.path.isdir(workflow_path):
-                if workflow_path not in sys.path:
-                    sys.path.append(workflow_path)
-            else:
-                logger.error('DAG directory {} does not exist!'.format(workflow_path))
+    def __init__(self):
+        pass
 
     def run_workflow(self, workflow_name, workflow_id):
         # create unique workflow id if it doesn't exist
