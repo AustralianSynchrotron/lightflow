@@ -1,5 +1,6 @@
 from celery import Celery
 from lightflow.config import Config
+from uuid import uuid4
 
 
 conf = Config().get('celery')
@@ -13,7 +14,7 @@ app.conf.update(
         CELERY_RESULT_SERIALIZER='pickle',
         CELERY_TIMEZONE='Australia/Melbourne',
         CELERY_ENABLE_UTC=True,
-        CELERYD_CONCURRENCY=1,
+        CELERYD_CONCURRENCY=3,
 )
 
 
@@ -30,4 +31,8 @@ def task_celery_task(task):
 
 
 def run_worker():
-    app.start()
+    argv = [
+        'worker',
+        '-n={}'.format(uuid4(),),
+    ]
+    app.worker_main(argv)

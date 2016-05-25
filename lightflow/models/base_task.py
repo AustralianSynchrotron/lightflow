@@ -14,6 +14,13 @@ class BaseTask:
     def is_queued(self):
         return self.celery_result is not None
 
+    @property
+    def is_finished(self):
+        if self.is_queued:
+            return self.celery_result.successful()
+        else:
+            return False
+
     def add_upstream(self, task):
         self._dag.add_edge(self, task)
 
