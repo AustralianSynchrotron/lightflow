@@ -14,7 +14,7 @@ app.conf.update(
         CELERY_RESULT_SERIALIZER='pickle',
         CELERY_TIMEZONE='Australia/Melbourne',
         CELERY_ENABLE_UTC=True,
-        CELERYD_CONCURRENCY=3,
+        CELERYD_CONCURRENCY=8,
 )
 
 
@@ -25,9 +25,9 @@ def dag_celery_task(dag, workflow_id=None):
 
 
 @app.task
-def task_celery_task(task):
-    print('Running task')
-    task.run()
+def task_celery_task(task, *args, **kwargs):
+    print('Running task:'.format(args))
+    return task._run(*args, **kwargs)
 
 
 def run_worker():

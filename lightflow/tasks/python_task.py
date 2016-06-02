@@ -6,6 +6,6 @@ class PythonTask(BaseTask):
         super().__init__(name, dag)
         self._python_callable = python_callable
 
-    def run(self):
+    def run(self, data, **kwargs):
         if self._python_callable is not None:
-            self._python_callable(self.name)
+            return self._python_callable(self.name, data, **kwargs)
