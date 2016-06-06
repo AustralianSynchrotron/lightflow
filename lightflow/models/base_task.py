@@ -1,4 +1,4 @@
-from lightflow.models.task_data import TaskData
+from lightflow.models.task_data import MultiTaskData
 
 
 class BaseTask:
@@ -39,11 +39,17 @@ class BaseTask:
     def add(self, task):
         self.add_downstream(task)
 
-    def _run(self, data=TaskData()):
+    def _run(self, data=None):
+        if data is None:
+            data = MultiTaskData(self._name)
+
         result = self.run(data)
-        if result is not None:
+
+        if result is None:
+            return data.copy()
+        else:
             result.add_task_history(self.name)
-        return data if result is None else result
+            return result.copy()
 
     def run(self, data, **kwargs):
         pass

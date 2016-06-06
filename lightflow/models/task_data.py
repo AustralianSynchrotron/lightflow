@@ -1,16 +1,76 @@
 from collections import OrderedDict, defaultdict
 from itertools import islice
+from copy import copy, deepcopy
+
+
+class TaskData:
+    def __init__(self, task_history=[], data=None):
+        if data is None:
+            self._data = {}
+        else:
+            self._data = data
+        self._task_history = task_history
+
+    def add_task_history(self, task):
+        self._task_history.append(task)
+
+    @property
+    def task_history(self):
+        return self._task_history
+
+    def get(self, key):
+        return self._data[key]
+
+    def set(self, key, value):
+        self._data[key] = value
+
+    def __deepcopy__(self, memo):
+        return TaskData(self._task_history[:], data=deepcopy(self._data, memo))
+
+    def __getitem__(self, item):
+        return self._data[item]
+
+    def __setitem__(self, key, value):
+        self._data[key] = value
+
+    def __delitem__(self, key):
+        del self._data[key]
+
+    def __repr__(self):
+        return '{}({})'.format(self.__class__.__name__, self._data)
+
+    def __str__(self):
+        return str(self._data)
 
 
 class MultiTaskData:
-    def __init__(self):
+    def __init__(self, task_name=''):
         self._datasets = OrderedDict()
         self._selected_index = 0
         self._selected_task_name = ''
         self._aliases = {}
         self._alias_lookup = defaultdict(list)
+        self.preserve = False
 
-    def add_dataset(self, task_name, dataset, aliases=None):
+        if task_name != '':
+            self.add_dataset(task_name, TaskData())
+
+    def copy(self):
+        data_copy = copy(self)
+        if self.preserve:
+            data_copy._datasets = deepcopy(self._datasets)
+            data_copy._aliases = self._aliases.copy()
+            data_copy._alias_lookup = self._alias_lookup.copy()
+        else:
+            data_copy._datasets = {self.selected_key: deepcopy(self._datasets[self.selected_key])}
+            data_copy._aliases = {alias: self.selected_key for alias in
+                                  self._alias_lookup[self.selected_key]}
+            data_copy._alias_lookup = {self.selected_key: self._alias_lookup[self.selected_key]}
+            data_copy.select_by_index(0)
+
+        return data_copy
+
+    def add_dataset(self, task_name, dataset=TaskData(), aliases=None):
         self._datasets[task_name] = dataset
         if aliases is not None:
             for alias in aliases:
@@ -76,6 +136,9 @@ class MultiTaskData:
     def dataset_from_alias(self, alias):
         return self.dataset_from_index(self.index_from_alias(alias))
 
+    def dataset_from_task_name(self, task_name):
+        return self.dataset_from_index(self.index_from_task_name(task_name))
+
     def task_name_from_index(self, index):
         return next(islice(self._datasets.keys(), index, index+1))
 
@@ -92,54 +155,3 @@ class MultiTaskData:
     @property
     def first_task_name(self):
         return self.task_name_from_index(0)
-
-
-class TaskData:
-    def __init__(self, task_history=[], data=None):
-        if data is None:
-            self._data = {}
-        else:
-            self._data = data
-        self._task_history = task_history
-
-    def add_task_history(self, task):
-        self._task_history.append(task)
-
-    @property
-    def task_history(self):
-        return self._task_history
-
-    def get(self, key):
-        return self._data[key]
-
-    def set(self, key, value):
-        self._data[key] = value
-
-    def __getitem__(self, item):
-        return self._data[item]
-
-    def __setitem__(self, key, value):
-        self._data[key] = value
-
-    def __delitem__(self, key):
-        del self._data[key]
-
-    def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, self._data)
-
-    def __str__(self):
-        return str(self._data)
-
-
-    # This pattern below doesn't work with celery (haven't worked out why)
-    # def __getattr__(self, key):
-    #     if key != '_data':
-    #         return self._data[key]
-    #     else:
-    #         return object.__getattribute__(self, key)
-    #
-    # def __setattr__(self, key, value):
-    #     if key != '_data':
-    #         self._data[key] = value
-    #     else:
-    #         return object.__setattr__(self, key, value)

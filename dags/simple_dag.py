@@ -29,6 +29,7 @@ def mult_data(name, data):
 def sub_data(name, data):
     print(name)
     data['value'] = data.dataset_from_alias('first')['value']-data.dataset_from_alias('second')['value']
+    return data
 
 
 d = Dag('myDag')
@@ -66,9 +67,9 @@ print_me4 = PythonTask(name='print_me4',
                        dag=d)
 
 
-d.define_workflow({put_me: {print_me: '', square_me: '', mult_me: '', sub_me: 'second'},
+d.define_workflow({put_me: {print_me: '', square_me: '', mult_me: '', sub_me: 'first'},
                    square_me: {print_me2: '', mult_me: ''},
-                   mult_me: {print_me3: '', sub_me: 'first'},
+                   mult_me: {print_me3: '', sub_me: 'second'},
                    sub_me: [print_me4]})
 
 # d.define_workflow({put_me: [t2, t3], buffer_retrieval: {subtract:subract.BUFFER}, t3: {t4:t4.SAMPLE}})
