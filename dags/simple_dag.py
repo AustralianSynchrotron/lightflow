@@ -1,12 +1,12 @@
 from time import sleep
-from lightflow.models import Dag
+from lightflow.models import Dag, Action
 from lightflow.tasks import PythonTask
 
 
 def square_value(name, data):
     print(name)
     data['value'] = data['value']*data['value']
-    return data
+    return Action(data)
 
 
 def print_value(name, data):
@@ -17,19 +17,19 @@ def print_value(name, data):
 def put_data_me(name, data):
     print(name)
     data['value'] = 5
-    return data
+    return Action(data)
 
 
 def mult_data(name, data):
     print(name)
     data['value'] = data['value']*data.dataset_from_index(1)['value']
-    return data
+    return Action(data)
 
 
 def sub_data(name, data):
     print(name)
     data['value'] = data.dataset_from_alias('first')['value']-data.dataset_from_alias('second')['value']
-    return data
+    return Action(data)
 
 
 d = Dag('myDag')

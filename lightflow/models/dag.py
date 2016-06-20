@@ -29,6 +29,7 @@ class Dag:
                     pass
 
     def run(self, workflow_id=None):
+        # TODO: any kind of exception handling of failed tasks
         # check whether the start graph is a directed acyclic graph
         if nx.is_directed_acyclic_graph(self._graph):
             running = []
@@ -53,18 +54,30 @@ class Dag:
                                 else:
                                     alias = None
 
-                                data_dict.add_dataset(p.name, p.celery_result.result, aliases=[alias])
+                                data_dict.add_dataset(p.name, p.celery_result.result.data,
+                                                      aliases=[alias])
 
                             t.celery_result = task_celery_task.delay(t, data_dict)
 
                     else:
                         if t.is_finished:
-                            for n in self._graph.successors(t):
-                                if not n.is_queued and n not in running:
-                                    if all([pn.is_finished for pn in self._graph.predecessors(n)]):
-                                        running.append(n)
+                            all_successors_queued = True
 
-                            running.remove(t)
+                            for n in self._graph.successors(t):
+                                if t.celery_result.result.selected_tasks is not None:
+                                    if n.name not in t.celery_result.result.selected_tasks:
+                                        n.skip()
+
+                                if not n.is_queued and n not in running:
+                                    if all([pn.is_finished or pn.is_skipped for pn in self._graph.predecessors(n)]):
+                                        if all([pn.is_skipped for pn in self._graph.predecessors(n)]):
+                                            n.skip()
+                                        running.append(n)
+                                    else:
+                                        all_successors_queued = False
+
+                            if all_successors_queued:
+                                running.remove(t)
         else:
             # TODO: throw exception !!!!
             print("Oh no, loops!")

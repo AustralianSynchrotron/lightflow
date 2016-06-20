@@ -1,51 +1,50 @@
-from socro.models import Dag
-from socro.tasks import PythonTask, BranchingTask, JoinTask
+from lightflow.models import Dag, Action
+from lightflow.tasks import PythonTask
 
 
-def branch_me():
-    return ['a1', 'b1']
-
-
-def print_me(name):
+def put_data_me(name, data):
     print(name)
+    data['value'] = 5
+    return Action(data)
+
+
+def branch_me(name, data):
+    return Action(data, ['t_lane1_print_me'])
+
+
+def print_value(name, data):
+    print(name)
+    print(data['value'])
 
 
 d = Dag('myDag')
 
-start = BranchingTask(name='start',
-                      python_callable=branch_me,
+t_put_me = PythonTask(name='t_put_me',
+                      python_callable=put_data_me,
                       dag=d)
 
-a1 = PythonTask(name='a1',
-                python_callable=print_me,
-                dag=d)
-a2 = PythonTask(name='a2',
-                python_callable=print_me,
-                dag=d)
-a1.add_downstream(start)
-a2.add_downstream(a1)
+t_branch_me = PythonTask(name='t_branch_me',
+                         python_callable=branch_me,
+                         dag=d)
 
-b1 = PythonTask(name='b1',
-                python_callable=print_me,
-                dag=d)
-b2 = PythonTask(name='b2',
-                python_callable=print_me,
-                dag=d)
-b1.add_downstream(start)
-b2.add_downstream(b1)
+t_lane1_print_me = PythonTask(name='t_lane1_print_me',
+                              python_callable=print_value,
+                              dag=d)
 
-c1 = PythonTask(name='c1',
-                python_callable=print_me,
-                dag=d)
-c2 = PythonTask(name='c2',
-                python_callable=print_me,
-                dag=d)
-c1.add_downstream(start)
-c2.add_downstream(c1)
+t_lane2_print_me = PythonTask(name='t_lane2_print_me',
+                              python_callable=print_value,
+                              dag=d)
 
-join = JoinTask(name='join',
-                wait_count=2,
-                dag=d)
-join.add_downstream(a2)
-join.add_downstream(b2)
-join.add_downstream(c2)
+t_lane3_print_me = PythonTask(name='t_lane3_print_me',
+                              python_callable=print_value,
+                              dag=d)
+
+t_join_me = PythonTask(name='t_join_me',
+                       python_callable=print_value,
+                       dag=d)
+
+d.define_workflow({t_put_me: [t_branch_me],
+                   t_branch_me: [t_lane1_print_me, t_lane2_print_me, t_lane3_print_me],
+                   t_lane1_print_me: [t_join_me],
+                   t_lane2_print_me: [t_join_me],
+                   t_lane3_print_me: [t_join_me]})
