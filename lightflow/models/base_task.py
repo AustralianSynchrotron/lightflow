@@ -38,7 +38,8 @@ class BaseTask:
             return "NOT_QUEUED"
 
     def skip(self):
-        self._skip = True
+        if not self._force_run:
+            self._skip = True
 
     def add_upstream(self, task):
         self._dag.add_edge(self, task)

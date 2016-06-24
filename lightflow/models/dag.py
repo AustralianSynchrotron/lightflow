@@ -6,10 +6,16 @@ from lightflow.models.task_data import MultiTaskData
 
 
 class Dag:
-    def __init__(self, dag_id):
+    def __init__(self, dag_id, autostart=True):
         self.dag_id = dag_id
+
+        self._autostart = autostart
         self._graph = nx.DiGraph()
         self._slots = defaultdict(dict)
+
+    @property
+    def autostart(self):
+        return self._autostart
 
     def add_task(self, task):
         self._graph.add_node(task)

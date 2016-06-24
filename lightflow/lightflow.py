@@ -22,8 +22,11 @@ class Lightflow:
             workflow_id = data_store.create_workflow_id(workflow_id)
             logger.info('Created workflow ID: {}'.format(workflow_id))
 
-        # run the workflow specified by the workflow name
+        # run all autostart dags in the workflow specified by the workflow name
         for dag in self.get_dags(workflow_name):
+            if not dag.autostart:
+                continue
+
             from lightflow.celery_tasks import dag_celery_task
             dag_celery_task.delay(dag, workflow_id=workflow_id)
 
