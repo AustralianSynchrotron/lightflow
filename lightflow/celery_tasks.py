@@ -1,38 +1,54 @@
 from celery import Celery
+
+from lightflow.logger import get_logger
 from lightflow.config import Config
-from uuid import uuid4
+from lightflow.models.datastore import DataStore
+
+logger = get_logger(__name__)
 
 
 conf = Config().get('celery')
-app = Celery('lightflow',
+celery_app = Celery('lightflow',
              broker=conf['broker'],
              backend=conf['backend'],
              include=['lightflow.celery_tasks'])
-app.conf.update(
+
+celery_app.conf.update(
         CELERY_TASK_SERIALIZER='pickle',
         CELERY_ACCEPT_CONTENT=['pickle'],  # Ignore other content
         CELERY_RESULT_SERIALIZER='pickle',
         CELERY_TIMEZONE='Australia/Melbourne',
         CELERY_ENABLE_UTC=True,
-        CELERYD_CONCURRENCY=8,
+        CELERYD_CONCURRENCY=8
 )
 
 
-@app.task
-def dag_celery_task(dag, workflow_id=None):
-    print('Running workflow')
+def connect_data_store():
+    data_store_conf = Config().get('datastore')
+    data_store = DataStore(host=data_store_conf['host'],
+                           port=data_store_conf['port'],
+                           database=data_store_conf['database'])
+    data_store.connect()
+    return data_store
+
+
+@celery_app.task
+def workflow_celery_task(workflow):
+    logger.info('Running workflow <{}>'.format(workflow.name))
+    workflow.run(connect_data_store())
+    logger.info('Finished workflow <{}>'.format(workflow.name))
+
+
+@celery_app.task
+def dag_celery_task(dag, workflow_id):
+    logger.info('Running DAG <{}>'.format(dag.name))
     dag.run(workflow_id)
+    logger.info('Finished DAG <{}>'.format(dag.name))
 
 
-@app.task
-def task_celery_task(task, *args, **kwargs):
-    print('Running task:'.format(args))
-    return task._run(*args, **kwargs)
-
-
-def run_worker():
-    argv = [
-        'worker',
-        '-n={}'.format(uuid4(),),
-    ]
-    app.worker_main(argv)
+@celery_app.task
+def task_celery_task(task, workflow_id, data=None):
+    logger.info('Running task <{}>'.format(task.name))
+    result = task._run(data, connect_data_store().get(workflow_id))
+    logger.info('Finished task <{}>'.format(task.name))
+    return result

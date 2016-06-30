@@ -1,3 +1,4 @@
+from .workflow import Workflow
 from .dag import Dag
 from .base_task import BaseTask
 from .action import Action

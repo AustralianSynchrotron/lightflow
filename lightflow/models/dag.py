@@ -1,17 +1,20 @@
 from time import sleep
 from collections import defaultdict
 import networkx as nx
-from lightflow.celery_tasks import app, task_celery_task
+from lightflow.celery_tasks import task_celery_task
 from lightflow.models.task_data import MultiTaskData
 
 
 class Dag:
-    def __init__(self, dag_id, autostart=True):
-        self.dag_id = dag_id
-
+    def __init__(self, name, autostart=True):
+        self._name = name
         self._autostart = autostart
         self._graph = nx.DiGraph()
         self._slots = defaultdict(dict)
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def autostart(self):
@@ -34,7 +37,7 @@ class Dag:
                 except TypeError:
                     pass
 
-    def run(self, workflow_id=None):
+    def run(self, workflow_id):
         # TODO: any kind of exception handling of failed tasks
         # check whether the start graph is a directed acyclic graph
         if nx.is_directed_acyclic_graph(self._graph):
@@ -51,7 +54,7 @@ class Dag:
                     if not t.is_queued:
                         pt = self._graph.predecessors(t)
                         if len(pt) == 0:
-                            t.celery_result = task_celery_task.delay(t)
+                            t.celery_result = task_celery_task.delay(t, workflow_id)
                         else:
                             data_dict = MultiTaskData()
                             for p in pt:
@@ -63,7 +66,9 @@ class Dag:
                                 data_dict.add_dataset(p.name, p.celery_result.result.data,
                                                       aliases=[alias])
 
-                            t.celery_result = task_celery_task.delay(t, data_dict)
+                            t.celery_result = task_celery_task.delay(t,
+                                                                     workflow_id,
+                                                                     data_dict)
 
                     else:
                         if t.is_finished:

@@ -45,9 +45,6 @@ class Config(metaclass=Singleton):
         else:
             self.update_from_file(expand_env_var(os.environ['LIGHTFLOW_CONFIG']))
 
-        if 'logging' in self.config:
-            logging.config.dictConfig(self.config['logging'])
-
         # append the workflow paths to the PYTHONPATH
         for workflow_path in self.config['workflows']:
             if os.path.isdir(os.path.abspath(workflow_path)):
@@ -57,8 +54,8 @@ class Config(metaclass=Singleton):
                 # logger.error('DAG directory {} does not exist!'.format(workflow_path))
                 print('DAG directory {} does not exist!'.format(workflow_path))
 
-    def get(self, key):
-        return self.config[key]
+    def get(self, key, default=None):
+        return self.config.get(key, default)
 
     def update_from_file(self, filename):
         with open(filename, 'r') as config_file:
@@ -75,10 +72,8 @@ class Config(metaclass=Singleton):
 
     datastore:
       host: localhost
-      port: 1234
-      database_name: lightflow_db
-      username: none
-      password: none
+      port: 27017
+      database: lightflow
 
     logging:
       version: 1
