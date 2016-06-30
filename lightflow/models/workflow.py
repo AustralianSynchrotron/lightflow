@@ -2,9 +2,9 @@ import copy
 import time
 import importlib
 
+from .dag import Dag
+from .exceptions import ImportWorkflowError
 from lightflow.logger import get_logger
-from lightflow.models.dag import Dag
-from lightflow.models.exceptions import ImportWorkflowError
 from lightflow.celery_tasks import dag_celery_task
 
 logger = get_logger(__name__)

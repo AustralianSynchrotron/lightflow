@@ -1,8 +1,9 @@
 from time import sleep
 from collections import defaultdict
 import networkx as nx
+
 from lightflow.celery_tasks import task_celery_task
-from lightflow.models.task_data import MultiTaskData
+from .task_data import MultiTaskData
 
 
 class Dag:

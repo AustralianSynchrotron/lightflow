@@ -1,6 +1,5 @@
 import os
 import sys
-import logging.config
 import ruamel.yaml as yaml
 
 

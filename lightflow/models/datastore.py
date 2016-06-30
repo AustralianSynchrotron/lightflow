@@ -4,7 +4,7 @@ from pymongo.errors import ConnectionFailure
 from bson.objectid import ObjectId
 
 from lightflow.logger import get_logger
-from lightflow.models.exceptions import DataStoreNotConnected, DataStoreIDInvalid
+from .exceptions import DataStoreNotConnected, DataStoreIDInvalid
 
 logger = get_logger(__name__)
 

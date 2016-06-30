@@ -1,7 +1,7 @@
 from uuid import uuid4
 
-from lightflow.models import Workflow
-from lightflow.celery_tasks import celery_app, workflow_celery_task
+from .models import Workflow
+from .celery_tasks import celery_app, workflow_celery_task
 
 
 def run_workflow(name):

@@ -1,8 +1,8 @@
 from celery import Celery
 
-from lightflow.logger import get_logger
-from lightflow.config import Config
-from lightflow.models.datastore import DataStore
+from .logger import get_logger
+from .config import Config
+from .models.datastore import DataStore
 
 logger = get_logger(__name__)
 

@@ -2,7 +2,7 @@ import logging.config
 from celery.utils.log import get_task_logger
 from celery.signals import setup_logging
 
-from lightflow.config import Config
+from .config import Config
 
 
 def get_logger(name):

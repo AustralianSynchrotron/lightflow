@@ -1,6 +1,6 @@
-from lightflow.models.action import Action
-from lightflow.models.task_data import MultiTaskData
-from lightflow.models.exceptions import TaskReturnActionInvalid
+from .action import Action
+from .task_data import MultiTaskData
+from .exceptions import TaskReturnActionInvalid
 
 
 class BaseTask:
