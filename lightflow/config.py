@@ -64,7 +64,7 @@ class Config(metaclass=Singleton):
     def default(self):
         return """
     workflows:
-      - ./dags
+      - ./examples
 
     celery:
       broker: redis://localhost:6379/0
@@ -79,17 +79,26 @@ class Config(metaclass=Singleton):
       version: 1
       disable_existing_loggers: false
       formatters:
-        standard:
+        verbose:
           format: '[%(asctime)s][%(levelname)s] %(name)s %(filename)s:%(funcName)s:%(lineno)d | %(message)s'
+          datefmt: '%H:%M:%S'
+        simple:
+          (): 'colorlog.ColoredFormatter'
+          format: '%(log_color)s[%(asctime)s][%(levelname)s] %(blue)s%(processName)s%(reset)s | %(message)s'
           datefmt: '%H:%M:%S'
       handlers:
         console:
           class: logging.StreamHandler
           level: INFO
-          formatter: standard
+          formatter: simple
+      loggers:
+        celery:
+          handlers:
+            - console
+          level: INFO
 
-      root:
-        handlers:
-          - console
-        level: INFO
+        root:
+          handlers:
+            - console
+          level: INFO
     """
