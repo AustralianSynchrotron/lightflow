@@ -1,6 +1,8 @@
 from lightflow.models import Dag, Action
 from lightflow.tasks import PythonTask
 
+import numpy as np
+
 
 def first_call(name, data, data_store):
     data_store.set('number', 5)
@@ -13,6 +15,7 @@ def first_call(name, data, data_store):
 def second_call(name, data, data_store):
     number = data_store.get('number')
     data_store.set('number', number*10)
+    data_store.set('image', np.ones((100, 100)))
     data_store.push('filenames', 'file_a.spec')
 
 

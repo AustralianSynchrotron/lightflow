@@ -1,10 +1,13 @@
 from datetime import datetime
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
+from bson.binary import Binary
 from bson.objectid import ObjectId
+import pickle
+import gridfs
 
 from lightflow.logger import get_logger
-from .exceptions import DataStoreNotConnected, DataStoreIDInvalid
+from .exceptions import DataStoreNotConnected
 
 logger = get_logger(__name__)
 
@@ -144,7 +147,8 @@ class DataStore:
         """
         try:
             db = self._client[self.database]
-            return DataStoreDocument(db[WORKFLOW_DATA_COLLECTION_NAME], workflow_id)
+            fs = gridfs.GridFS(db)
+            return DataStoreDocument(db[WORKFLOW_DATA_COLLECTION_NAME], fs, workflow_id)
 
         except ConnectionFailure:
             raise DataStoreNotConnected()
@@ -157,14 +161,17 @@ class DataStoreDocument:
     persistent data store. It represents the data for a single workflow run.
     """
 
-    def __init__(self, collection, workflow_id):
+    def __init__(self, collection, grid_fs, workflow_id):
         """ Initialise the data store document.
 
         Args:
             collection: A MongoDB collection object pointing to the data store collection.
+            grid_fs: A GridFS object used for splitting large, binary data into smaller
+                     chunks in order to avoid the 16MB document limit of MongoDB.
             workflow_id: The id of the workflow run this document is associated with.
         """
         self._collection = collection
+        self._gridfs = grid_fs
         self._workflow_id = workflow_id
 
     def get(self, key, default=None):
@@ -212,7 +219,7 @@ class DataStoreDocument:
             {"_id": ObjectId(self._workflow_id)},
             {
                 "$set": {
-                    key_notation: value
+                    key_notation: self._encode_value(value)
                 },
                 "$currentDate": {"lastModified": True}
             }
@@ -235,7 +242,7 @@ class DataStoreDocument:
             {"_id": ObjectId(self._workflow_id)},
             {
                 "$push": {
-                    key_notation: value
+                    key_notation: self._encode_value(value)
                 },
                 "$currentDate": {"lastModified": True}
             }
@@ -261,9 +268,35 @@ class DataStoreDocument:
             {"_id": ObjectId(self._workflow_id)},
             {
                 "$push": {
-                    key_notation: {"$each": values}
+                    key_notation: {"$each": self._encode_value(values)}
                 },
                 "$currentDate": {"lastModified": True}
             }
         )
         return result.modified_count == 1
+
+
+    def _encode_value(self, value):
+        """ Encodes the value such that it can be stored into MongoDB.
+
+        Any primitive types are stored directly into MongoDB, while non-primitive types
+        are pickled and stored as GridFS objects. The id pointing to a GridFS object
+        replaces the original value.
+
+        Args:
+            value (object): The object that should be encoded for storing in MongoDB.
+
+        Returns:
+            object: The encoded value ready to be stored in MongoDB.
+        """
+        if isinstance(value, (int, float, str, bool)):
+            return value
+        elif isinstance(value, list):
+            return [self._encode_value(item) for item in value]
+        elif isinstance(value, dict):
+            result = {}
+            for key, item in value.items():
+                result[key] = self._encode_value(item)
+            return result
+        else:
+            Binary(pickle.dumps(value), subtype=128)
