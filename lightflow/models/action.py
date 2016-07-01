@@ -9,17 +9,17 @@ class Action:
     a list of immediate successor tasks that should be executed. The latter allows
     to limit the execution of successor tasks.
     """
-    def __init__(self, data, selected_tasks=None):
+    def __init__(self, data, limit=None):
         """ Initialise the Action object.
 
         Args:
             data (MultiTaskData): The processed data from the task that should be passed
                                   on to successor tasks.
-            selected_tasks (list): A list of names of all immediate successor tasks that
-                                   should be executed.
+            limit (list): A list of names of all immediate successor tasks that
+                          should be executed.
         """
         self._data = data
-        self._selected_tasks = selected_tasks
+        self._limit = limit
 
     @property
     def data(self):
@@ -27,9 +27,9 @@ class Action:
         return self._data
 
     @property
-    def selected_tasks(self):
+    def limit(self):
         """ Returns the list of tasks that should be executed. """
-        return self._selected_tasks
+        return self._limit
 
     def copy(self):
         """ Return a copy of the Action object. """

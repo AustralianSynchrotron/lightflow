@@ -76,8 +76,8 @@ class Dag:
                             all_successors_queued = True
 
                             for n in self._graph.successors(t):
-                                if t.celery_result.result.selected_tasks is not None:
-                                    if n.name not in t.celery_result.result.selected_tasks:
+                                if t.celery_result.result.limit is not None:
+                                    if n.name not in t.celery_result.result.limit:
                                         n.skip()
 
                                 if not n.is_queued and n not in running:
