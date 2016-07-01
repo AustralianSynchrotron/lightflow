@@ -8,14 +8,17 @@ def first_call(name, data, data_store):
     data_store.set('number', 5)
     data_store.set('buffer.observable', 20)
     data_store.push('sample.spectra', 7)
+    data_store.set('image', np.ones((100, 100)))
 
     return Action(data)
 
 
 def second_call(name, data, data_store):
     number = data_store.get('number')
+    img = data_store.get('image')
+    print(img.shape)
+
     data_store.set('number', number*10)
-    data_store.set('image', np.ones((100, 100)))
     data_store.push('filenames', 'file_a.spec')
 
 

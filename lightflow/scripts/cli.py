@@ -13,8 +13,10 @@ def cli():
 
 
 @click.command()
+@click.option('--keep-data', '-k', is_flag=True, default=False,
+              help='Do not delete the workflow data.')
 @click.argument('names', nargs=-1)
-def run(names):
+def run(keep_data, names):
     """ Run one or more workflows.
 
     NAMES: A list of workflow names that should be run.
@@ -24,7 +26,7 @@ def run(names):
         return
 
     for name in names:
-        lightflow.run_workflow(name)
+        lightflow.run_workflow(name, not keep_data)
 
 
 @click.command()

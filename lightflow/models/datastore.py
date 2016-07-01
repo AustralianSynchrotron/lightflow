@@ -7,7 +7,8 @@ import pickle
 import gridfs
 
 from lightflow.logger import get_logger
-from .exceptions import DataStoreNotConnected
+from .exceptions import DataStoreNotConnected,\
+    DataStoreDecodeGridfsIdInvalid, DataStoreDecodeUnknownType
 
 logger = get_logger(__name__)
 
@@ -119,6 +120,8 @@ class DataStore:
     def remove(self, workflow_id):
         """ Removes a document specified by its id from the data store.
 
+        All associated GridFs documents are deleted as well.
+
         Args:
             workflow_id (str): The id of the document that represents a workflow run.
 
@@ -127,6 +130,12 @@ class DataStore:
         """
         try:
             db = self._client[self.database]
+            fs = gridfs.GridFS(db)
+
+            for grid_doc in fs.find({"workflow_id": workflow_id},
+                                    no_cursor_timeout=True):
+                fs.delete(grid_doc._id)
+
             col = db[WORKFLOW_DATA_COLLECTION_NAME]
             return col.delete_one({"_id": ObjectId(workflow_id)})
 
@@ -198,7 +207,7 @@ class DataStoreDocument:
         for k in key.split('.'):
             data = data[k]
 
-        return data
+        return self._decode_value(data)
 
     def set(self, key, value):
         """ Store a value under the specified key in the data section of the document.
@@ -275,7 +284,6 @@ class DataStoreDocument:
         )
         return result.modified_count == 1
 
-
     def _encode_value(self, value):
         """ Encodes the value such that it can be stored into MongoDB.
 
@@ -299,4 +307,39 @@ class DataStoreDocument:
                 result[key] = self._encode_value(item)
             return result
         else:
-            Binary(pickle.dumps(value), subtype=128)
+            return self._gridfs.put(Binary(pickle.dumps(value)),
+                                    workflow_id=self._workflow_id)
+
+    def _decode_value(self, value):
+        """ Decodes the value by turning any binary data back into Python objects.
+
+        The method searches for ObjectId values, loads the associated binary data from
+        GridFS and returns the decoded Python object.
+
+        Args:
+            value (object): The value that should be decoded.
+
+        Raises:
+            DataStoreDecodingError: An ObjectId was found but the id is not a valid
+                                    GridFS id.
+            DataStoreDecodeUnknownType: The type of the specified value is unknown.
+
+        Returns:
+            object: The decoded value as a valid Python object.
+        """
+        if isinstance(value, (int, float, str, bool)):
+            return value
+        elif isinstance(value, list):
+            return [self._decode_value(item) for item in value]
+        elif isinstance(value, dict):
+            result = {}
+            for key, item in value.items():
+                result[key] = self._decode_value(item)
+            return result
+        elif isinstance(value, ObjectId):
+            if self._gridfs.exists({"_id": value}):
+                return pickle.loads(self._gridfs.get(value).read())
+            else:
+                raise DataStoreDecodeGridfsIdInvalid()
+        else:
+            raise DataStoreDecodeUnknownType()
