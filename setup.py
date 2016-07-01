@@ -22,7 +22,7 @@ setup(
         'Intended Audience :: Developers',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.5',
     ],
 
     packages=find_packages(exclude=['tests', 'examples']),
