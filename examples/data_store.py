@@ -8,6 +8,7 @@ def first_call(name, data, data_store):
     data_store.set('number', 5)
     data_store.set('buffer.observable', 20)
     data_store.push('sample.spectra', 7)
+    data_store.set('image', np.ones((10, 10)))
     data_store.set('image', np.ones((100, 100)))
 
     return Action(data)

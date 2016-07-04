@@ -7,8 +7,8 @@ import pickle
 import gridfs
 
 from lightflow.logger import get_logger
-from .exceptions import DataStoreNotConnected,\
-    DataStoreDecodeGridfsIdInvalid, DataStoreDecodeUnknownType
+from .exceptions import DataStoreNotConnected, \
+    DataStoreGridfsIdInvalid, DataStoreDecodeUnknownType
 
 logger = get_logger(__name__)
 
@@ -199,21 +199,15 @@ class DataStoreDocument:
                     key does not exist, the default value is returned. If no default value
                     is provided and the key does not exist None is returned.
         """
-        doc = self._collection.find_one({"_id": ObjectId(self._workflow_id)})
-        if doc is None:
-            return default
-
-        data = doc[WORKFLOW_DATA_DOCUMENT_DATA]
-        for k in key.split('.'):
-            data = data[k]
-
-        return self._decode_value(data)
+        key_notation = '.'.join([WORKFLOW_DATA_DOCUMENT_DATA, key])
+        return self._decode_value(self._data_from_dotnotation(key_notation, default))
 
     def set(self, key, value):
         """ Store a value under the specified key in the data section of the document.
 
         This method stores a value into the data section of the workflow data store
-        document. Any existing value is overridden.
+        document. Any existing value is overridden. Before storing a value, any linked
+        GridFS document under the specified key is deleted.
 
         Args:
             key (str): The key pointing to the value that should be stored/updated.
@@ -224,6 +218,13 @@ class DataStoreDocument:
             bool: True if the value could be set/updated, otherwise False.
         """
         key_notation = '.'.join([WORKFLOW_DATA_DOCUMENT_DATA, key])
+
+        try:
+            self._delete_gridfs_data(self._data_from_dotnotation(key_notation,
+                                                                 default=None))
+        except KeyError:
+            logger.info('Adding new field {} to the data store'.format(key_notation))
+
         result = self._collection.update_one(
             {"_id": ObjectId(self._workflow_id)},
             {
@@ -284,6 +285,30 @@ class DataStoreDocument:
         )
         return result.modified_count == 1
 
+    def _data_from_dotnotation(self, key, default=None):
+        """ Returns the MongoDB data from a key using dot notation.
+
+        Args:
+            key (str): The key to the field in the workflow document. Supports MongoDB's
+                       dot notation for embedded fields.
+            default (object): The default value that is returned if the key
+                              does not exist.
+
+        Returns:
+            object: The data for the specified key or the default value.
+        """
+        if key is None:
+            raise KeyError('NoneType is not a valid key!')
+
+        doc = self._collection.find_one({"_id": ObjectId(self._workflow_id)})
+        if doc is None:
+            return default
+
+        for k in key.split('.'):
+            doc = doc[k]
+
+        return doc
+
     def _encode_value(self, value):
         """ Encodes the value such that it can be stored into MongoDB.
 
@@ -340,6 +365,25 @@ class DataStoreDocument:
             if self._gridfs.exists({"_id": value}):
                 return pickle.loads(self._gridfs.get(value).read())
             else:
-                raise DataStoreDecodeGridfsIdInvalid()
+                raise DataStoreGridfsIdInvalid()
         else:
             raise DataStoreDecodeUnknownType()
+
+    def _delete_gridfs_data(self, data):
+        """ Delete all GridFS data that is linked by fields in the specified data.
+
+        Args:
+            data: The data that is parsed for MongoDB ObjectIDs. The linked GridFs object
+                  for any ObjectID is deleted.
+        """
+        if isinstance(data, ObjectId):
+            if self._gridfs.exists({"_id": data}):
+                self._gridfs.delete(data)
+            else:
+                raise DataStoreGridfsIdInvalid()
+        elif isinstance(data, list):
+            for item in data:
+                self._delete_gridfs_data(item)
+        elif isinstance(data, dict):
+            for key, item in data.items():
+                self._delete_gridfs_data(item)

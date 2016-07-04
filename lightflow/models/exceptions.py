@@ -15,7 +15,7 @@ class DataStoreIDInvalid(RuntimeError):
     pass
 
 
-class DataStoreDecodeGridfsIdInvalid(RuntimeError):
+class DataStoreGridfsIdInvalid(RuntimeError):
     pass
 
 
