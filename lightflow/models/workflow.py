@@ -1,9 +1,10 @@
 import copy
-import time
+from time import sleep
 import importlib
 
 from .dag import Dag
 from .exceptions import ImportWorkflowError
+from .signal import Server
 from lightflow.logger import get_logger
 from lightflow.celery_tasks import dag_celery_task
 
@@ -13,8 +14,11 @@ logger = get_logger(__name__)
 class Workflow:
     """ A workflow manages the execution and monitoring of dags.
 
-    A workflow is a container for one or more dags. It is responsible for running and
-    monitoring dags.
+    A workflow is a container for one or more dags. It is responsible for creating,
+    running and monitoring dags.
+
+    It is also the central server for the signal system, handling the incoming
+    requests from dags and tasks.
 
     Please note: this class has to be serialisable (e.g. by pickle)
     """
@@ -90,19 +94,33 @@ class Workflow:
             self._workflow_id = data_store.add(self._name)
             logger.info('Created workflow ID: {}'.format(self._workflow_id))
 
-        running = []
+        # create the server for the signal service
+        signal_server = Server()
+
+        # start all dags with the autostart flag set to True
+        dags = []
         for dag in self._dags:
             if not dag.autostart:
                 continue
 
-            # schedule a deep copy of the dag for execution in order to allow
-            # multiple copies of the same dag to be run in parallel.
-            running.append(dag_celery_task.delay(copy.deepcopy(dag),
-                                                 workflow_id=self._workflow_id))
+            dags.append(dag_celery_task.delay(copy.deepcopy(dag),
+                                              workflow_id=self._workflow_id,
+                                              signal_connection=signal_server.info()))
 
-        while running:
-            time.sleep(self._polling_time)
+        # as long as there are dags in the list keep running
+        while dags:
+            sleep(self._polling_time)
 
-            for dag_result in reversed(running):
-                if dag_result.ready():
-                    running.remove(dag_result)
+            # check for new requests from dags and tasks
+            self._handle_requests(signal_server.receive(block=False))
+
+            # remove any dags that finished running
+            for dag in reversed(dags):
+                if dag.ready():
+                    dags.remove(dag)
+
+    def _handle_requests(self, request=None):
+        if request is None:
+            return
+
+        logger.info('Incoming message: {}'.format(request.sender))

@@ -1,6 +1,18 @@
 from .action import Action
 from .task_data import MultiTaskData
 from .exceptions import TaskReturnActionInvalid
+from .signal import Request
+
+
+class TaskSignal:
+    """ Class to wrap the construction and sending of signals into easy to use methods.
+
+    """
+    def __init__(self, client):
+        self._client = client
+
+    def run_dag(self, name):
+        self._client.send(Request(name), block=False)
 
 
 class BaseTask:
@@ -77,7 +89,7 @@ class BaseTask:
         if not self._force_run:
             self._skip = True
 
-    def _run(self, data=None, data_store=None):
+    def _run(self, data, data_store, signal):
         """ The internal run method that decorates  the public run method.
 
         This method makes sure data is being passed to and from the task.
@@ -88,6 +100,8 @@ class BaseTask:
             data_store (DataStore): The persistent data store object that allows the task
                                     to store data for access across the current workflow
                                     run.
+            signal (TaskSignal): The signal object for tasks. It wraps the construction
+                                 and sending of signals into easy to use methods.
 
         Raises:
             TaskReturnActionInvalid: If the return value of the task is not
@@ -102,7 +116,7 @@ class BaseTask:
             data = MultiTaskData(self._name)
 
         if not self.is_skipped or self._force_run:
-            result = self.run(data, data_store)
+            result = self.run(data, data_store, signal)
         else:
             result = None
 
@@ -115,7 +129,7 @@ class BaseTask:
             result.data.add_task_history(self.name)
             return result.copy()
 
-    def run(self, data, data_store, **kwargs):
+    def run(self, data, data_store, signal, **kwargs):
         """ The main run method of a task.
 
         Implement this method in inherited classes.
@@ -126,6 +140,8 @@ class BaseTask:
             data_store (DataStore): The persistent data store object that allows the task
                                     to store data for access across the current workflow
                                     run.
+            signal (TaskSignal): The signal object for tasks. It wraps the construction
+                                 and sending of signals into easy to use methods.
 
         Returns:
             Action: An Action object containing the data that should be passed on

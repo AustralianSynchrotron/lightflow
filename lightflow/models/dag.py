@@ -4,11 +4,22 @@ from collections import defaultdict
 import networkx as nx
 
 from lightflow.logger import get_logger
-from lightflow.celery_tasks import task_celery_task
 from .exceptions import DirectedAcyclicGraphInvalid
 from .task_data import MultiTaskData
 
 logger = get_logger(__name__)
+
+
+class DagSignal:
+    """ Class to wrap the construction and sending of signals into easy to use methods.
+
+    """
+    def __init__(self, client):
+        self._client = client
+
+    @property
+    def connection(self):
+        return self._client.info()
 
 
 class Dag:
@@ -91,16 +102,20 @@ class Dag:
                 except TypeError:
                     pass
 
-    def run(self, workflow_id, data=None):
+    def run(self, workflow_id, signal, data=None):
         """ Run the dag by calling the tasks in the correct order.
 
         Args:
             workflow_id (str): The unique ID of the workflow that runs this dag.
+            signal (DagSignal): The signal object for dags. It wraps the construction
+                                and sending of signals into easy to use methods.
             data (MultiTaskData): The initial data that is passed on to the start tasks.
 
         Raises:
             DirectedAcyclicGraphInvalid: If the graph is not a dag (e.g. contains loops).
         """
+        from lightflow.celery_tasks import task_celery_task  # TODO: replace with Executor
+
         if not nx.is_directed_acyclic_graph(self._graph):
             raise DirectedAcyclicGraphInvalid()
 
@@ -123,6 +138,7 @@ class Dag:
                         # start a task without predecessors with the supplied initial data
                         task.celery_result = task_celery_task.delay(task,
                                                                     workflow_id,
+                                                                    signal.connection,
                                                                     data)
                     else:
                         # compose the input data from the predecessor tasks output data
@@ -140,6 +156,7 @@ class Dag:
                         # start task with the aggregated data from its predecessors
                         task.celery_result = task_celery_task.delay(task,
                                                                     workflow_id,
+                                                                    signal.connection,
                                                                     input_data)
                 else:
                     # the task finished processing. Check whether its successor tasks can

@@ -16,7 +16,7 @@ class PythonTask(BaseTask):
         super().__init__(name, force_run, propagate_skip)
         self._python_callable = python_callable
 
-    def run(self, data, data_store, **kwargs):
+    def run(self, data, data_store, signal, **kwargs):
         """ The main run method of the Python task.
 
         Args:
@@ -25,6 +25,8 @@ class PythonTask(BaseTask):
             data_store (DataStore): The persistent data store object that allows the task
                                     to store data for access across the current workflow
                                     run.
+            signal (TaskSignal): The signal object for tasks. It wraps the construction
+                                 and sending of signals into easy to use methods.
 
         Returns:
             Action: An Action object containing the data that should be passed on
@@ -32,4 +34,4 @@ class PythonTask(BaseTask):
                     should be executed.
         """
         if self._python_callable is not None:
-            return self._python_callable(self.name, data, data_store, **kwargs)
+            return self._python_callable(self.name, data, data_store, signal, **kwargs)
