@@ -3,16 +3,17 @@ from lightflow.models import BaseTask
 
 class PythonTask(BaseTask):
     """ The Python task executes a user-defined python method. """
-    def __init__(self, name, force_run=False, python_callable=None):
+    def __init__(self, name, force_run=False, propagate_skip=True, python_callable=None):
         """ Initialise the Python task.
 
         Args:
             name (str): The name of the task.
             force_run (bool): Run the task even if it is flagged to be skipped.
+            propagate_skip (bool): Propagate the skip flag to the next task.
             python_callable: A reference to the Python method that should be called by
                              the task as soon as it is run.
         """
-        super().__init__(name, force_run)
+        super().__init__(name, force_run, propagate_skip)
         self._python_callable = python_callable
 
     def run(self, data, data_store, **kwargs):

@@ -8,15 +8,17 @@ class BaseTask:
 
     Tasks should inherit from this class and implement the run() method.
     """
-    def __init__(self, name, force_run=False):
+    def __init__(self, name, force_run=False, propagate_skip=True):
         """ Initialise the base task.
 
         Args:
             name (str): The name of the task.
             force_run (bool): Run the task even if it is flagged to be skipped.
+            propagate_skip (bool): Propagate the skip flag to the next task.
         """
         self._name = name
         self._force_run = force_run
+        self.propagate_skip = propagate_skip
 
         self.celery_result = None
         self._skip = False
@@ -27,15 +29,33 @@ class BaseTask:
         return self._name
 
     @property
-    def is_queued(self):
-        """ Returns whether the task has been queued for execution. """
+    def has_result(self):
+        """ Returns whether the task has a result.
+
+        This indicates that the task is either queued, running or finished. """
         return self.celery_result is not None
+
+    @property
+    def is_pending(self):
+        """ Returns whether the task is queued. """
+        if self.has_result:
+            return self.celery_result.state == "PENDING"
+        else:
+            return False
 
     @property
     def is_finished(self):
         """ Returns whether the execution of the task has finished. """
-        if self.is_queued:
+        if self.has_result:
             return self.celery_result.ready()
+        else:
+            return False
+
+    @property
+    def is_failed(self):
+        """ Returns whether the execution of the task failed. """
+        if self.has_result:
+            return self.celery_result.failed()
         else:
             return False
 
@@ -47,7 +67,7 @@ class BaseTask:
     @property
     def state(self):
         """ Returns the current state of the task as a string. """
-        if self.is_queued:
+        if self.has_result:
             return self.celery_result.state
         else:
             return "NOT_QUEUED"

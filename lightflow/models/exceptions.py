@@ -3,6 +3,10 @@ class ImportWorkflowError(RuntimeError):
     pass
 
 
+class DirectedAcyclicGraphInvalid(RuntimeError):
+    pass
+
+
 class DataStoreNotConnected(RuntimeError):
     pass
 

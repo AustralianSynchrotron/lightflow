@@ -4,12 +4,12 @@ from copy import copy, deepcopy
 
 
 class TaskData:
-    def __init__(self, task_history=[], data=None):
+    def __init__(self, task_history=None, data=None):
         if data is None:
             self._data = {}
         else:
             self._data = data
-        self._task_history = task_history
+        self._task_history = task_history if task_history is not None else []
 
     def add_task_history(self, task):
         self._task_history.append(task)
