@@ -94,8 +94,9 @@ class Workflow:
             self._workflow_id = data_store.add(self._name)
             logger.info('Created workflow ID: {}'.format(self._workflow_id))
 
-        # create the server for the signal service
+        # create the server for the signal service and start listening for requests
         signal_server = Server()
+        signal_server.bind()
 
         # start all dags with the autostart flag set to True
         dags = []

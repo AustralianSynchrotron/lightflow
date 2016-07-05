@@ -2,7 +2,10 @@ from celery import Celery
 
 from .logger import get_logger
 from .config import Config
-from .models import DataStore, TaskSignal, DagSignal, Client
+from .models.base_task import TaskSignal
+from .models.dag import DagSignal
+from .models.datastore import DataStore
+from .models.signal import Client
 
 logger = get_logger(__name__)
 
