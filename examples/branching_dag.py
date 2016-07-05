@@ -20,28 +20,22 @@ def print_value(name, data, data_store):
 d = Dag('myDag')
 
 t_put_me = PythonTask(name='t_put_me',
-                      python_callable=put_data_me,
-                      dag=d)
+                      python_callable=put_data_me)
 
 t_branch_me = PythonTask(name='t_branch_me',
-                         python_callable=branch_me,
-                         dag=d)
+                         python_callable=branch_me)
 
 t_lane1_print_me = PythonTask(name='t_lane1_print_me',
-                              python_callable=print_value,
-                              dag=d)
+                              python_callable=print_value)
 
 t_lane2_print_me = PythonTask(name='t_lane2_print_me',
-                              python_callable=print_value,
-                              dag=d)
+                              python_callable=print_value)
 
 t_lane3_print_me = PythonTask(name='t_lane3_print_me',
-                              python_callable=print_value,
-                              dag=d)
+                              python_callable=print_value)
 
 t_join_me = PythonTask(name='t_join_me',
-                       python_callable=print_value,
-                       dag=d)
+                       python_callable=print_value)
 
 d.define_workflow({t_put_me: [t_branch_me],
                    t_branch_me: [t_lane1_print_me, t_lane2_print_me, t_lane3_print_me],

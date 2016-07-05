@@ -8,16 +8,14 @@ class BaseTask:
 
     Tasks should inherit from this class and implement the run() method.
     """
-    def __init__(self, name, dag, force_run=False):
+    def __init__(self, name, force_run=False):
         """ Initialise the base task.
 
         Args:
             name (str): The name of the task.
-            dag (Dag): Reference to the dag object that this task belongs to.
             force_run (bool): Run the task even if it is flagged to be skipped.
         """
         self._name = name
-        self._dag = dag
         self._force_run = force_run
 
         self.celery_result = None

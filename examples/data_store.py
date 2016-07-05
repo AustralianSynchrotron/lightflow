@@ -28,19 +28,15 @@ def third_b_call(name, data, data_store):
 d = Dag('myDag')
 
 first = PythonTask(name='first',
-                   python_callable=first_call,
-                   dag=d)
+                   python_callable=first_call)
 
 second = PythonTask(name='second',
-                    python_callable=second_call,
-                    dag=d)
+                    python_callable=second_call)
 
 third_a = PythonTask(name='third_a',
-                     python_callable=third_a_call,
-                     dag=d)
+                     python_callable=third_a_call)
 
 third_b = PythonTask(name='third_b',
-                     python_callable=third_b_call,
-                     dag=d)
+                     python_callable=third_b_call)
 
 d.define_workflow({first: [second], second: [third_a, third_b]})
