@@ -1,17 +1,24 @@
 from lightflow.models import Dag, Action
 from lightflow.tasks import PythonTask
 
+import numpy as np
+
 
 def first_call(name, data, data_store, signal):
     data_store.set('number', 5)
     data_store.set('buffer.observable', 20)
     data_store.push('sample.spectra', 7)
+    data_store.set('image', np.ones((10, 10)))
+    data_store.set('image', np.ones((100, 100)))
 
     return Action(data)
 
 
 def second_call(name, data, data_store, signal):
     number = data_store.get('number')
+    img = data_store.get('image')
+    print(img.shape)
+
     data_store.set('number', number*10)
     data_store.push('filenames', 'file_a.spec')
 

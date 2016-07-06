@@ -19,6 +19,14 @@ class DataStoreIDInvalid(RuntimeError):
     pass
 
 
+class DataStoreGridfsIdInvalid(RuntimeError):
+    pass
+
+
+class DataStoreDecodeUnknownType(RuntimeError):
+    pass
+
+
 class TaskReturnActionInvalid(RuntimeError):
     pass
 
