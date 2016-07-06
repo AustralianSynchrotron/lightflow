@@ -11,11 +11,12 @@ class TaskSignal:
     def __init__(self, client):
         self._client = client
 
-    def run_dag(self, name):
+    def run_dag(self, name, data=None):
         self._client.send(
             Request(
                 action='run_dag',
-                payload={'name': name}
+                payload={'name': name,
+                         'data': data if isinstance(data, MultiTaskData) else None}
             )
         )
 

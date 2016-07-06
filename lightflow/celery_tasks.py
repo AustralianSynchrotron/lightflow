@@ -50,10 +50,11 @@ def workflow_celery_task(workflow):
 
 
 @celery_app.task
-def dag_celery_task(dag, workflow_id, signal_connection):
+def dag_celery_task(dag, workflow_id, signal_connection, data=None):
     logger.info('Running DAG <{}>'.format(dag.name))
     dag.run(workflow_id,
-            DagSignal(Client.from_connection(signal_connection)))
+            DagSignal(Client.from_connection(signal_connection)),
+            data)
     logger.info('Finished DAG <{}>'.format(dag.name))
 
 

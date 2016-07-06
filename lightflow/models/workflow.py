@@ -122,14 +122,14 @@ class Workflow:
                 if dag.ready():
                     self._dags_running.remove(dag)
 
-    def _queue_dag(self, name, signal_server):
+    def _queue_dag(self, name, signal_server, data=None):
         if name not in self._dags_blueprint:
             raise DagNameUnknown()
 
         self._dags_running.append(
             dag_celery_task.apply_async(
                 (copy.deepcopy(self._dags_blueprint[name]),
-                 self._workflow_id, signal_server.info()),
+                 self._workflow_id, signal_server.info(), data),
                 queue='dag',
                 routing_key='dag'
             )
@@ -149,5 +149,7 @@ class Workflow:
             raise RequestActionUnknown()
 
     def _handle_run_dag(self, request, signal_server):
-        self._queue_dag(request.payload['name'], signal_server)
+        self._queue_dag(request.payload['name'],
+                        signal_server,
+                        request.payload['data'])
         return Response(success=True)

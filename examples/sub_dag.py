@@ -1,6 +1,7 @@
 from lightflow.models import Dag
 from lightflow.tasks import PythonTask
 from time import sleep
+import numpy as np
 
 
 def print_name(name, data, data_store, signal):
@@ -10,7 +11,12 @@ def print_name(name, data, data_store, signal):
 def start_sub_dag(name, data, data_store, signal):
     for i in range(5):
         sleep(1)
-        signal.run_dag('subDag')
+        data['image'] = np.ones((100, 100))
+        signal.run_dag('subDag', data)
+
+
+def sub_dag_print(name, data, data_store, signal):
+    print('<<<<<<<<<<< {}'.format(data['image'].shape))
 
 
 md_one = PythonTask(name='md_one',
@@ -24,10 +30,10 @@ main_dag.define_workflow({md_one: [md_two]})
 
 
 sd_one = PythonTask(name='sd_one',
-                    python_callable=print_name)
+                    python_callable=sub_dag_print)
 
 sd_two = PythonTask(name='sd_two',
-                    python_callable=print_name)
+                    python_callable=sub_dag_print)
 
 sub_dag = Dag('subDag', autostart=False)
 sub_dag.define_workflow({sd_one: [sd_two]})
