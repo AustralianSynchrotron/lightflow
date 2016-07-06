@@ -248,7 +248,7 @@ class DataStoreDocument:
         Args:
             key (str): The key pointing to the value that should be stored/updated.
                        It supports MongoDB's dot notation for nested fields.
-            values:
+            values: The values that should be appended to a list in the data store.
 
         Returns:
             bool: True if the list in the database could be extended, otherwise False.

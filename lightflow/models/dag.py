@@ -15,10 +15,16 @@ class DagSignal:
 
     """
     def __init__(self, client):
+        """ Initialise the task signal convenience class.
+
+        Args:
+            client (Client): A reference to a signal client object.
+        """
         self._client = client
 
     @property
     def connection(self):
+        """ Return the client connection information."""
         return self._client.info()
 
 
@@ -172,6 +178,7 @@ class Dag:
                                 if next_task.name not in task.celery_result.result.limit:
                                     next_task.skip()
 
+                            # consider queuing the successor task if it is not in the list
                             if next_task not in tasks and not next_task.has_result:
                                 if all([pt.is_finished or pt.is_skipped
                                         for pt in self._graph.predecessors(next_task)]):

@@ -5,20 +5,32 @@ from .signal import Request
 
 
 class TaskSignal:
-    """ Class to wrap the construction and sending of signals into easy to use methods.
-
-    """
+    """ Class to wrap the construction and sending of signals into easy to use methods."""
     def __init__(self, client):
+        """ Initialise the task signal convenience class.
+
+        Args:
+            client (Client): A reference to a signal client object.
+        """
         self._client = client
 
     def run_dag(self, name, data=None):
-        self._client.send(
+        """ Schedule the execution of a dag by sending a signal to the workflow.
+
+        Args:
+            name (str): The name of the dag that should be run.
+            data (MultiTaskData): The data that should be passed on to the new dag.
+
+        Returns:
+            bool: True if the requested dag was started successfully.
+        """
+        return self._client.send(
             Request(
                 action='run_dag',
                 payload={'name': name,
                          'data': data if isinstance(data, MultiTaskData) else None}
             )
-        )
+        ).success
 
 
 class BaseTask:
@@ -50,7 +62,8 @@ class BaseTask:
     def has_result(self):
         """ Returns whether the task has a result.
 
-        This indicates that the task is either queued, running or finished. """
+        This indicates that the task is either queued, running or finished.
+        """
         return self.celery_result is not None
 
     @property

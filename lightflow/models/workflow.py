@@ -123,6 +123,13 @@ class Workflow:
                     self._dags_running.remove(dag)
 
     def _queue_dag(self, name, signal_server, data=None):
+        """ Add a new dag to the queue.
+
+        Args:
+            name (str): The name of the dag that should be queued.
+            signal_server (Server): Reference to the main signal server object.
+            data (MultiTaskData): The data that should be passed on to the new dag.
+        """
         if name not in self._dags_blueprint:
             raise DagNameUnknown()
 
@@ -136,6 +143,20 @@ class Workflow:
         )
 
     def _handle_request(self, request, signal_server):
+        """ Handle an incoming request by forwarding it to the appropriate method.
+
+        Args:
+            request (Request): Reference to a request object containing the
+                               incoming request.
+            signal_server (Server): Reference to the main signal server object.
+
+        Raises:
+            RequestActionUnknown: If the action specified in the request is not known.
+
+        Returns:
+            Response: A response object containing the response from the method handling
+                      the request.
+        """
         if request is None:
             return Response(success=False)
 
@@ -149,6 +170,19 @@ class Workflow:
             raise RequestActionUnknown()
 
     def _handle_run_dag(self, request, signal_server):
+        """ The handler for the run_dag request.
+
+        The run_dag request creates a new dag and adds it to the queue.
+
+        Args:
+            request (Request): Reference to a request object containing the
+                               incoming request.
+            signal_server (Server): Reference to the main signal server object.
+
+        Returns:
+            Response: A response object containing the following fields:
+                          - success: True if a new dag was started successfully.
+        """
         self._queue_dag(request.payload['name'],
                         signal_server,
                         request.payload['data'])
