@@ -12,7 +12,11 @@ class TaskSignal:
         self._client = client
 
     def run_dag(self, name):
-        self._client.send(Request(name), block=False)
+        self._client.send(
+            Request(
+                action='run_dag',
+                payload={'name': name}
+            ), block=False)
 
 
 class BaseTask:

@@ -71,5 +71,6 @@ class Client:
 
 
 class Request:
-    def __init__(self, sender):
-        self.sender = sender
+    def __init__(self, action, payload):
+        self.action = action
+        self.payload = payload

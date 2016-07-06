@@ -15,8 +15,6 @@ def second_call(name, data, data_store, signal):
     data_store.set('number', number*10)
     data_store.push('filenames', 'file_a.spec')
 
-    signal.run_dag(name)
-
 
 def third_a_call(name, data, data_store, signal):
     data_store.push('filenames', 'file_b.spec')

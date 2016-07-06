@@ -3,7 +3,7 @@ from time import sleep
 import importlib
 
 from .dag import Dag
-from .exceptions import ImportWorkflowError
+from .exceptions import ImportWorkflowError, RequestActionUnknown, DagNameUnknown
 from .signal import Server
 from lightflow.logger import get_logger
 from lightflow.celery_tasks import dag_celery_task
@@ -31,7 +31,8 @@ class Workflow:
         """
         self._polling_time = polling_time
 
-        self._dags = []
+        self._dags_blueprint = {}
+        self._dags_running = []
         self._workflow_id = None
         self._name = None
 
@@ -71,8 +72,9 @@ class Workflow:
         """
         try:
             workflow_module = importlib.import_module(name)
-            self._dags = [dag for key, dag in workflow_module.__dict__.items() if
-                          isinstance(dag, Dag)]
+            for key, dag in workflow_module.__dict__.items():
+                if isinstance(dag, Dag):
+                    self._dags_blueprint[dag.name] = dag
             self._name = name
         except TypeError:
             logger.error('Cannot import workflow {}!'.format(name))
@@ -99,29 +101,46 @@ class Workflow:
         signal_server.bind()
 
         # start all dags with the autostart flag set to True
-        dags = []
-        for dag in self._dags:
-            if not dag.autostart:
-                continue
-
-            dags.append(dag_celery_task.delay(copy.deepcopy(dag),
-                                              workflow_id=self._workflow_id,
-                                              signal_connection=signal_server.info()))
+        for name, dag in self._dags_blueprint.items():
+            if dag.autostart:
+                self._queue_dag(name, signal_server)
 
         # as long as there are dags in the list keep running
-        while dags:
+        while self._dags_running:
             sleep(self._polling_time)
 
             # check for new requests from dags and tasks
-            self._handle_requests(signal_server.receive(block=False))
+            request = signal_server.receive(block=False)
+            while request is not None:
+                self._handle_request(request, signal_server)
+                request = signal_server.receive(block=False)
 
             # remove any dags that finished running
-            for dag in reversed(dags):
+            for dag in reversed(self._dags_running):
                 if dag.ready():
-                    dags.remove(dag)
+                    self._dags_running.remove(dag)
 
-    def _handle_requests(self, request=None):
+    def _queue_dag(self, name, signal_server):
+        if name not in self._dags_blueprint:
+            raise DagNameUnknown()
+
+        self._dags_running.append(dag_celery_task.delay(
+            copy.deepcopy(self._dags_blueprint[name]),
+            workflow_id=self._workflow_id,
+            signal_connection=signal_server.info()))
+
+    def _handle_request(self, request, signal_server):
         if request is None:
             return
 
-        logger.info('Incoming message: {}'.format(request.sender))
+        action_map = {
+            'run_dag': self._handle_run_dag
+        }
+
+        if request.action in action_map:
+            action_map[request.action](request, signal_server)
+        else:
+            raise RequestActionUnknown()
+
+    def _handle_run_dag(self, request, signal_server):
+        self._queue_dag(request.payload['name'], signal_server)

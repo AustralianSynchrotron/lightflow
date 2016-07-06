@@ -21,3 +21,11 @@ class DataStoreIDInvalid(RuntimeError):
 
 class TaskReturnActionInvalid(RuntimeError):
     pass
+
+
+class RequestActionUnknown(RuntimeError):
+    pass
+
+
+class DagNameUnknown(RuntimeError):
+    pass
