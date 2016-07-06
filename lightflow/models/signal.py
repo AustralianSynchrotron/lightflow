@@ -33,11 +33,14 @@ class Server:
             max_port=self._port_range[1],
             max_tries=self._max_tries)
 
-    def receive(self, block=False):
+    def receive(self):
         try:
-            return self._zmq_socket.recv_pyobj(flags=0 if block else zmq.NOBLOCK)
+            return self._zmq_socket.recv_pyobj(flags=zmq.NOBLOCK)
         except zmq.ZMQError:
             return None
+
+    def send(self, response):
+        self._zmq_socket.send_pyobj(response)
 
 
 class Client:
@@ -62,9 +65,9 @@ class Client:
                                                      self._ip_address,
                                                      self._port))
 
-    def send(self, message, block=False):
-        self._zmq_socket.send_pyobj(message,
-                                    flags=0 if block else zmq.NOBLOCK)
+    def send(self, request):
+        self._zmq_socket.send_pyobj(request)
+        return self._zmq_socket.recv_pyobj()
 
     def info(self):
         return ConnectionInfo(self._ip_address, self._port, self._protocol)
@@ -74,3 +77,9 @@ class Request:
     def __init__(self, action, payload):
         self.action = action
         self.payload = payload
+
+
+class Response:
+    def __init__(self, success, payload=None):
+        self.success = success
+        self.payload = payload if payload is not None else {}

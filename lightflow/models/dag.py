@@ -136,10 +136,11 @@ class Dag:
                     pre_tasks = self._graph.predecessors(task)
                     if len(pre_tasks) == 0:
                         # start a task without predecessors with the supplied initial data
-                        task.celery_result = task_celery_task.delay(task,
-                                                                    workflow_id,
-                                                                    signal.connection,
-                                                                    data)
+                        task.celery_result = task_celery_task.apply_async(
+                            (task, workflow_id, signal.connection, data),
+                            queue='task',
+                            routing_key='task'
+                        )
                     else:
                         # compose the input data from the predecessor tasks output data
                         input_data = MultiTaskData()
@@ -154,10 +155,11 @@ class Dag:
                                                    aliases=aliases)
 
                         # start task with the aggregated data from its predecessors
-                        task.celery_result = task_celery_task.delay(task,
-                                                                    workflow_id,
-                                                                    signal.connection,
-                                                                    input_data)
+                        task.celery_result = task_celery_task.apply_async(
+                            (task, workflow_id, signal.connection, input_data),
+                            queue='task',
+                            routing_key='task'
+                        )
                 else:
                     # the task finished processing. Check whether its successor tasks can
                     # be added to the task list

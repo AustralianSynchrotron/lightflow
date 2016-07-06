@@ -1,4 +1,5 @@
 from celery import Celery
+from kombu import Queue
 
 from .logger import get_logger
 from .config import Config
@@ -12,9 +13,9 @@ logger = get_logger(__name__)
 
 conf = Config().get('celery')
 celery_app = Celery('lightflow',
-             broker=conf['broker'],
-             backend=conf['backend'],
-             include=['lightflow.celery_tasks'])
+                    broker=conf['broker'],
+                    backend=conf['backend'],
+                    include=['lightflow.celery_tasks'])
 
 celery_app.conf.update(
         CELERY_TASK_SERIALIZER='pickle',
@@ -22,7 +23,13 @@ celery_app.conf.update(
         CELERY_RESULT_SERIALIZER='pickle',
         CELERY_TIMEZONE='Australia/Melbourne',
         CELERY_ENABLE_UTC=True,
-        CELERYD_CONCURRENCY=8
+        CELERYD_CONCURRENCY=8,
+        CELERY_DEFAULT_QUEUE='task',
+        CELERY_QUEUES=(
+            Queue('task', routing_key='task'),
+            Queue('workflow', routing_key='workflow'),
+            Queue('dag', routing_key='dag'),
+        )
 )
 
 

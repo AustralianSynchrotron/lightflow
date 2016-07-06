@@ -16,7 +16,8 @@ class TaskSignal:
             Request(
                 action='run_dag',
                 payload={'name': name}
-            ), block=False)
+            )
+        )
 
 
 class BaseTask:

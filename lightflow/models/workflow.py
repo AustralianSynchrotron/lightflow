@@ -4,7 +4,7 @@ import importlib
 
 from .dag import Dag
 from .exceptions import ImportWorkflowError, RequestActionUnknown, DagNameUnknown
-from .signal import Server
+from .signal import Server, Response
 from lightflow.logger import get_logger
 from lightflow.celery_tasks import dag_celery_task
 
@@ -109,11 +109,13 @@ class Workflow:
         while self._dags_running:
             sleep(self._polling_time)
 
-            # check for new requests from dags and tasks
-            request = signal_server.receive(block=False)
-            while request is not None:
-                self._handle_request(request, signal_server)
-                request = signal_server.receive(block=False)
+            # handle new requests from dags and tasks
+            break_counter = 0
+            request = signal_server.receive()
+            while (request is not None) and (break_counter < 10):
+                signal_server.send(self._handle_request(request, signal_server))
+                request = signal_server.receive()
+                break_counter += 1
 
             # remove any dags that finished running
             for dag in reversed(self._dags_running):
@@ -124,23 +126,28 @@ class Workflow:
         if name not in self._dags_blueprint:
             raise DagNameUnknown()
 
-        self._dags_running.append(dag_celery_task.delay(
-            copy.deepcopy(self._dags_blueprint[name]),
-            workflow_id=self._workflow_id,
-            signal_connection=signal_server.info()))
+        self._dags_running.append(
+            dag_celery_task.apply_async(
+                (copy.deepcopy(self._dags_blueprint[name]),
+                 self._workflow_id, signal_server.info()),
+                queue='dag',
+                routing_key='dag'
+            )
+        )
 
     def _handle_request(self, request, signal_server):
         if request is None:
-            return
+            return Response(success=False)
 
         action_map = {
             'run_dag': self._handle_run_dag
         }
 
         if request.action in action_map:
-            action_map[request.action](request, signal_server)
+            return action_map[request.action](request, signal_server)
         else:
             raise RequestActionUnknown()
 
     def _handle_run_dag(self, request, signal_server):
         self._queue_dag(request.payload['name'], signal_server)
+        return Response(success=True)
