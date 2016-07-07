@@ -13,14 +13,20 @@ def run_workflow(name, clear_data_store=True):
                                  run in the data store after the run.
     """
     wf = Workflow.from_name(name, clear_data_store)
-    workflow_celery_task.delay(wf)
+    workflow_celery_task.apply_async((wf,),
+                                     queue='workflow',
+                                     routing_key='workflow')
 
 
-def run_worker():
+def run_worker(queues=None):
     """ Run a worker process.
+
     """
+    queues = queues if queues is not None else ['workflow', 'dag', 'task']
+
     argv = [
         'worker',
         '-n={}'.format(uuid4(), ),
+        '--queues={}'.format(','.join(queues))
     ]
     celery_app.worker_main(argv)

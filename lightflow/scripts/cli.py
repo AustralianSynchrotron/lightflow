@@ -30,9 +30,11 @@ def run(keep_data, names):
 
 
 @click.command()
-def worker():
+@click.option('--queues', '-q', default='workflow,dag,task',
+              help='Comma separated list of queues to enable for this worker.')
+def worker(queues):
     """ Start a worker process. """
-    lightflow.run_worker()
+    lightflow.run_worker(queues.split(','))
 
 
 cli.add_command(run, 'run')

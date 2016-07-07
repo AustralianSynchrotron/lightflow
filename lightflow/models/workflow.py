@@ -1,9 +1,10 @@
 import copy
-import time
+from time import sleep
 import importlib
 
 from .dag import Dag
-from .exceptions import ImportWorkflowError
+from .exceptions import ImportWorkflowError, RequestActionUnknown, DagNameUnknown
+from .signal import Server, Response
 from lightflow.logger import get_logger
 from lightflow.celery_tasks import dag_celery_task
 
@@ -13,42 +14,41 @@ logger = get_logger(__name__)
 class Workflow:
     """ A workflow manages the execution and monitoring of dags.
 
-    A workflow is a container for one or more dags. It is responsible for running and
-    monitoring dags.
+    A workflow is a container for one or more dags. It is responsible for creating,
+    running and monitoring dags.
+
+    It is also the central server for the signal system, handling the incoming
+    requests from dags and tasks.
 
     Please note: this class has to be serialisable (e.g. by pickle)
     """
-    def __init__(self, clear_data_store=True, polling_time=0.5):
+    def __init__(self, polling_time=0.5):
         """ Initialise the workflow.
 
         Args:
-            clear_data_store (bool): Remove any documents created during the workflow
-                                     run in the data store after the run.
             polling_time (float): The waiting time between status checks of the running
                                   dags in seconds.
         """
-        self._clear_data_store = clear_data_store
         self._polling_time = polling_time
 
-        self._name = None
+        self._dags_blueprint = {}
+        self._dags_running = []
         self._workflow_id = None
-        self._dags = []
+        self._name = None
 
     @classmethod
-    def from_name(cls, name, clear_data_store=True, polling_time=0.5):
+    def from_name(cls, name, polling_time=0.5):
         """ Create a workflow object from a workflow script.
 
         Args:
             name (str): The name of the workflow script.
-            clear_data_store (bool): Remove any documents created during the workflow
-                                     run in the data store after the run.
             polling_time (float): The waiting time between status checks of the running
                                   dags in seconds.
 
         Returns:
             Workflow: A fully initialised workflow object
         """
-        new_workflow = cls(clear_data_store, polling_time)
+        new_workflow = cls(polling_time)
         new_workflow.load(name)
         return new_workflow
 
@@ -72,8 +72,9 @@ class Workflow:
         """
         try:
             workflow_module = importlib.import_module(name)
-            self._dags = [dag for key, dag in workflow_module.__dict__.items() if
-                          isinstance(dag, Dag)]
+            for key, dag in workflow_module.__dict__.items():
+                if isinstance(dag, Dag):
+                    self._dags_blueprint[dag.name] = dag
             self._name = name
         except TypeError:
             logger.error('Cannot import workflow {}!'.format(name))
@@ -95,22 +96,94 @@ class Workflow:
             self._workflow_id = data_store.add(self._name)
             logger.info('Created workflow ID: {}'.format(self._workflow_id))
 
-        running = []
-        for dag in self._dags:
-            if not dag.autostart:
-                continue
+        # create the server for the signal service and start listening for requests
+        signal_server = Server()
+        signal_server.bind()
 
-            # schedule a deep copy of the dag for execution in order to allow
-            # multiple copies of the same dag to be run in parallel.
-            running.append(dag_celery_task.delay(copy.deepcopy(dag),
-                                                 workflow_id=self._workflow_id))
+        # start all dags with the autostart flag set to True
+        for name, dag in self._dags_blueprint.items():
+            if dag.autostart:
+                self._queue_dag(name, signal_server)
 
-        while running:
-            time.sleep(self._polling_time)
+        # as long as there are dags in the list keep running
+        while self._dags_running:
+            sleep(self._polling_time)
 
-            for dag_result in reversed(running):
-                if dag_result.ready():
-                    running.remove(dag_result)
+            # handle new requests from dags and tasks
+            break_counter = 0
+            request = signal_server.receive()
+            while (request is not None) and (break_counter < 10):
+                signal_server.send(self._handle_request(request, signal_server))
+                request = signal_server.receive()
+                break_counter += 1
 
-        if self._clear_data_store:
-            data_store.remove(self._workflow_id)
+            # remove any dags that finished running
+            for dag in reversed(self._dags_running):
+                if dag.ready():
+                    self._dags_running.remove(dag)
+
+    def _queue_dag(self, name, signal_server, data=None):
+        """ Add a new dag to the queue.
+
+        Args:
+            name (str): The name of the dag that should be queued.
+            signal_server (Server): Reference to the main signal server object.
+            data (MultiTaskData): The data that should be passed on to the new dag.
+        """
+        if name not in self._dags_blueprint:
+            raise DagNameUnknown()
+
+        self._dags_running.append(
+            dag_celery_task.apply_async(
+                (copy.deepcopy(self._dags_blueprint[name]),
+                 self._workflow_id, signal_server.info(), data),
+                queue='dag',
+                routing_key='dag'
+            )
+        )
+
+    def _handle_request(self, request, signal_server):
+        """ Handle an incoming request by forwarding it to the appropriate method.
+
+        Args:
+            request (Request): Reference to a request object containing the
+                               incoming request.
+            signal_server (Server): Reference to the main signal server object.
+
+        Raises:
+            RequestActionUnknown: If the action specified in the request is not known.
+
+        Returns:
+            Response: A response object containing the response from the method handling
+                      the request.
+        """
+        if request is None:
+            return Response(success=False)
+
+        action_map = {
+            'run_dag': self._handle_run_dag
+        }
+
+        if request.action in action_map:
+            return action_map[request.action](request, signal_server)
+        else:
+            raise RequestActionUnknown()
+
+    def _handle_run_dag(self, request, signal_server):
+        """ The handler for the run_dag request.
+
+        The run_dag request creates a new dag and adds it to the queue.
+
+        Args:
+            request (Request): Reference to a request object containing the
+                               incoming request.
+            signal_server (Server): Reference to the main signal server object.
+
+        Returns:
+            Response: A response object containing the following fields:
+                          - success: True if a new dag was started successfully.
+        """
+        self._queue_dag(request.payload['name'],
+                        signal_server,
+                        request.payload['data'])
+        return Response(success=True)
