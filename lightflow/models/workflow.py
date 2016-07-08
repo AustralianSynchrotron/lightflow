@@ -25,13 +25,16 @@ class Workflow:
 
     Please note: this class has to be serialisable (e.g. by pickle)
     """
-    def __init__(self, polling_time=0.5):
+    def __init__(self, clear_data_store=True, polling_time=0.5):
         """ Initialise the workflow.
 
         Args:
+            clear_data_store (bool): Remove any documents created during the workflow
+                                     run in the data store after the run.
             polling_time (float): The waiting time between status checks of the running
                                   dags in seconds.
         """
+        self._clear_data_store = clear_data_store
         self._polling_time = polling_time
 
         self._dags_blueprint = {}
@@ -40,18 +43,20 @@ class Workflow:
         self._name = None
 
     @classmethod
-    def from_name(cls, name, polling_time=0.5):
+    def from_name(cls, name, clear_data_store=True, polling_time=0.5):
         """ Create a workflow object from a workflow script.
 
         Args:
             name (str): The name of the workflow script.
+            clear_data_store (bool): Remove any documents created during the workflow
+                                     run in the data store after the run.
             polling_time (float): The waiting time between status checks of the running
                                   dags in seconds.
 
         Returns:
             Workflow: A fully initialised workflow object
         """
-        new_workflow = cls(polling_time)
+        new_workflow = cls(clear_data_store, polling_time)
         new_workflow.load(name)
         return new_workflow
 
@@ -128,6 +133,9 @@ class Workflow:
             for dag in reversed(self._dags_running):
                 if dag.ready():
                     self._dags_running.remove(dag)
+
+        if self._clear_data_store:
+            data_store.remove(self._workflow_id)
 
     def _queue_dag(self, name, signal_server, data=None):
         """ Add a new dag to the queue.
