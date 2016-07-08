@@ -57,6 +57,7 @@ class Config(metaclass=Singleton):
         return self.config.get(key, default)
 
     def update_from_file(self, filename):
+        print('Using configuration: {}'.format(filename))
         with open(filename, 'r') as config_file:
             self.config.update(yaml.load(config_file.read()))
 

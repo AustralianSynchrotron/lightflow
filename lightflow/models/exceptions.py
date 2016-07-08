@@ -35,5 +35,9 @@ class RequestActionUnknown(RuntimeError):
     pass
 
 
+class RequestFailed(RuntimeError):
+    pass
+
+
 class DagNameUnknown(RuntimeError):
     pass

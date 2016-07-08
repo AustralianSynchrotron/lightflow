@@ -1,3 +1,14 @@
+"""
+Lightflow
+-----
+
+Lightflow is a lightweight, high performance pipeline system for synchrotrons.
+
+It is based on a directed acyclic graph structure, with tasks as nodes and arbitrary data
+flowing between tasks.
+
+"""
+
 from setuptools import setup, find_packages
 import re
 
@@ -5,9 +16,10 @@ with open('lightflow/__init__.py') as file:
     version = re.search(r"__version__ = '(.*)'", file.read()).group(1)
 
 setup(
-    name='lightflow',
+    name='Lightflow',
     version=version,
     description='A lightweight, high performance pipeline system for synchrotrons',
+    long_description=__doc__,
     url='https://stash.synchrotron.org.au/projects/DR/repos/lightflow/browse',
 
     author='The Australian Synchrotron Python Group',

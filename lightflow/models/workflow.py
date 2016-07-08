@@ -3,10 +3,13 @@ from time import sleep
 import importlib
 
 from .dag import Dag
-from .exceptions import ImportWorkflowError, RequestActionUnknown, DagNameUnknown
+from .exceptions import ImportWorkflowError, RequestActionUnknown, RequestFailed,\
+    DagNameUnknown
 from .signal import Server, Response
 from lightflow.logger import get_logger
 from lightflow.celery_tasks import dag_celery_task
+
+MAX_SIGNAL_REQUESTS = 10
 
 logger = get_logger(__name__)
 
@@ -110,12 +113,16 @@ class Workflow:
             sleep(self._polling_time)
 
             # handle new requests from dags and tasks
-            break_counter = 0
-            request = signal_server.receive()
-            while (request is not None) and (break_counter < 10):
-                signal_server.send(self._handle_request(request, signal_server))
+            for i in range(MAX_SIGNAL_REQUESTS):
                 request = signal_server.receive()
-                break_counter += 1
+                if request is None:
+                    break
+
+                try:
+                    response = self._handle_request(request, signal_server)
+                    signal_server.send(response)
+                except (RequestActionUnknown, RequestFailed):
+                    signal_server.send(Response(success=False))
 
             # remove any dags that finished running
             for dag in reversed(self._dags_running):
