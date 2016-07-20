@@ -1,6 +1,8 @@
 from celery import Celery
 from kombu import Queue
 
+import lightflow.celery_pickle
+
 from .logger import get_logger
 from .config import Config
 from .models.base_task import TaskSignal

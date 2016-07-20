@@ -1,3 +1,4 @@
+import sys
 import copy
 from time import sleep
 import importlib
@@ -84,6 +85,7 @@ class Workflow:
                 if isinstance(dag, Dag):
                     self._dags_blueprint[dag.name] = dag
             self._name = name
+            del sys.modules[name]
         except TypeError:
             logger.error('Cannot import workflow {}!'.format(name))
             raise ImportWorkflowError('Cannot import workflow {}!'.format(name))
