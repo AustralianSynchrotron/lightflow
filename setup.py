@@ -48,7 +48,8 @@ setup(
         'pytz>=2016.4',
         'redis>=2.10.5',
         'ruamel.yaml>=0.11.11',
-        'pyzmq>=15.2.0'
+        'pyzmq>=15.2.0',
+        'cloudpickle>=0.2.1'
     ],
 
     entry_points={
