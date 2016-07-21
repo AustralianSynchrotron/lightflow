@@ -1,18 +1,20 @@
 from celery import Celery
 from kombu import Queue
 
-import lightflow.celery_pickle
-
 from .logger import get_logger
 from .config import Config
 from .models.base_task import TaskSignal
 from .models.dag import DagSignal
 from .models.datastore import DataStore
 from .models.signal import Client
+from .celery_pickle import patch_celery
 
 logger = get_logger(__name__)
 
+# patch Celery to use cloudpickle instead of pickle for serialisation
+patch_celery()
 
+# configure Celery and create the main celery app
 conf = Config().get('celery')
 celery_app = Celery('lightflow',
                     broker=conf['broker'],
@@ -34,6 +36,9 @@ celery_app.conf.update(
         )
 )
 
+
+# ----------------------------------------------------------------------------------------
+# Celery tasks
 
 def connect_data_store():
     data_store_conf = Config().get('datastore')

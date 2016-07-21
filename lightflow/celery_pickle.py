@@ -1,41 +1,40 @@
-"""Patch Celery to use `cloudpickle` instead of `pickle`.
+"""Patch Celery to use cloudpickle instead of pickle.
 
-This file has been taken from cesium.
+This file is based on the file '_patch_celery.py' of the cesium project.
+Copyright (C) 2016, the cesium team.
 
-The built-in `pickle` module cannot handle lambda functions or other functions
-not imported from modules; this is a major limitation when passing custom
-featurization functions to Celery workers. `cloudpickle` handles these cases
-correctly, so here we monkey patch the relevant Celery modules/dependencies to
-use `cloudpickle` when {,un}serializing.
+The project can be found at: https://github.com/cesium-ml/cesium
 """
 import cloudpickle
-import kombu.serialization
+import kombu.serialization as serialization
 from io import BytesIO
 
 
-def pickle_loads(s, load=cloudpickle.load):
+def cloudpickle_loads(s, load=cloudpickle.load):
+    """ Decode the byte stream into Python objects using cloudpickle. """
     return load(BytesIO(s))
 
 
-def pickle_dumps(obj, dumper=cloudpickle.dumps):
-    return dumper(obj, protocol=kombu.serialization.pickle_protocol)
+def cloudpickle_dumps(obj, dumper=cloudpickle.dumps):
+    """ Encode Python objects into a byte stream using cloudpickle. """
+    return dumper(obj, protocol=serialization.pickle_protocol)
 
 
-registry = kombu.serialization.registry
-kombu.serialization.pickle = cloudpickle
+def patch_celery():
+    """ Monkey patch Celery to use cloudpickle instead of pickle. """
+    registry = serialization.registry
+    serialization.pickle = cloudpickle
+    registry.unregister('pickle')
+    registry.register('pickle', cloudpickle_dumps, cloudpickle_loads,
+                      content_type='application/x-python-serialize',
+                      content_encoding='binary')
 
-registry.unregister('pickle')
+    import celery.worker as worker
+    import celery.concurrency.asynpool as asynpool
+    worker.state.pickle = cloudpickle
+    asynpool._pickle = cloudpickle
 
-registry.register('pickle', pickle_dumps, pickle_loads,
-                  content_type='application/x-python-serialize',
-                  content_encoding='binary')
-
-import celery.worker
-import celery.concurrency.asynpool
-celery.worker.state.pickle = cloudpickle
-celery.concurrency.asynpool._pickle = cloudpickle
-
-import billiard
-billiard.common.pickle = cloudpickle
-billiard.common.pickle_loads = pickle_loads
-billiard.common.pickle_dumps = pickle_dumps
+    import billiard.common
+    billiard.common.pickle = cloudpickle
+    billiard.common.pickle_dumps = cloudpickle_dumps
+    billiard.common.pickle_loads = cloudpickle_loads
