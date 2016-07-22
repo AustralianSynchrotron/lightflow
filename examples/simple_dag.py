@@ -59,7 +59,7 @@ print_me4 = PythonTask(name='print_me4',
                        python_callable=print_value)
 
 
-d.define_workflow({put_me: {print_me: '', square_me: '', mult_me: '', sub_me: 'first'},
-                   square_me: {print_me2: '', mult_me: ''},
-                   mult_me: {print_me3: '', sub_me: 'second'},
-                   sub_me: [print_me4]})
+d.define({put_me: {print_me: '', square_me: '', mult_me: '', sub_me: 'first'},
+          square_me: {print_me2: '', mult_me: ''},
+          mult_me: {print_me3: '', sub_me: 'second'},
+          sub_me: [print_me4]})

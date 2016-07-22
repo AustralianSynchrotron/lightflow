@@ -26,7 +26,7 @@ md_two = PythonTask(name='md_two',
                     python_callable=start_sub_dag)
 
 main_dag = Dag('mainDag')
-main_dag.define_workflow({md_one: [md_two]})
+main_dag.define({md_one: [md_two]})
 
 
 sd_one = PythonTask(name='sd_one',
@@ -36,4 +36,4 @@ sd_two = PythonTask(name='sd_two',
                     python_callable=sub_dag_print)
 
 sub_dag = Dag('subDag', autostart=False)
-sub_dag.define_workflow({sd_one: [sd_two]})
+sub_dag.define({sd_one: [sd_two]})

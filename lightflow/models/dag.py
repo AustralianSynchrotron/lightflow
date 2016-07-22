@@ -74,7 +74,7 @@ class Dag:
         """ Return whether the dag is automatically run upon the start of the workflow."""
         return self._autostart
 
-    def define_workflow(self, schema):
+    def define(self, schema):
         """ Constructs the task graph (dag) from a given schema.
 
         Parses the graph schema definition and creates the task graph. Tasks are the

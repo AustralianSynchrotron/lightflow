@@ -46,4 +46,4 @@ third_a = PythonTask(name='third_a',
 third_b = PythonTask(name='third_b',
                      python_callable=third_b_call)
 
-d.define_workflow({first: [second], second: [third_a, third_b]})
+d.define({first: [second], second: [third_a, third_b]})
