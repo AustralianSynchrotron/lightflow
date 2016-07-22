@@ -99,14 +99,17 @@ class Dag:
         """
         self._graph.clear()
         for parent, children in schema.items():
-            for child in children:
-                self._graph.add_edge(parent, child)
-                try:
-                    slot = children[child]
-                    if slot != '' and slot is not None:
-                        self._slots[child][parent] = slot
-                except TypeError:
-                    pass
+            if children is not None and len(children) > 0:
+                for child in children:
+                    self._graph.add_edge(parent, child)
+                    try:
+                        slot = children[child]
+                        if slot != '' and slot is not None:
+                            self._slots[child][parent] = slot
+                    except TypeError:
+                        pass
+            else:
+                self._graph.add_node(parent)
 
     def run(self, workflow_id, signal, data=None):
         """ Run the dag by calling the tasks in the correct order.
