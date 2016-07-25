@@ -17,7 +17,7 @@ class ConnectionInfo:
 
 
 class Server:
-    """ The server for the signal system, listening for requests from client.s
+    """ The server for the signal system, listening for requests from clients.
 
     This implementation uses the ZeroMQ library and the REQ-REP pattern. A request
     to the server has to be answered with a reply. The port number the server is listening

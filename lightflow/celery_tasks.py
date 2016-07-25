@@ -22,25 +22,25 @@ celery_app = Celery('lightflow',
                     include=['lightflow.celery_tasks'])
 
 celery_app.conf.update(
-        CELERY_TASK_SERIALIZER='pickle',
-        CELERY_ACCEPT_CONTENT=['pickle'],  # Ignore other content
-        CELERY_RESULT_SERIALIZER='pickle',
-        CELERY_TIMEZONE='Australia/Melbourne',
-        CELERY_ENABLE_UTC=True,
-        CELERYD_CONCURRENCY=8,
-        CELERY_DEFAULT_QUEUE='task',
-        CELERY_QUEUES=(
-            Queue('task', routing_key='task'),
-            Queue('workflow', routing_key='workflow'),
-            Queue('dag', routing_key='dag'),
-        )
+    CELERY_TASK_SERIALIZER='pickle',
+    CELERY_ACCEPT_CONTENT=['pickle'],  # Ignore other content
+    CELERY_RESULT_SERIALIZER='pickle',
+    CELERY_TIMEZONE='Australia/Melbourne',
+    CELERY_ENABLE_UTC=True,
+    CELERYD_CONCURRENCY=8,
+    CELERY_DEFAULT_QUEUE='task',
+    CELERY_QUEUES=(
+        Queue('task', routing_key='task'),
+        Queue('workflow', routing_key='workflow'),
+        Queue('dag', routing_key='dag'),
+    )
 )
 
 
 # ----------------------------------------------------------------------------------------
 # Celery tasks
 
-def connect_data_store():
+def create_data_store_connection():
     data_store_conf = Config().get('datastore')
     data_store = DataStore(host=data_store_conf['host'],
                            port=data_store_conf['port'],
@@ -52,7 +52,7 @@ def connect_data_store():
 @celery_app.task
 def workflow_celery_task(workflow):
     logger.info('Running workflow <{}>'.format(workflow.name))
-    workflow.run(connect_data_store())
+    workflow.run(create_data_store_connection())
     logger.info('Finished workflow <{}>'.format(workflow.name))
 
 
@@ -69,7 +69,7 @@ def dag_celery_task(dag, workflow_id, signal_connection, data=None):
 def task_celery_task(task, workflow_id, signal_connection, data=None):
     logger.info('Running task <{}>'.format(task.name))
     result = task._run(data,
-                       connect_data_store().get(workflow_id),
+                       create_data_store_connection().get(workflow_id),
                        TaskSignal(Client.from_connection(signal_connection)))
     logger.info('Finished task <{}>'.format(task.name))
     return result
