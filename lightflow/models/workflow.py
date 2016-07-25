@@ -6,7 +6,7 @@ import importlib
 from .dag import Dag
 from .exceptions import ImportWorkflowError, RequestActionUnknown, RequestFailed,\
     DagNameUnknown
-from .signal import Server, Response
+from .signal import Response
 from lightflow.logger import get_logger
 from lightflow.celery_tasks import dag_celery_task
 
@@ -90,7 +90,7 @@ class Workflow:
             logger.error('Cannot import workflow {}!'.format(name))
             raise ImportWorkflowError('Cannot import workflow {}!'.format(name))
 
-    def run(self, data_store):
+    def run(self, data_store, signal_server):
         """ Run all autostart dags in the workflow.
 
         Only the dags that are flagged as autostart are started. If a unique workflow id
@@ -99,16 +99,14 @@ class Workflow:
         Args:
             data_store (DataStore): A DataStore object that is fully initialised and
                         connected to the persistent data storage.
+            signal_server (Server): A signal Server object that has been bound to a port
+                                    number.
         """
         if data_store.exists(self._workflow_id):
             logger.info('Using existing workflow ID: {}'.format(self._workflow_id))
         else:
             self._workflow_id = data_store.add(self._name)
             logger.info('Created workflow ID: {}'.format(self._workflow_id))
-
-        # create the server for the signal service and start listening for requests
-        signal_server = Server()
-        signal_server.bind()
 
         # start all dags with the autostart flag set to True
         for name, dag in self._dags_blueprint.items():

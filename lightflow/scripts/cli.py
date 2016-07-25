@@ -37,13 +37,19 @@ def info():
                                      ', '.join(lightflow.get_queues(name))))
 
         for task_status in ['active', 'scheduled']:
+            task_colour = 'green' if task_status == 'active' else 'yellow'
+
             for i, task in enumerate(lightflow.get_tasks(name, task_status)):
                 if i == 0:
                     click.echo('{:20} {}'.format(
                         click.style('> {}:'.format(task_status), bold=True),
-                        task['name']))
+                        click.style('{} ({}) [{}]'.format(task['name'], task['type'],
+                                                          task['id']), fg=task_colour)))
                 else:
-                    click.echo('{:12} {}'.format(' ', task['name']))
+                    click.echo('{:12} {}'.format(
+                        ' ',
+                        click.style('{} ({}) [{}]'.format(task['name'], task['type'],
+                                                          task['id']), fg=task_colour)))
 
         click.echo('\n')
 

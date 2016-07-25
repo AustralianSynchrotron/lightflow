@@ -15,6 +15,19 @@ class ConnectionInfo:
         self.port = port
         self.protocol = protocol
 
+    def to_dict(self):
+        """ Return the connection information in dictionary form. """
+        return {
+            'ip_address': self.ip_address,
+            'port': self.port,
+            'protocol': self.protocol
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        """ Create a connection information object from a dictionary. """
+        return ConnectionInfo(data['ip_address'], data['port'], data['protocol'])
+
 
 class Server:
     """ The server for the signal system, listening for requests from clients.

@@ -1,4 +1,5 @@
 from uuid import uuid4
+from celery.result import AsyncResult
 
 from .models import Workflow
 from .celery_tasks import celery_app, workflow_celery_task
@@ -103,9 +104,16 @@ def get_tasks(worker_name, task_status='active'):
     else:
         tasks = inspect.scheduled()[worker_name]
 
-    return [{
-        'id': task['id'],
-        'name': task['name'],
-        'worker_pid': task['worker_pid'],
-        'routing_key': task['delivery_info']['routing_key']
-    } for task in tasks]
+    result = []
+    for task in tasks:
+        async_result = AsyncResult(id=task['id'], app=celery_app)
+        result.append({
+            'id': task['id'],
+            'name': async_result.info.get('name', ''),
+            'type': async_result.info.get('type', ''),
+            'class_name': task['name'],
+            'worker_pid': task['worker_pid'],
+            'routing_key': task['delivery_info']['routing_key']
+        })
+
+    return result

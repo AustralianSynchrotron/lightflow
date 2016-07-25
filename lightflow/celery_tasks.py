@@ -6,7 +6,7 @@ from .config import Config
 from .models.base_task import TaskSignal
 from .models.dag import DagSignal
 from .models.datastore import DataStore
-from .models.signal import Client
+from .models.signal import Server, Client
 from .celery_pickle import patch_celery
 
 logger = get_logger(__name__)
@@ -49,27 +49,51 @@ def create_data_store_connection():
     return data_store
 
 
-@celery_app.task
-def workflow_celery_task(workflow):
+@celery_app.task(bind=True)
+def workflow_celery_task(self, workflow):
     logger.info('Running workflow <{}>'.format(workflow.name))
-    workflow.run(create_data_store_connection())
+
+    # create the server for the signal service and start listening for requests
+    signal_server = Server()
+    signal_server.bind()
+
+    # store task specific meta information wth the task
+    self.update_state(meta={'name': workflow.name, 'type': 'workflow',
+                            'signal_connection': signal_server.info().to_dict()})
+
+    # run the DAGs in the workflow
+    workflow.run(data_store=create_data_store_connection(),
+                 signal_server=signal_server)
+
     logger.info('Finished workflow <{}>'.format(workflow.name))
 
 
-@celery_app.task
-def dag_celery_task(dag, workflow_id, signal_connection, data=None):
+@celery_app.task(bind=True)
+def dag_celery_task(self, dag, workflow_id, signal_connection, data=None):
     logger.info('Running DAG <{}>'.format(dag.name))
+
+    # store task specific meta information wth the task
+    self.update_state(meta={'name': dag.name, 'type': 'dag'})
+
+    # run the tasks in the DAG
     dag.run(workflow_id,
             DagSignal(Client.from_connection(signal_connection)),
             data)
+
     logger.info('Finished DAG <{}>'.format(dag.name))
 
 
-@celery_app.task
-def task_celery_task(task, workflow_id, signal_connection, data=None):
+@celery_app.task(bind=True)
+def task_celery_task(self, task, workflow_id, signal_connection, data=None):
     logger.info('Running task <{}>'.format(task.name))
+
+    # store task specific meta information wth the task
+    self.update_state(meta={'name': task.name,  'type': 'task'})
+
+    # run the task and capture the result
     result = task._run(data,
                        create_data_store_connection().get(workflow_id),
                        TaskSignal(Client.from_connection(signal_connection)))
+
     logger.info('Finished task <{}>'.format(task.name))
     return result
