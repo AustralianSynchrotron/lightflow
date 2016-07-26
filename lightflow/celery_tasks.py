@@ -50,20 +50,32 @@ def create_data_store_connection():
 
 
 @celery_app.task(bind=True)
-def workflow_celery_task(self, workflow):
+def workflow_celery_task(self, workflow, workflow_id=None):
     logger.info('Running workflow <{}>'.format(workflow.name))
 
     # create the server for the signal service and start listening for requests
     signal_server = Server()
     signal_server.bind()
 
+    # create the data store connection
+    data_store = create_data_store_connection()
+
+    # create a unique workflow id for this run
+    if data_store.exists(workflow_id):
+        logger.info('Using existing workflow ID: {}'.format(workflow_id))
+    else:
+        workflow_id = data_store.add(workflow.name)
+        logger.info('Created workflow ID: {}'.format(workflow_id))
+
     # store task specific meta information wth the task
     self.update_state(meta={'name': workflow.name, 'type': 'workflow',
+                            'workflow_id': workflow_id,
                             'signal_connection': signal_server.info().to_dict()})
 
     # run the DAGs in the workflow
-    workflow.run(data_store=create_data_store_connection(),
-                 signal_server=signal_server)
+    workflow.run(data_store=data_store,
+                 signal_server=signal_server,
+                 workflow_id=workflow_id)
 
     logger.info('Finished workflow <{}>'.format(workflow.name))
 
@@ -73,11 +85,12 @@ def dag_celery_task(self, dag, workflow_id, signal_connection, data=None):
     logger.info('Running DAG <{}>'.format(dag.name))
 
     # store task specific meta information wth the task
-    self.update_state(meta={'name': dag.name, 'type': 'dag'})
+    self.update_state(meta={'name': dag.name, 'type': 'dag',
+                            'signal_connection': signal_connection.to_dict()})
 
     # run the tasks in the DAG
     dag.run(workflow_id,
-            DagSignal(Client.from_connection(signal_connection)),
+            DagSignal(Client.from_connection(signal_connection), dag.name),
             data)
 
     logger.info('Finished DAG <{}>'.format(dag.name))
@@ -88,12 +101,14 @@ def task_celery_task(self, task, workflow_id, signal_connection, data=None):
     logger.info('Running task <{}>'.format(task.name))
 
     # store task specific meta information wth the task
-    self.update_state(meta={'name': task.name,  'type': 'task'})
+    self.update_state(meta={'name': task.name,  'type': 'task',
+                            'signal_connection': signal_connection.to_dict()})
 
     # run the task and capture the result
     result = task._run(data,
                        create_data_store_connection().get(workflow_id),
-                       TaskSignal(Client.from_connection(signal_connection)))
+                       TaskSignal(Client.from_connection(signal_connection),
+                                  task.dag_name))
 
     logger.info('Finished task <{}>'.format(task.name))
     return result

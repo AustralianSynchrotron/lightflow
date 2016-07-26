@@ -6,6 +6,7 @@ import networkx as nx
 from lightflow.logger import get_logger
 from .exceptions import DirectedAcyclicGraphInvalid
 from .task_data import MultiTaskData
+from .signal import Request
 
 logger = get_logger(__name__)
 
@@ -14,18 +15,29 @@ class DagSignal:
     """ Class to wrap the construction and sending of signals into easy to use methods.
 
     """
-    def __init__(self, client):
+    def __init__(self, client, dag_name):
         """ Initialise the task signal convenience class.
 
         Args:
             client (Client): A reference to a signal client object.
+            dag_name (str): The name of the dag sending this signal.
         """
         self._client = client
+        self._dag_name = dag_name
 
     @property
     def connection(self):
         """ Return the client connection information."""
         return self._client.info()
+
+    def is_stopped(self):
+        resp = self._client.send(
+            Request(
+                action='is_dag_stopped',
+                payload={'dag_name': self._dag_name}
+            )
+        )
+        return resp.payload['is_stopped']
 
 
 class Dag:
@@ -128,10 +140,12 @@ class Dag:
         if not nx.is_directed_acyclic_graph(self._graph):
             raise DirectedAcyclicGraphInvalid()
 
-        # add all tasks without predecessors to the initial task list
+        # add all tasks without predecessors to the initial task list and
+        # set the dag_name for all tasks (which binds the task to this dag).
         tasks = []
         linearised_graph = nx.topological_sort(self._graph)
         for node in linearised_graph:
+            node.dag_name = self.name
             if len(self._graph.predecessors(node)) == 0:
                 tasks.append(node)
 
@@ -145,11 +159,12 @@ class Dag:
                     pre_tasks = self._graph.predecessors(task)
                     if len(pre_tasks) == 0:
                         # start a task without predecessors with the supplied initial data
-                        task.celery_result = task_celery_task.apply_async(
-                            (task, workflow_id, signal.connection, data),
-                            queue='task',
-                            routing_key='task'
-                        )
+                        if not signal.is_stopped():
+                            task.celery_result = task_celery_task.apply_async(
+                                (task, workflow_id, signal.connection, data),
+                                queue='task',
+                                routing_key='task'
+                            )
                     else:
                         # compose the input data from the predecessor tasks output data
                         input_data = MultiTaskData()
@@ -164,11 +179,12 @@ class Dag:
                                                    aliases=aliases)
 
                         # start task with the aggregated data from its predecessors
-                        task.celery_result = task_celery_task.apply_async(
-                            (task, workflow_id, signal.connection, input_data),
-                            queue='task',
-                            routing_key='task'
-                        )
+                        if not signal.is_stopped():
+                            task.celery_result = task_celery_task.apply_async(
+                                (task, workflow_id, signal.connection, input_data),
+                                queue='task',
+                                routing_key='task'
+                            )
                 else:
                     # the task finished processing. Check whether its successor tasks can
                     # be added to the task list

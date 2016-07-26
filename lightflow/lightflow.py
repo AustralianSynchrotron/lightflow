@@ -2,6 +2,7 @@ from uuid import uuid4
 from celery.result import AsyncResult
 
 from .models import Workflow
+from .models.signal import Client, ConnectionInfo, Request
 from .celery_tasks import celery_app, workflow_celery_task
 
 
@@ -107,13 +108,84 @@ def get_tasks(worker_name, task_status='active'):
     result = []
     for task in tasks:
         async_result = AsyncResult(id=task['id'], app=celery_app)
-        result.append({
+        task_result = {
             'id': task['id'],
             'name': async_result.info.get('name', ''),
             'type': async_result.info.get('type', ''),
             'class_name': task['name'],
             'worker_pid': task['worker_pid'],
-            'routing_key': task['delivery_info']['routing_key']
-        })
+            'routing_key': task['delivery_info']['routing_key'],
+            'signal_connection': async_result.info.get('signal_connection', {})
+        }
+
+        if task_result['type'] == 'workflow':
+            task_result['workflow_id'] = async_result.info.get('workflow_id', '')
+
+        result.append(task_result)
 
     return result
+
+
+def stop_workflows(task_ids):
+    return stop_tasks(task_ids, 'workflow')
+
+
+def stop_dags(task_ids):
+    return stop_tasks(task_ids, 'dag')
+
+
+def stop_tasks(task_ids, task_type=None):
+    stopped_tasks = []
+
+    if task_type not in ['workflow', 'dag']:
+        return stopped_tasks
+
+    for task_id in task_ids:
+        task = find_task(task_id, task_type)
+
+        if task is not None:
+            client = Client.from_connection(
+                ConnectionInfo.from_dict(task['signal_connection']))
+
+            req = {
+                'workflow': Request(action='stop_workflow'),
+                'dag': Request(action='stop_dag',
+                               payload={'dag_name': task['name']}),
+            }
+
+            if client.send(req[task_type]).success:
+                stopped_tasks.append(task)
+
+    return stopped_tasks
+
+
+def find_task(task_id, task_type=None):
+    task_type = task_type if task_type is not None else 'workflow'
+
+    inspect = celery_app.control.inspect()
+    workers = inspect.active()
+
+    task_found = None
+    for worker, tasks in workers.items():
+        if task_found is not None:
+            break
+
+        for task in tasks:
+            async_result = AsyncResult(id=task['id'], app=celery_app)
+            task['name'] = async_result.info.get('name', None)
+            task['type'] = async_result.info.get('type', None)
+            task['signal_connection'] = async_result.info.get('signal_connection', {})
+
+            if task['type'] != task_type:
+                continue
+
+            if task['id'] == task_id:
+                task_found = task
+                break
+
+            if task['type'] == 'workflow':
+                if async_result.info.get('workflow_id', None) == task_id:
+                    task_found = task
+                    break
+
+    return task_found

@@ -6,13 +6,15 @@ from .signal import Request
 
 class TaskSignal:
     """ Class to wrap the construction and sending of signals into easy to use methods."""
-    def __init__(self, client):
+    def __init__(self, client, dag_name):
         """ Initialise the task signal convenience class.
 
         Args:
             client (Client): A reference to a signal client object.
+            dag_name (str): The name of the dag the task belongs to.
         """
         self._client = client
+        self._dag_name = dag_name
 
     def run_dag(self, name, data=None):
         """ Schedule the execution of a dag by sending a signal to the workflow.
@@ -32,6 +34,26 @@ class TaskSignal:
             )
         ).success
 
+    def stop_dag(self):
+        return self._client.send(
+            Request(
+                action='stop_dag',
+                payload={'dag_name': self._dag_name}
+            )
+        ).success
+
+    def stop_workflow(self):
+        return self._client.send(Request(action='stop_workflow')).success
+
+    def is_stopped(self):
+        resp = self._client.send(
+            Request(
+                action='is_dag_stopped',
+                payload={'dag_name': self._dag_name}
+            )
+        )
+        return resp.payload['is_stopped']
+
 
 class BaseTask:
     """ The base class for all tasks.
@@ -40,6 +62,8 @@ class BaseTask:
     """
     def __init__(self, name, force_run=False, propagate_skip=True):
         """ Initialise the base task.
+
+        The dag_name attribute is filled by the dag define method.
 
         Args:
             name (str): The name of the task.
@@ -50,6 +74,7 @@ class BaseTask:
         self._force_run = force_run
         self.propagate_skip = propagate_skip
 
+        self.dag_name = None
         self.celery_result = None
         self._skip = False
 

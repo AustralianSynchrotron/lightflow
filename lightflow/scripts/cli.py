@@ -37,19 +37,35 @@ def info():
                                      ', '.join(lightflow.get_queues(name))))
 
         for task_status in ['active', 'scheduled']:
-            task_colour = 'green' if task_status == 'active' else 'yellow'
+            task_colour = {
+                'active': {
+                    'workflow': 'green',
+                    'dag': 'yellow',
+                    'task': 'magenta'
+                },
+                'scheduled': {
+                    'workflow': None,
+                    'dag': None,
+                    'task': None
+                }
+            }
 
             for i, task in enumerate(lightflow.get_tasks(name, task_status)):
+                wid_str = '[{}]'.format(task['workflow_id'])\
+                    if task['type'] == 'workflow' else ''
+
                 if i == 0:
                     click.echo('{:20} {}'.format(
                         click.style('> {}:'.format(task_status), bold=True),
-                        click.style('{} ({}) [{}]'.format(task['name'], task['type'],
-                                                          task['id']), fg=task_colour)))
+                        click.style('{} ({}) {} <{}>'.format(
+                            task['name'], task['type'], wid_str, task['id']),
+                            fg=task_colour[task_status][task['type']])))
                 else:
                     click.echo('{:12} {}'.format(
                         ' ',
-                        click.style('{} ({}) [{}]'.format(task['name'], task['type'],
-                                                          task['id']), fg=task_colour)))
+                        click.style('{} ({}) {} <{}>'.format(
+                            task['name'], task['type'], wid_str, task['id']),
+                            fg=task_colour[task_status][task['type']])))
 
         click.echo('\n')
 
@@ -72,18 +88,28 @@ def run(keep_data, names):
 
 
 @click.command()
-@click.argument('names', nargs=-1)
-def stop(workflows):
-    """ Stop one or more running workflows.
+@click.argument('ids', nargs=-1)
+def stop(ids):
+    """ Stop one or more running dags or workflows.
 
-    WORKFLOWS: A list of workflow ids or names. Use 'all' to stop all workflows.
+    IDS: A list of workflow/dag task ids or workflow ids. Use 'all' to stop all running workflows.
     """
-    if len(workflows) == 0:
-        click.echo('Please specify at least one workflow')
+    if len(ids) == 0:
+        click.echo('Please specify at least one dag or workflow')
         return
 
-    #for name in names:
-    #    lightflow.run_workflow(name, not keep_data)
+    # first try workflows and if there are ids left, try the dags
+    tasks_stopped = lightflow.stop_workflows(ids)
+    if len(tasks_stopped) < len(ids):
+        tasks_stopped.extend(lightflow.stop_dags(ids))
+
+    if len(tasks_stopped) > 0:
+        for task in tasks_stopped:
+            click.echo('Sent stop signal to {}: {} <{}>'.format(task['type'],
+                                                                task['name'],
+                                                                task['id']))
+    else:
+        click.echo('Could not find the specified dag or workflow')
 
 
 @click.command()
