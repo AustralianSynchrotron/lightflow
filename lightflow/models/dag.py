@@ -150,16 +150,19 @@ class Dag:
                 tasks.append(node)
 
         # process tasks as long as there are tasks in the task list
+        stopped = False
         while tasks:
             sleep(self._polling_time)
             for task in reversed(tasks):
+                if not stopped:
+                    stopped = signal.is_stopped()
 
                 if not task.has_result:
                     # a task is in the task list but has never been queued or ran.
                     pre_tasks = self._graph.predecessors(task)
                     if len(pre_tasks) == 0:
                         # start a task without predecessors with the supplied initial data
-                        if not signal.is_stopped():
+                        if not stopped:
                             task.celery_result = task_celery_task.apply_async(
                                 (task, workflow_id, signal.connection, data),
                                 queue='task',
@@ -179,7 +182,7 @@ class Dag:
                                                    aliases=aliases)
 
                         # start task with the aggregated data from its predecessors
-                        if not signal.is_stopped():
+                        if not stopped:
                             task.celery_result = task_celery_task.apply_async(
                                 (task, workflow_id, signal.connection, input_data),
                                 queue='task',
@@ -207,7 +210,8 @@ class Dag:
                                             self._graph.predecessors(next_task)]):
                                         next_task.skip()
 
-                                    tasks.append(next_task)
+                                    if not stopped:
+                                        tasks.append(next_task)
                                 else:
                                     all_successors_queued = False
 
