@@ -38,7 +38,7 @@ def run_worker(queues=None):
 
 
 @worker_process_shutdown.connect
-def worker_shutdown(signal, sender, **kwargs):
+def worker_shutdown(**kwargs):
     """ Celery hook that is executed when a worker process receives a term signal. """
     stop_all_workflows()
 
