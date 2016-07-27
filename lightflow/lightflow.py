@@ -23,6 +23,8 @@ def run_workflow(name, clear_data_store=True):
 def run_worker(queues=None):
     """ Run a worker process.
 
+    Args:
+        queues (list): List of queue names this worker accepts tasks from.
     """
     queues = queues if queues is not None else ['workflow', 'dag', 'task']
 
@@ -48,7 +50,6 @@ def get_workers():
               'proc': the worker process
                 'pid': the PID of the worker
                 'processes': the PIDs of the concurrent task processes
-
     """
     workers = {}
     for name, stats in celery_app.control.inspect().stats().items():
@@ -84,64 +85,76 @@ def get_queues(worker_name):
 
 
 def get_tasks(worker_name, task_status='active'):
-    """ Return the active and scheduled tasks for the specified worker.
+    """ Return the active or scheduled tasks for the specified worker.
 
     Args:
         worker_name (str): the unique name of the worker.
         task_status (str): the status of the tasks.
-                           Allowed values are 'active' and 'scheduled'
+                           Allowed values are 'active' and 'scheduled'.
 
     Returns:
         list: A list of the active or scheduled tasks. Each list item is a dictionary
-              with the following fields:
-              'id': the unique id of the task
-              'name': the name of the task
-              'worker_pid': the PID of the worker executing the task
-              'routing_key': the queue the task is in
+              with the fields as specified in the _build_task_response() helper method.
     """
     inspect = celery_app.control.inspect(destination=[worker_name])
     if task_status == 'active':
         tasks = inspect.active()[worker_name]
     else:
         tasks = inspect.scheduled()[worker_name]
-
-    result = []
-    for task in tasks:
-        async_result = AsyncResult(id=task['id'], app=celery_app)
-        task_result = {
-            'id': task['id'],
-            'name': async_result.info.get('name', ''),
-            'type': async_result.info.get('type', ''),
-            'class_name': task['name'],
-            'worker_pid': task['worker_pid'],
-            'routing_key': task['delivery_info']['routing_key'],
-            'signal_connection': async_result.info.get('signal_connection', {})
-        }
-
-        if task_result['type'] == 'workflow':
-            task_result['workflow_id'] = async_result.info.get('workflow_id', '')
-
-        result.append(task_result)
-
-    return result
+    return [_build_task_response(task) for task in tasks]
 
 
-def stop_workflows(task_ids):
-    return stop_tasks(task_ids, 'workflow')
+def find_task(task_id):
+    """ Find a task by its celery task id or workflow id.
+
+    Args:
+        task_id (str): The celery task id or workflow id of the task.
+
+    Returns:
+        dict: If the task was found a dictionary representing the task with the fields
+              as specified in the _build_task_response() helper method.
+              Otherwise, None is returned.
+    """
+    inspect = celery_app.control.inspect()
+    workers = inspect.active()
+
+    task_found = None
+    for worker, tasks in workers.items():
+        if task_found is not None:
+            break
+
+        for task in tasks:
+            task = _build_task_response(task)
+
+            if task['id'] == task_id:
+                task_found = task
+                break
+
+            if task['type'] == 'workflow':
+                if task['workflow_id'] == task_id:
+                    task_found = task
+                    break
+
+    return task_found
 
 
-def stop_dags(task_ids):
-    return stop_tasks(task_ids, 'dag')
+def stop_tasks(task_ids):
+    """ Send a stop signal to the specified tasks.
 
+    This method only supports tasks of the type 'workflow' and 'dag'.
 
-def stop_tasks(task_ids, task_type=None):
+    Args:
+        task_ids (list): A list of celery task ids or workflow ids.
+
+    Returns:
+        list: A list of all tasks that received a stop signal. Each list item is a
+              dictionary with the fields as specified in the _build_task_response()
+              helper method.
+    """
     stopped_tasks = []
 
-    if task_type not in ['workflow', 'dag']:
-        return stopped_tasks
-
     for task_id in task_ids:
-        task = find_task(task_id, task_type)
+        task = find_task(task_id)
 
         if task is not None:
             client = Client.from_connection(
@@ -153,39 +166,67 @@ def stop_tasks(task_ids, task_type=None):
                                payload={'dag_name': task['name']}),
             }
 
-            if client.send(req[task_type]).success:
-                stopped_tasks.append(task)
+            if task['type'] in req:
+                if client.send(req[task['type']]).success:
+                    stopped_tasks.append(task)
 
     return stopped_tasks
 
 
-def find_task(task_id, task_type=None):
-    task_type = task_type if task_type is not None else 'workflow'
+def stop_all_workflows():
+    """ Send a stop signal to all running workflows.
 
+    Returns:
+        list: A list of all workflows that received a stop signal. Each list item is a
+              dictionary with the fields as specified in the _build_task_response()
+              helper method.
+    """
+    stopped_tasks = []
     inspect = celery_app.control.inspect()
     workers = inspect.active()
 
-    task_found = None
     for worker, tasks in workers.items():
-        if task_found is not None:
-            break
-
         for task in tasks:
-            async_result = AsyncResult(id=task['id'], app=celery_app)
-            task['name'] = async_result.info.get('name', None)
-            task['type'] = async_result.info.get('type', None)
-            task['signal_connection'] = async_result.info.get('signal_connection', {})
-
-            if task['type'] != task_type:
-                continue
-
-            if task['id'] == task_id:
-                task_found = task
-                break
-
+            task = _build_task_response(task)
             if task['type'] == 'workflow':
-                if async_result.info.get('workflow_id', None) == task_id:
-                    task_found = task
-                    break
+                client = Client.from_connection(
+                    ConnectionInfo.from_dict(task['signal_connection']))
 
-    return task_found
+                if client.send(Request(action='stop_workflow')).success:
+                    stopped_tasks.append(task)
+
+    return stopped_tasks
+
+
+def _build_task_response(task):
+    """ Helper function to enrich a task dict as returned by celery with additional data.
+
+    Args:
+        task (dict): A dictionary representing a task as returned by celery inspect()
+
+    Returns:
+        dict: A dictionary with the following fields:
+            'id': the unique id of the task as created by celery
+            'name': the name of the task
+            'type': the type of the task ('workflow', 'dag', 'task')
+            'class_name': the Python class name of the task
+            'worker_pid': the PID of the worker executing the task
+            'routing_key': the queue the task is in
+            'signal_connection': the connection information for sending signals
+            'workflow_id': The id of the workflow, only exists for workflow tasks
+    """
+    async_result = AsyncResult(id=task['id'], app=celery_app)
+    task_response = {
+        'id': task['id'],
+        'name': async_result.info.get('name', ''),
+        'type': async_result.info.get('type', ''),
+        'class_name': task['name'],
+        'worker_pid': task['worker_pid'],
+        'routing_key': task['delivery_info']['routing_key'],
+        'signal_connection': async_result.info.get('signal_connection', {})
+    }
+
+    if task_response['type'] == 'workflow':
+        task_response['workflow_id'] = async_result.info.get('workflow_id', '')
+
+    return task_response

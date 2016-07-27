@@ -31,6 +31,14 @@ class DagSignal:
         return self._client.info()
 
     def is_stopped(self):
+        """ Check whether the dag received a stop signal from the workflow.
+
+        As soon as the dag receives a stop signal, no new tasks will be queued
+        and the dag will wait for the active tasks to terminate.
+
+        Returns:
+            bool: True if the dag should be stopped.
+        """
         resp = self._client.send(
             Request(
                 action='is_dag_stopped',

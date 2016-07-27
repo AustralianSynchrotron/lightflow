@@ -35,6 +35,14 @@ class TaskSignal:
         ).success
 
     def stop_dag(self):
+        """ Send a stop signal to the dag that hosts this task.
+
+        Upon receiving the stop signal, the dag will not queue any new tasks and wait
+        for running tasks to terminate.
+
+        Returns:
+            bool: True if the signal was sent successfully.
+        """
         return self._client.send(
             Request(
                 action='stop_dag',
@@ -43,9 +51,28 @@ class TaskSignal:
         ).success
 
     def stop_workflow(self):
+        """ Send a stop signal to the workflow.
+
+        Upon receiving the stop signal, the workflow will not queue any new dags.
+        Furthermore it will make the stop signal available to the dags, which will
+        then stop queueing new tasks. As soon as all active tasks have finished
+        processing, the workflow will terminate.
+
+        Returns:
+            bool: True if the signal was sent successfully.
+        """
         return self._client.send(Request(action='stop_workflow')).success
 
     def is_stopped(self):
+        """ Check whether the task received a stop signal from the workflow.
+
+        Tasks can use the stop flag to gracefully terminate their work. This is
+        particularly important for long running tasks and tasks that employ an
+        infinite loop, such as trigger tasks.
+
+        Returns:
+            bool: True if the task should be stopped.
+        """
         resp = self._client.send(
             Request(
                 action='is_dag_stopped',
@@ -134,7 +161,7 @@ class BaseTask:
             self._skip = True
 
     def _run(self, data, data_store, signal):
-        """ The internal run method that decorates  the public run method.
+        """ The internal run method that decorates the public run method.
 
         This method makes sure data is being passed to and from the task.
 

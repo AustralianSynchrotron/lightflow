@@ -16,7 +16,7 @@ class ConnectionInfo:
         self.protocol = protocol
 
     def to_dict(self):
-        """ Return the connection information in dictionary form. """
+        """ Return the connection information as a dictionary. """
         return {
             'ip_address': self.ip_address,
             'port': self.port,

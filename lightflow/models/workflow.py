@@ -4,8 +4,8 @@ from time import sleep
 import importlib
 
 from .dag import Dag
-from .exceptions import ImportWorkflowError, RequestActionUnknown, RequestFailed,\
-    DagNameUnknown
+from .exceptions import (ImportWorkflowError, RequestActionUnknown,
+                         RequestFailed, DagNameUnknown)
 from .signal import Response
 from lightflow.logger import get_logger
 from lightflow.celery_tasks import dag_celery_task
@@ -210,7 +210,10 @@ class Workflow:
 
         Args:
             request (Request): Reference to a request object containing the
-                               incoming request.
+                               incoming request. The payload has to contain the
+                               following fields:
+                                'name': the name of the dag that should be run
+                                'data': the data that is passed onto the start tasks
             signal_server (Server): Reference to the main signal server object.
 
         Returns:
@@ -223,6 +226,23 @@ class Workflow:
         return Response(success=result)
 
     def _handle_stop_workflow(self, request, signal_server):
+        """ The handler for the stop_workflow request.
+
+        The stop_workflow request adds all running dags to the list of dags
+        that should be stopped and prevents new dags from being started. The dags will
+        then stop queueing new tasks, which will terminate the dags and in turn the
+        workflow.
+
+        Args:
+            request (Request): Reference to a request object containing the
+                               incoming request.
+            signal_server (Server): Reference to the main signal server object.
+
+        Returns:
+            Response: A response object containing the following fields:
+                          - success: True if the dags were added successfully to the list
+                                     of dags that should be stopped.
+        """
         self._stop_workflow = True
         for dag in self._dags_running:
             if dag.info['name'] not in self._stop_dags:
@@ -230,12 +250,44 @@ class Workflow:
         return Response(success=True)
 
     def _handle_stop_dag(self, request, signal_server):
+        """ The handler for the stop_dag request.
+
+        The stop_dag request adds a dag to the list of dags that should be stopped.
+        The dag will then stop queueing new tasks and will eventually stop running.
+
+        Args:
+            request (Request): Reference to a request object containing the
+                               incoming request. The payload has to contain the
+                               following fields:
+                                'dag_name': the name of the dag that should be stopped
+            signal_server (Server): Reference to the main signal server object.
+
+        Returns:
+            Response: A response object containing the following fields:
+                          - success: True if the dag was added successfully to the list
+                                     of dags that should be stopped.
+        """
         if (request.payload['dag_name'] is not None) and \
            (request.payload['dag_name'] not in self._stop_dags):
             self._stop_dags.append(request.payload['dag_name'])
         return Response(success=True)
 
     def _handle_is_dag_stopped(self, request, signal_server):
+        """ The handler for the dag_stopped request.
+
+        The dag_stopped request checks whether a dag is flagged to be terminated.
+
+        Args:
+            request (Request): Reference to a request object containing the
+                               incoming request. The payload has to contain the
+                               following fields:
+                                'dag_name': the name of the dag that should be checked
+            signal_server (Server): Reference to the main signal server object.
+
+        Returns:
+            Response: A response object containing the following fields:
+                          - is_stopped: True if the dag is flagged to be stopped.
+        """
         return Response(success=True,
                         payload={
                             'is_stopped': request.payload['dag_name'] in self._stop_dags

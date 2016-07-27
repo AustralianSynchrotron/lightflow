@@ -14,7 +14,7 @@ def cli():
 
 @click.command()
 def info():
-    """ Show information about the. """
+    """ Print worker and task information. """
     workers = lightflow.get_workers()
 
     click.echo('\n')
@@ -90,18 +90,18 @@ def run(keep_data, names):
 @click.command()
 @click.argument('ids', nargs=-1)
 def stop(ids):
-    """ Stop one or more running dags or workflows.
+    """ Stop one or more active dags or workflows gracefully.
 
-    IDS: A list of workflow/dag task ids or workflow ids. Use 'all' to stop all running workflows.
+    IDS: A list of workflow/dag ids. Use 'all' to stop all running workflows.
     """
     if len(ids) == 0:
         click.echo('Please specify at least one dag or workflow')
         return
 
-    # first try workflows and if there are ids left, try the dags
-    tasks_stopped = lightflow.stop_workflows(ids)
-    if len(tasks_stopped) < len(ids):
-        tasks_stopped.extend(lightflow.stop_dags(ids))
+    if 'all' in ids:
+        tasks_stopped = lightflow.stop_all_workflows()
+    else:
+        tasks_stopped = lightflow.stop_tasks(ids)
 
     if len(tasks_stopped) > 0:
         for task in tasks_stopped:
