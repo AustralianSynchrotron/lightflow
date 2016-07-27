@@ -1,6 +1,6 @@
 import logging.config
-from celery.utils.log import get_task_logger
 from celery.signals import setup_logging
+from celery.utils.log import get_task_logger
 
 from .config import Config
 
@@ -10,7 +10,7 @@ def get_logger(name):
 
 
 @setup_logging.connect
-def setup(**kwargs):
+def setup_logging(**kwargs):
     conf = Config().get('logging')
     if conf is not None:
         logging.config.dictConfig(conf)

@@ -15,9 +15,22 @@ class ConnectionInfo:
         self.port = port
         self.protocol = protocol
 
+    def to_dict(self):
+        """ Return the connection information as a dictionary. """
+        return {
+            'ip_address': self.ip_address,
+            'port': self.port,
+            'protocol': self.protocol
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        """ Create a connection information object from a dictionary. """
+        return ConnectionInfo(data['ip_address'], data['port'], data['protocol'])
+
 
 class Server:
-    """ The server for the signal system, listening for requests from client.s
+    """ The server for the signal system, listening for requests from clients.
 
     This implementation uses the ZeroMQ library and the REQ-REP pattern. A request
     to the server has to be answered with a reply. The port number the server is listening

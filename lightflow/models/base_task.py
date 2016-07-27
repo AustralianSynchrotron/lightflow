@@ -6,13 +6,15 @@ from .signal import Request
 
 class TaskSignal:
     """ Class to wrap the construction and sending of signals into easy to use methods."""
-    def __init__(self, client):
+    def __init__(self, client, dag_name):
         """ Initialise the task signal convenience class.
 
         Args:
             client (Client): A reference to a signal client object.
+            dag_name (str): The name of the dag the task belongs to.
         """
         self._client = client
+        self._dag_name = dag_name
 
     def run_dag(self, name, data=None):
         """ Schedule the execution of a dag by sending a signal to the workflow.
@@ -32,6 +34,53 @@ class TaskSignal:
             )
         ).success
 
+    def stop_dag(self):
+        """ Send a stop signal to the dag that hosts this task.
+
+        Upon receiving the stop signal, the dag will not queue any new tasks and wait
+        for running tasks to terminate.
+
+        Returns:
+            bool: True if the signal was sent successfully.
+        """
+        return self._client.send(
+            Request(
+                action='stop_dag',
+                payload={'dag_name': self._dag_name}
+            )
+        ).success
+
+    def stop_workflow(self):
+        """ Send a stop signal to the workflow.
+
+        Upon receiving the stop signal, the workflow will not queue any new dags.
+        Furthermore it will make the stop signal available to the dags, which will
+        then stop queueing new tasks. As soon as all active tasks have finished
+        processing, the workflow will terminate.
+
+        Returns:
+            bool: True if the signal was sent successfully.
+        """
+        return self._client.send(Request(action='stop_workflow')).success
+
+    def is_stopped(self):
+        """ Check whether the task received a stop signal from the workflow.
+
+        Tasks can use the stop flag to gracefully terminate their work. This is
+        particularly important for long running tasks and tasks that employ an
+        infinite loop, such as trigger tasks.
+
+        Returns:
+            bool: True if the task should be stopped.
+        """
+        resp = self._client.send(
+            Request(
+                action='is_dag_stopped',
+                payload={'dag_name': self._dag_name}
+            )
+        )
+        return resp.payload['is_stopped']
+
 
 class BaseTask:
     """ The base class for all tasks.
@@ -40,6 +89,8 @@ class BaseTask:
     """
     def __init__(self, name, force_run=False, propagate_skip=True):
         """ Initialise the base task.
+
+        The dag_name attribute is filled by the dag define method.
 
         Args:
             name (str): The name of the task.
@@ -50,6 +101,7 @@ class BaseTask:
         self._force_run = force_run
         self.propagate_skip = propagate_skip
 
+        self.dag_name = None
         self.celery_result = None
         self._skip = False
 
@@ -109,7 +161,7 @@ class BaseTask:
             self._skip = True
 
     def _run(self, data, data_store, signal):
-        """ The internal run method that decorates  the public run method.
+        """ The internal run method that decorates the public run method.
 
         This method makes sure data is being passed to and from the task.
 
