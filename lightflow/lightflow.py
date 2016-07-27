@@ -1,5 +1,6 @@
 from uuid import uuid4
 from celery.result import AsyncResult
+from celery.signals import worker_process_shutdown
 
 from .models import Workflow
 from .models.signal import Client, ConnectionInfo, Request
@@ -34,6 +35,12 @@ def run_worker(queues=None):
         '--queues={}'.format(','.join(queues))
     ]
     celery_app.worker_main(argv)
+
+
+@worker_process_shutdown.connect
+def worker_shutdown(signal, sender, **kwargs):
+    """ Celery hook that is executed when a worker process receives a term signal. """
+    stop_all_workflows()
 
 
 def get_workers():
@@ -185,15 +192,16 @@ def stop_all_workflows():
     inspect = celery_app.control.inspect()
     workers = inspect.active()
 
-    for worker, tasks in workers.items():
-        for task in tasks:
-            task = _build_task_response(task)
-            if task['type'] == 'workflow':
-                client = Client.from_connection(
-                    ConnectionInfo.from_dict(task['signal_connection']))
+    if workers is not None:
+        for worker, tasks in workers.items():
+            for task in tasks:
+                task = _build_task_response(task)
+                if task['type'] == 'workflow':
+                    client = Client.from_connection(
+                        ConnectionInfo.from_dict(task['signal_connection']))
 
-                if client.send(Request(action='stop_workflow')).success:
-                    stopped_tasks.append(task)
+                    if client.send(Request(action='stop_workflow')).success:
+                        stopped_tasks.append(task)
 
     return stopped_tasks
 
@@ -218,15 +226,17 @@ def _build_task_response(task):
     async_result = AsyncResult(id=task['id'], app=celery_app)
     task_response = {
         'id': task['id'],
-        'name': async_result.info.get('name', ''),
-        'type': async_result.info.get('type', ''),
+        'name': async_result.info.get('name', '') if async_result.info is not None else '',
+        'type': async_result.info.get('type', '') if async_result.info is not None else '',
         'class_name': task['name'],
         'worker_pid': task['worker_pid'],
         'routing_key': task['delivery_info']['routing_key'],
         'signal_connection': async_result.info.get('signal_connection', {})
+        if async_result.info is not None else ''
     }
 
     if task_response['type'] == 'workflow':
-        task_response['workflow_id'] = async_result.info.get('workflow_id', '')
+        task_response['workflow_id'] = async_result.info.get('workflow_id', '')\
+            if async_result.info is not None else ''
 
     return task_response
