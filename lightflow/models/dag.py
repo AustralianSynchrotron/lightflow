@@ -119,6 +119,9 @@ class Dag:
         """
         self._graph.clear()
         for parent, children in schema.items():
+            if children is not None:
+                children = children if isinstance(children, list) else [children]
+
             if children is not None and len(children) > 0:
                 for child in children:
                     self._graph.add_edge(parent, child)
