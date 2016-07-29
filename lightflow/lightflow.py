@@ -59,22 +59,24 @@ def get_workers():
                 'processes': the PIDs of the concurrent task processes
     """
     workers = {}
-    for name, stats in celery_app.control.inspect().stats().items():
-        if name not in workers:
-            workers[name] = {}
+    stats = celery_app.control.inspect().stats()
+    if stats is not None:
+        for name, stats in stats.items():
+            if name not in workers:
+                workers[name] = {}
 
-        broker = stats['broker']
-        workers[name]['broker'] = {
-            'transport': broker['transport'],
-            'hostname': broker['hostname'],
-            'port': broker['port'],
-            'virtual_host': broker['virtual_host']
-        }
+            broker = stats['broker']
+            workers[name]['broker'] = {
+                'transport': broker['transport'],
+                'hostname': broker['hostname'],
+                'port': broker['port'],
+                'virtual_host': broker['virtual_host']
+            }
 
-        workers[name]['proc'] = {
-            'pid': stats['pid'],
-            'processes': stats['pool']['processes']
-        }
+            workers[name]['proc'] = {
+                'pid': stats['pid'],
+                'processes': stats['pool']['processes']
+            }
     return workers
 
 
