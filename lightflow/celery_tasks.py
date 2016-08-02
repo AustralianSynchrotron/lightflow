@@ -19,7 +19,7 @@ conf = Config().get('celery')
 celery_app = Celery('lightflow',
                     broker=conf['broker'],
                     backend=conf['backend'],
-                    include=['lightflow.celery_tasks'])
+                    include=['lightflow.celery_tasks', 'lightflow.models'])
 
 celery_app.conf.update(
     CELERY_TASK_SERIALIZER='pickle',
