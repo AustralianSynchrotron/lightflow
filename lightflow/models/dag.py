@@ -120,7 +120,8 @@ class Dag:
         self._graph.clear()
         for parent, children in schema.items():
             if children is not None:
-                children = children if isinstance(children, list) else [children]
+                children = children if (isinstance(children, list) or
+                                        isinstance(children, dict)) else [children]
 
             if children is not None and len(children) > 0:
                 for child in children:
