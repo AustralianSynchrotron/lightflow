@@ -60,7 +60,8 @@ class Config(metaclass=Singleton):
         with open(filename, 'r') as config_file:
             self.config.update(yaml.load(config_file.read()))
 
-    def default(self):
+    @staticmethod
+    def default():
         return """
     workflows:
       - ./examples
