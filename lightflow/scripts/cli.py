@@ -120,10 +120,17 @@ def worker(queues):
     lightflow.run_worker(queues.split(','))
 
 
+@click.command()
+def config():
+    """ Write a new default config to disk. """
+    with open('lightflow.cfg', 'w') as f:
+        f.write(lightflow.default_config)
+
 cli.add_command(info, 'info')
 cli.add_command(run, 'run')
 cli.add_command(stop, 'stop')
 cli.add_command(worker, 'worker')
+cli.add_command(config, 'config')
 
 if __name__ == '__main__':
     cli()
