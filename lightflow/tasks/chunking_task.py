@@ -1,33 +1,13 @@
 import re
 from lightflow.models import BaseTask
 from lightflow.models import Action
-
-
-def indices(lst, element, value=False):
-    """ Returns the indices, or optionally the value, for all occurrences of 'element' in 'lst'.
-
-    Args:
-        lst (list): List to search.
-        element:  Element to find.
-        value: If True return the list value instead of the element.
-
-    Returns:
-        list: List of indices or values
-    """
-    result = []
-    offset = -1
-    while True:
-        try:
-            offset = lst.index(element, offset+1)
-        except ValueError:
-            return result
-        result.append(offset if not value else lst[offset])
+from lightflow.models.utils import find_indices
 
 
 class ChunkingTask(BaseTask):
     """ The Chunking task divides up lists based on patterns. """
 
-    def __init__(self, name, dag_name, key, match_pattern,
+    def __init__(self, name, dag_name, match_pattern, in_key, out_key=None,
                  flush_string='|', flush_on_end=True,
                  force_consecutive=True, decimate=1,
                  force_run=False, propagate_skip=True):
@@ -36,7 +16,8 @@ class ChunkingTask(BaseTask):
         Args:
             name (str): The name of the task.
             dag_name (str): Dag to run with eat chunk.
-            key: Key to the data object containing list to chunk, and to overwrite with chunk.
+            in_key: Key to the data object containing list to chunk.
+            out_key: Key to the data object to store chunk. If None, list in_key is overwitten with chunk.
             match_pattern (str): The regex pattern used to match like entries. Pattern will be used with
             re.search. Capture groups can be used. If the groups are unnamed the first group is used,
             if a group is named "match" then it will be used.
@@ -53,7 +34,8 @@ class ChunkingTask(BaseTask):
         """
         super().__init__(name, force_run, propagate_skip)
         self._dag_name = dag_name
-        self._key = key
+        self._in_key = in_key
+        self._out_key = out_key if out_key is not None else in_key
         self._pattern = match_pattern
         self._flush_string = flush_string
         self._flush_on_end = flush_on_end if force_consecutive is True else True
@@ -77,14 +59,14 @@ class ChunkingTask(BaseTask):
                     to the next task and optionally a list of successor tasks that
                     should be executed.
         """
-        if self._pattern is not None and self._key is not None:
+        if self._pattern is not None and self._in_key is not None:
             try:
                 saved_list = data_store.get('chunking_list')
             except KeyError:
                 saved_list = []
 
             try:
-                new_list = data[self._key]
+                new_list = data[self._in_key]
             except KeyError:
                 return
             new_list += saved_list
@@ -125,9 +107,9 @@ class ChunkingTask(BaseTask):
 
             else:
                 unique_matches = set(matches)
-                chunked_indices = [indices(matches, unique) for unique in unique_matches]
+                chunked_indices = [find_indices(matches, unique) for unique in unique_matches]
                 chunked_list = [[new_list[i] for i in cis] for cis in chunked_indices]
 
             for chunk in chunked_list:
-                data[self._key] = chunk[::self._decimate if self._decimate > len(chunk) else None]
+                data[self._out_key] = chunk[::self._decimate if self._decimate > len(chunk) else None]
                 signal.run_dag(self._dag_name, data=data)
