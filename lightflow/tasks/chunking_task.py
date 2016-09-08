@@ -80,10 +80,14 @@ class ChunkingTask(BaseTask):
                         matches.append(None)
             else:
                 for item in new_list:
-                    try:
-                        matches.append(re.search(self._pattern, item).groups(0)[0])
-                    except AttributeError:
+                    match = re.search(self._pattern, item)
+                    if match is None:
                         matches.append(None)
+                    else:
+                        if len(match.groups()):
+                            matches.append(match.groups()[0])
+                        else:
+                            matches.append(match.group())
 
             if self._force_consecutive:
                 previous = None
