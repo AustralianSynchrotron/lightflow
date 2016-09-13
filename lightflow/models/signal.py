@@ -1,4 +1,5 @@
 import zmq
+import socket
 
 
 class ConnectionInfo:
@@ -68,7 +69,8 @@ class Server:
         Returns:
             ConnectionInfo: The information required to connect a client to this server.
         """
-        return ConnectionInfo('127.0.0.1', self._port, self._protocol)
+        return ConnectionInfo(socket.gethostbyname(socket.gethostname()),
+                              self._port, self._protocol)
 
     def bind(self):
         """ Starts the server listening on all interfaces and the selected port. """
