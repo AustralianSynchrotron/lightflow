@@ -37,8 +37,8 @@ t_lane3_print_me = PythonTask(name='t_lane3_print_me',
 t_join_me = PythonTask(name='t_join_me',
                        python_callable=print_value)
 
-d.define({t_put_me: [t_branch_me],
+d.define({t_put_me: t_branch_me,
           t_branch_me: [t_lane1_print_me, t_lane2_print_me, t_lane3_print_me],
-          t_lane1_print_me: [t_join_me],
-          t_lane2_print_me: [t_join_me],
-          t_lane3_print_me: [t_join_me]})
+          t_lane1_print_me: t_join_me,
+          t_lane2_print_me: t_join_me,
+          t_lane3_print_me: t_join_me})

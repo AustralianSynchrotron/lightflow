@@ -1,4 +1,3 @@
-from time import sleep
 from lightflow.models import Dag, Action
 from lightflow.tasks import PythonTask
 

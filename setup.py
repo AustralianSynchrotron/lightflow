@@ -33,7 +33,6 @@ setup(
         'Natural Language :: English',
         'Intended Audience :: Developers',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.5',
     ],
 
