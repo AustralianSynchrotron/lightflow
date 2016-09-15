@@ -1,3 +1,4 @@
+from redis import StrictRedis
 from celery import Celery
 from kombu import Queue
 
@@ -49,13 +50,15 @@ def create_data_store_connection():
     return data_store
 
 
+def create_signal_connection():
+    signal_conf = Config().get('signal')
+    return StrictRedis(host=signal_conf['host'], port=signal_conf['port'],
+                       db=signal_conf['db'])
+
+
 @celery_app.task(bind=True)
 def workflow_celery_task(self, workflow, workflow_id=None):
     logger.info('Running workflow <{}>'.format(workflow.name))
-
-    # create the server for the signal service and start listening for requests
-    signal_server = Server()
-    signal_server.bind()
 
     # create the data store connection
     data_store = create_data_store_connection()
@@ -67,10 +70,12 @@ def workflow_celery_task(self, workflow, workflow_id=None):
         workflow_id = data_store.add(workflow.name)
         logger.info('Created workflow ID: {}'.format(workflow_id))
 
+    # create the server for the signal service
+    signal_server = Server(create_signal_connection(), request_key=workflow_id)
+
     # store task specific meta information wth the task
     self.update_state(meta={'name': workflow.name, 'type': 'workflow',
-                            'workflow_id': workflow_id,
-                            'signal_connection': signal_server.info().to_dict()})
+                            'workflow_id': workflow_id})
 
     # run the DAGs in the workflow
     workflow.run(data_store=data_store,
@@ -81,33 +86,35 @@ def workflow_celery_task(self, workflow, workflow_id=None):
 
 
 @celery_app.task(bind=True)
-def dag_celery_task(self, dag, workflow_id, signal_connection, data=None):
+def dag_celery_task(self, dag, workflow_id, data=None):
     logger.info('Running DAG <{}>'.format(dag.name))
 
     # store task specific meta information wth the task
     self.update_state(meta={'name': dag.name, 'type': 'dag',
-                            'signal_connection': signal_connection.to_dict()})
+                            'workflow_id': workflow_id})
 
     # run the tasks in the DAG
     dag.run(workflow_id,
-            DagSignal(Client.from_connection(signal_connection), dag.name),
+            DagSignal(Client(create_signal_connection(), request_key=workflow_id),
+                      dag.name),
             data)
 
     logger.info('Finished DAG <{}>'.format(dag.name))
 
 
 @celery_app.task(bind=True)
-def task_celery_task(self, task, workflow_id, signal_connection, data=None):
+def task_celery_task(self, task, workflow_id, data=None):
     logger.info('Running task <{}>'.format(task.name))
 
     # store task specific meta information wth the task
     self.update_state(meta={'name': task.name,  'type': 'task',
-                            'signal_connection': signal_connection.to_dict()})
+                            'workflow_id': workflow_id})
 
     # run the task and capture the result
     result = task._run(data,
                        create_data_store_connection().get(workflow_id),
-                       TaskSignal(Client.from_connection(signal_connection),
+                       TaskSignal(Client(create_signal_connection(),
+                                         request_key=workflow_id),
                                   task.dag_name))
 
     logger.info('Finished task <{}>'.format(task.name))

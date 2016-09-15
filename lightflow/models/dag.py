@@ -25,11 +25,6 @@ class DagSignal:
         self._client = client
         self._dag_name = dag_name
 
-    @property
-    def connection(self):
-        """ Return the client connection information."""
-        return self._client.info()
-
     def is_stopped(self):
         """ Check whether the dag received a stop signal from the workflow.
 
@@ -147,7 +142,7 @@ class Dag:
         Raises:
             DirectedAcyclicGraphInvalid: If the graph is not a dag (e.g. contains loops).
         """
-        from lightflow.celery_tasks import task_celery_task  # TODO: replace with Executor
+        from lightflow.celery_tasks import task_celery_task
 
         if not nx.is_directed_acyclic_graph(self._graph):
             raise DirectedAcyclicGraphInvalid()
@@ -176,7 +171,7 @@ class Dag:
                         # start a task without predecessors with the supplied initial data
                         if not stopped:
                             task.celery_result = task_celery_task.apply_async(
-                                (task, workflow_id, signal.connection, data),
+                                (task, workflow_id, data),
                                 queue='task',
                                 routing_key='task'
                             )
@@ -196,7 +191,7 @@ class Dag:
                         # start task with the aggregated data from its predecessors
                         if not stopped:
                             task.celery_result = task_celery_task.apply_async(
-                                (task, workflow_id, signal.connection, input_data),
+                                (task, workflow_id, input_data),
                                 queue='task',
                                 routing_key='task'
                             )

@@ -105,8 +105,8 @@ class Workflow:
         Args:
             data_store (DataStore): A DataStore object that is fully initialised and
                         connected to the persistent data storage.
-            signal_server (Server): A signal Server object that has been bound to a port
-                                    number.
+            signal_server (Server): A signal Server object that receives requests
+                                    from dags and tasks.
             workflow_id (str): A unique workflow id, that represents this workflow run
         """
         self._workflow_id = workflow_id
@@ -114,7 +114,7 @@ class Workflow:
         # start all dags with the autostart flag set to True
         for name, dag in self._dags_blueprint.items():
             if dag.autostart:
-                self._queue_dag(name, signal_server)
+                self._queue_dag(name)
 
         # as long as there are dags in the list keep running
         while self._dags_running:
@@ -127,27 +127,30 @@ class Workflow:
                     break
 
                 try:
-                    response = self._handle_request(request, signal_server)
+                    response = self._handle_request(request)
                     signal_server.send(response)
                 except (RequestActionUnknown, RequestFailed):
-                    signal_server.send(Response(success=False))
+                    signal_server.send(Response(success=False, uid=request.uid))
 
             # remove any dags that finished running
             for dag in reversed(self._dags_running):
                 if dag.ready():
                     self._dags_running.remove(dag)
 
+        # remove the signal entry
+        signal_server.clear()
+
+        # delete all entries in the data_store under this workflow id, if requested
         if self._clear_data_store:
             data_store.remove(self._workflow_id)
 
-    def _queue_dag(self, name, signal_server, data=None):
+    def _queue_dag(self, name, data=None):
         """ Add a new dag to the queue.
 
         If the stop workflow flag is set, no new dag can be queued.
 
         Args:
             name (str): The name of the dag that should be queued.
-            signal_server (Server): Reference to the main signal server object.
             data (MultiTaskData): The data that should be passed on to the new dag.
 
         Raises:
@@ -165,7 +168,7 @@ class Workflow:
         self._dags_running.append(
             dag_celery_task.apply_async(
                 (copy.deepcopy(self._dags_blueprint[name]),
-                 self._workflow_id, signal_server.info(), data),
+                 self._workflow_id, data),
                 queue='dag',
                 routing_key='dag'
             )
@@ -173,13 +176,12 @@ class Workflow:
 
         return True
 
-    def _handle_request(self, request, signal_server):
+    def _handle_request(self, request):
         """ Handle an incoming request by forwarding it to the appropriate method.
 
         Args:
             request (Request): Reference to a request object containing the
                                incoming request.
-            signal_server (Server): Reference to the main signal server object.
 
         Raises:
             RequestActionUnknown: If the action specified in the request is not known.
@@ -189,7 +191,7 @@ class Workflow:
                       the request.
         """
         if request is None:
-            return Response(success=False)
+            return Response(success=False, uid=request.uid)
 
         action_map = {
             'run_dag': self._handle_run_dag,
@@ -199,11 +201,11 @@ class Workflow:
         }
 
         if request.action in action_map:
-            return action_map[request.action](request, signal_server)
+            return action_map[request.action](request)
         else:
             raise RequestActionUnknown()
 
-    def _handle_run_dag(self, request, signal_server):
+    def _handle_run_dag(self, request):
         """ The handler for the run_dag request.
 
         The run_dag request creates a new dag and adds it to the queue.
@@ -214,18 +216,16 @@ class Workflow:
                                following fields:
                                 'name': the name of the dag that should be run
                                 'data': the data that is passed onto the start tasks
-            signal_server (Server): Reference to the main signal server object.
 
         Returns:
             Response: A response object containing the following fields:
                           - success: True if a new dag was queued successfully.
         """
         result = self._queue_dag(request.payload['name'],
-                                 signal_server,
                                  request.payload['data'])
-        return Response(success=result)
+        return Response(success=result, uid=request.uid)
 
-    def _handle_stop_workflow(self, request, signal_server):
+    def _handle_stop_workflow(self, request):
         """ The handler for the stop_workflow request.
 
         The stop_workflow request adds all running dags to the list of dags
@@ -236,7 +236,6 @@ class Workflow:
         Args:
             request (Request): Reference to a request object containing the
                                incoming request.
-            signal_server (Server): Reference to the main signal server object.
 
         Returns:
             Response: A response object containing the following fields:
@@ -247,9 +246,9 @@ class Workflow:
         for dag in self._dags_running:
             if dag.info['name'] not in self._stop_dags:
                 self._stop_dags.append(dag.info['name'])
-        return Response(success=True)
+        return Response(success=True, uid=request.uid)
 
-    def _handle_stop_dag(self, request, signal_server):
+    def _handle_stop_dag(self, request):
         """ The handler for the stop_dag request.
 
         The stop_dag request adds a dag to the list of dags that should be stopped.
@@ -260,7 +259,6 @@ class Workflow:
                                incoming request. The payload has to contain the
                                following fields:
                                 'dag_name': the name of the dag that should be stopped
-            signal_server (Server): Reference to the main signal server object.
 
         Returns:
             Response: A response object containing the following fields:
@@ -270,9 +268,9 @@ class Workflow:
         if (request.payload['dag_name'] is not None) and \
            (request.payload['dag_name'] not in self._stop_dags):
             self._stop_dags.append(request.payload['dag_name'])
-        return Response(success=True)
+        return Response(success=True, uid=request.uid)
 
-    def _handle_is_dag_stopped(self, request, signal_server):
+    def _handle_is_dag_stopped(self, request):
         """ The handler for the dag_stopped request.
 
         The dag_stopped request checks whether a dag is flagged to be terminated.
@@ -282,13 +280,13 @@ class Workflow:
                                incoming request. The payload has to contain the
                                following fields:
                                 'dag_name': the name of the dag that should be checked
-            signal_server (Server): Reference to the main signal server object.
 
         Returns:
             Response: A response object containing the following fields:
                           - is_stopped: True if the dag is flagged to be stopped.
         """
         return Response(success=True,
+                        uid=request.uid,
                         payload={
                             'is_stopped': request.payload['dag_name'] in self._stop_dags
                         })

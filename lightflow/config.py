@@ -70,6 +70,11 @@ class Config(metaclass=Singleton):
       broker: redis://localhost:6379/0
       backend: redis://localhost:6379/0
 
+    signal:
+      host: localhost
+      port: 6379
+      db: 0
+
     datastore:
       host: localhost
       port: 27017
