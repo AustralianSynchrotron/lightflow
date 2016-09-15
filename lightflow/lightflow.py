@@ -3,8 +3,8 @@ from celery.result import AsyncResult
 from celery.signals import worker_process_shutdown
 
 from .models import Workflow
-from .models.signal import Client, ConnectionInfo, Request
-from .celery_tasks import celery_app, workflow_celery_task
+from .models.signal import Client, Request
+from .celery_tasks import celery_app, workflow_celery_task, create_signal_connection
 
 
 def run_workflow(name, clear_data_store=True):
@@ -54,7 +54,7 @@ def get_workers():
                 'hostname': the broker hostname
                 'port': the broker port
                 'virtual_host': the virtual host, e.g. the database number in redis.
-              'proc': the worker process
+                'proc': the worker process
                 'pid': the PID of the worker
                 'processes': the PIDs of the concurrent task processes
     """
@@ -166,8 +166,7 @@ def stop_tasks(task_ids):
         task = find_task(task_id)
 
         if task is not None:
-            client = Client.from_connection(
-                ConnectionInfo.from_dict(task['signal_connection']))
+            client = Client(create_signal_connection(), task['workflow_id'])
 
             req = {
                 'workflow': Request(action='stop_workflow'),
@@ -199,8 +198,7 @@ def stop_all_workflows():
             for task in tasks:
                 task = _build_task_response(task)
                 if task['type'] == 'workflow':
-                    client = Client.from_connection(
-                        ConnectionInfo.from_dict(task['signal_connection']))
+                    client = Client(create_signal_connection(), task['workflow_id'])
 
                     if client.send(Request(action='stop_workflow')).success:
                         stopped_tasks.append(task)
@@ -222,7 +220,6 @@ def _build_task_response(task):
             'class_name': the Python class name of the task
             'worker_pid': the PID of the worker executing the task
             'routing_key': the queue the task is in
-            'signal_connection': the connection information for sending signals
             'workflow_id': The id of the workflow, only exists for workflow tasks
     """
     async_result = AsyncResult(id=task['id'], app=celery_app)
@@ -232,9 +229,7 @@ def _build_task_response(task):
         'type': async_result.info.get('type', '') if async_result.info is not None else '',
         'class_name': task['name'],
         'worker_pid': task['worker_pid'],
-        'routing_key': task['delivery_info']['routing_key'],
-        'signal_connection': async_result.info.get('signal_connection', {})
-        if async_result.info is not None else ''
+        'routing_key': task['delivery_info']['routing_key']
     }
 
     if task_response['type'] == 'workflow':
