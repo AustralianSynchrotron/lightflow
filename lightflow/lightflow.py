@@ -7,15 +7,17 @@ from .models.signal import Client, Request
 from .celery_tasks import celery_app, workflow_celery_task, create_signal_connection
 
 
-def run_workflow(name, clear_data_store=True):
+def run_workflow(name, clear_data_store=True, arguments=None):
     """ Run a single workflow by sending it to the workflow queue.
 
     Args:
         name (str): The name of the workflow that should be run.
         clear_data_store (bool): Remove any documents created during the workflow
                                  run in the data store after the run.
+        arguments (dict): Dictionary of additional arguments that are ingested into the
+                          data store prior to the execution of the workflow.
     """
-    wf = Workflow.from_name(name, clear_data_store)
+    wf = Workflow.from_name(name, clear_data_store, arguments)
     workflow_celery_task.apply_async((wf,),
                                      queue='workflow',
                                      routing_key='workflow')

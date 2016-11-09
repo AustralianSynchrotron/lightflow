@@ -1,6 +1,7 @@
 import click
 import lightflow
 
+from lightflow.models.exceptions import WorkflowArgumentError
 
 @click.group()
 def cli():
@@ -70,21 +71,23 @@ def info():
         click.echo('\n')
 
 
-@click.command()
+@click.command(context_settings=dict(ignore_unknown_options=True))
 @click.option('--keep-data', '-k', is_flag=True, default=False,
               help='Do not delete the workflow data.')
-@click.argument('names', nargs=-1)
-def run(keep_data, names):
+@click.argument('name')
+@click.argument('args', nargs=-1, type=click.UNPROCESSED)
+def run(keep_data, name, args):
     """ Run one or more workflows.
 
-    NAMES: A list of workflow names that should be run.
+    NAME: The name of the workflow that should be run.
     """
-    if len(names) == 0:
-        click.echo('Please specify at least one workflow')
-        return
-
-    for name in names:
-        lightflow.run_workflow(name, not keep_data)
+    try:
+        lightflow.run_workflow(name, not keep_data,
+                               dict([arg.split('=', maxsplit=1) for arg in args]))
+    except WorkflowArgumentError as e:
+        click.echo(click.style('An error occurred when trying to run the workflow:',
+                               fg='red', bold=True))
+        click.echo('>> {}'.format(e))
 
 
 @click.command()

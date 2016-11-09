@@ -1,5 +1,9 @@
 
-class ImportWorkflowError(RuntimeError):
+class WorkflowArgumentError(RuntimeError):
+    pass
+
+
+class WorkflowImportError(RuntimeError):
     pass
 
 

@@ -4,9 +4,10 @@ from time import sleep
 import importlib
 
 from .dag import Dag
-from .exceptions import (ImportWorkflowError, RequestActionUnknown,
-                         RequestFailed, DagNameUnknown)
+from .exceptions import (WorkflowImportError, WorkflowArgumentError,
+                         RequestActionUnknown, RequestFailed, DagNameUnknown)
 from .signal import Response
+from .arguments import Arguments
 from lightflow.logger import get_logger
 from lightflow.celery_tasks import dag_celery_task
 
@@ -29,42 +30,41 @@ class Workflow:
 
     Please note: this class has to be serialisable (e.g. by pickle)
     """
-    def __init__(self, clear_data_store=True, polling_time=0.5):
+    def __init__(self, clear_data_store=True):
         """ Initialise the workflow.
 
         Args:
             clear_data_store (bool): Remove any documents created during the workflow
                                      run in the data store after the run.
-            polling_time (float): The waiting time between status checks of the running
-                                  dags in seconds.
         """
         self._clear_data_store = clear_data_store
-        self._polling_time = polling_time
 
         self._dags_blueprint = {}
         self._dags_running = []
         self._workflow_id = None
         self._name = None
+        self._arguments = Arguments()
+        self._provided_arguments = {}
 
         self._stop_workflow = False
         self._stop_dags = []
 
     @classmethod
-    def from_name(cls, name, clear_data_store=True, polling_time=0.5):
+    def from_name(cls, name, clear_data_store=True, arguments=None):
         """ Create a workflow object from a workflow script.
 
         Args:
             name (str): The name of the workflow script.
             clear_data_store (bool): Remove any documents created during the workflow
                                      run in the data store after the run.
-            polling_time (float): The waiting time between status checks of the running
-                                  dags in seconds.
+            arguments (dict): Dictionary of additional arguments that are ingested
+                              into the data store prior to the execution of the workflow.
 
         Returns:
             Workflow: A fully initialised workflow object
         """
-        new_workflow = cls(clear_data_store, polling_time)
-        new_workflow.load(name)
+        new_workflow = cls(clear_data_store)
+        new_workflow.load(name, arguments)
         return new_workflow
 
     @property
@@ -76,27 +76,53 @@ class Workflow:
         """
         return self._name
 
-    def load(self, name):
-        """ Import the workflow script and load all dags.
+    def load(self, name, arguments=None):
+        """ Import the workflow script and load all known objects.
+
+        The workflow script is treated like a module and imported
+        into the Python namespace. After the import, the method looks
+        for instances of known classes and stores a reference for further
+        use in the workflow object.
 
         Args:
             name (str): The name of the workflow script.
+            arguments (dict): Dictionary of additional arguments that are ingested
+                              into the data store prior to the execution of the workflow.
 
         Raises:
-            ImportWorkflowError: If the import of the workflow fails.
+            WorkflowArgumentError: If the workflow requires arguments to be set that
+                                   were not supplied to the workflow.
+            WorkflowImportError: If the import of the workflow fails.
         """
         try:
             workflow_module = importlib.import_module(name)
-            for key, dag in workflow_module.__dict__.items():
-                if isinstance(dag, Dag):
-                    self._dags_blueprint[dag.name] = dag
+
+            # extract objects of specific types from the workflow module
+            for key, obj in workflow_module.__dict__.items():
+                if isinstance(obj, Dag):
+                    self._dags_blueprint[obj.name] = obj
+                elif isinstance(obj, Arguments):
+                    self._arguments.extend(obj)
+
             self._name = name
             del sys.modules[name]
+
+            # check whether all arguments have been specified
+            if arguments is not None:
+                missing_arguments = self._arguments.check_missing(arguments)
+                if len(missing_arguments) > 0:
+                    raise WorkflowArgumentError(
+                        'The following arguments are required ' +
+                        'by the workflow, but are missing: {}'.format(
+                            ', '.join(missing_arguments)))
+
+                self._provided_arguments = arguments
+
         except TypeError:
             logger.error('Cannot import workflow {}!'.format(name))
-            raise ImportWorkflowError('Cannot import workflow {}!'.format(name))
+            raise WorkflowImportError('Cannot import workflow {}!'.format(name))
 
-    def run(self, data_store, signal_server, workflow_id):
+    def run(self, data_store, signal_server, workflow_id, polling_time=0.5):
         """ Run all autostart dags in the workflow.
 
         Only the dags that are flagged as autostart are started. If a unique workflow id
@@ -108,8 +134,15 @@ class Workflow:
             signal_server (Server): A signal Server object that receives requests
                                     from dags and tasks.
             workflow_id (str): A unique workflow id, that represents this workflow run
+            polling_time (float): The waiting time between status checks of the running
+                                  dags in seconds.
         """
         self._workflow_id = workflow_id
+
+        # pre-fill the data store with supplied arguments
+        args = self._arguments.consolidate(self._provided_arguments)
+        for key, value in args.items():
+            data_store.get(self._workflow_id).set(key, value)
 
         # start all dags with the autostart flag set to True
         for name, dag in self._dags_blueprint.items():
@@ -118,7 +151,7 @@ class Workflow:
 
         # as long as there are dags in the list keep running
         while self._dags_running:
-            sleep(self._polling_time)
+            sleep(polling_time)
 
             # handle new requests from dags, tasks and the library (e.g. cli, web)
             for i in range(MAX_SIGNAL_REQUESTS):
