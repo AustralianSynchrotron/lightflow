@@ -1,4 +1,4 @@
-from lightflow.models import Arguments, Option, Dag, Action
+from lightflow.models import Arguments, Option, Dag
 from lightflow.tasks import PythonTask
 
 

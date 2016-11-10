@@ -79,7 +79,9 @@ def info():
 def run(keep_data, name, args):
     """ Run one or more workflows.
 
+    \b
     NAME: The name of the workflow that should be run.
+    ARGS: Workflow arguments in the form key1=value1 key2=value2.
     """
     try:
         lightflow.run_workflow(name, not keep_data,
