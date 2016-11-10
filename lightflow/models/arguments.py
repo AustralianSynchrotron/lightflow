@@ -1,3 +1,5 @@
+from .exceptions import WorkflowArgumentError
+
 
 class Option:
     """ A single option which is required to run the workflow.
@@ -51,11 +53,24 @@ class Option:
         if self._type is str:
             return str(value)
         elif self._type is int:
-            return int(value)
+            try:
+                return int(value)
+            except (UnicodeError, ValueError):
+                raise WorkflowArgumentError('Cannot convert {} to int'.format(value))
         elif self._type is float:
-            return float(value)
+            try:
+                return float(value)
+            except (UnicodeError, ValueError):
+                raise WorkflowArgumentError('Cannot convert {} to float'.format(value))
         elif self._type is bool:
-            return bool(value)
+            if isinstance(value, bool):
+                return bool(value)
+            value = value.lower()
+            if value in ('true', '1', 'yes', 'y'):
+                return True
+            elif value in ('false', '0', 'no', 'n'):
+                return False
+            raise WorkflowArgumentError('Cannot convert {} to bool'.format(value))
         else:
             return value
 
