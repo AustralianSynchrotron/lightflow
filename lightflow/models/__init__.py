@@ -1,4 +1,5 @@
 from .workflow import Workflow
+from .arguments import Arguments, Option
 from .dag import Dag, DagSignal
 from .base_task import BaseTask, TaskParameters, TaskSignal
 from .action import Action
