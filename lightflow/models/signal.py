@@ -128,4 +128,5 @@ class Client:
         response = pickle.loads(next(psub.listen())['data'])
 
         psub.punsubscribe(channel)
+        psub.close()
         return response
