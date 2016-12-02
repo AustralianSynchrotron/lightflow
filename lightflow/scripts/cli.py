@@ -1,16 +1,21 @@
 import click
+
 import lightflow
+from lightflow.config import config as lf_config
 
 from lightflow.models.exceptions import WorkflowArgumentError
 
+
 @click.group()
-def cli():
+@click.option('--config', '-c', help='Path to configuration file.')
+def cli(config):
     """ Command line client for lightflow. A lightweight, high performance pipeline
     system for synchrotrons.
 
     Lightflow is being developed at the Australian Synchrotron.
     """
-    pass
+    if config is not None:
+        lf_config.load_from_file(config)
 
 
 @click.command()
@@ -129,13 +134,15 @@ def worker(queues):
 def config():
     """ Write a new default config to disk. """
     with open('lightflow.cfg', 'w') as f:
-        f.write(lightflow.default_config)
+        f.write(config.default())
+
 
 cli.add_command(info, 'info')
 cli.add_command(run, 'run')
 cli.add_command(stop, 'stop')
 cli.add_command(worker, 'worker')
 cli.add_command(config, 'config')
+
 
 if __name__ == '__main__':
     cli()

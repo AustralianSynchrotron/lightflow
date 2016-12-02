@@ -9,7 +9,6 @@ from .exceptions import (WorkflowImportError, WorkflowArgumentError,
 from .signal import Response
 from .arguments import Arguments
 from lightflow.logger import get_logger
-from lightflow.celery_tasks import dag_celery_task
 
 MAX_SIGNAL_REQUESTS = 10
 
@@ -198,6 +197,7 @@ class Workflow:
         if name not in self._dags_blueprint:
             raise DagNameUnknown()
 
+        from lightflow.celery_tasks import dag_celery_task
         self._dags_running.append(
             dag_celery_task.apply_async(
                 (copy.deepcopy(self._dags_blueprint[name]),

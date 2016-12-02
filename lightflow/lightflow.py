@@ -4,7 +4,6 @@ from celery.signals import worker_process_shutdown
 
 from .models import Workflow
 from .models.signal import Client, Request
-from .celery_tasks import celery_app, workflow_celery_task, create_signal_connection
 
 
 def run_workflow(name, clear_data_store=True, arguments=None):
@@ -17,6 +16,8 @@ def run_workflow(name, clear_data_store=True, arguments=None):
         arguments (dict): Dictionary of additional arguments that are ingested into the
                           data store prior to the execution of the workflow.
     """
+    from lightflow.celery_tasks import workflow_celery_task
+
     wf = Workflow.from_name(name, clear_data_store, arguments)
     workflow_celery_task.apply_async((wf,),
                                      queue='workflow',
@@ -36,6 +37,8 @@ def run_worker(queues=None):
         '-n={}'.format(uuid4(), ),
         '--queues={}'.format(','.join(queues))
     ]
+
+    from lightflow.celery_tasks import celery_app
     celery_app.worker_main(argv)
 
 
@@ -60,6 +63,8 @@ def get_workers():
                 'pid': the PID of the worker
                 'processes': the PIDs of the concurrent task processes
     """
+    from lightflow.celery_tasks import celery_app
+
     workers = {}
     stats = celery_app.control.inspect().stats()
     if stats is not None:
@@ -91,6 +96,7 @@ def get_queues(worker_name):
     Returns:
         list: a list of the queue names this worker serves.
     """
+    from lightflow.celery_tasks import celery_app
     inspect = celery_app.control.inspect(destination=[worker_name])
     return [q['name'] for q in inspect.active_queues()[worker_name]]
 
@@ -107,6 +113,7 @@ def get_tasks(worker_name, task_status='active'):
         list: A list of the active or scheduled tasks. Each list item is a dictionary
               with the fields as specified in the _build_task_response() helper method.
     """
+    from lightflow.celery_tasks import celery_app
     inspect = celery_app.control.inspect(destination=[worker_name])
     if task_status == 'active':
         tasks = inspect.active()[worker_name]
@@ -126,6 +133,7 @@ def find_task(task_id):
               as specified in the _build_task_response() helper method.
               Otherwise, None is returned.
     """
+    from lightflow.celery_tasks import celery_app
     inspect = celery_app.control.inspect()
     workers = inspect.active()
 
@@ -168,6 +176,7 @@ def stop_tasks(task_ids):
         task = find_task(task_id)
 
         if task is not None:
+            from lightflow.celery_tasks import create_signal_connection
             client = Client(create_signal_connection(), task['workflow_id'])
 
             req = {
@@ -191,6 +200,8 @@ def stop_all_workflows():
               dictionary with the fields as specified in the _build_task_response()
               helper method.
     """
+    from lightflow.celery_tasks import celery_app
+
     stopped_tasks = []
     inspect = celery_app.control.inspect()
     workers = inspect.active()
@@ -200,6 +211,7 @@ def stop_all_workflows():
             for task in tasks:
                 task = _build_task_response(task)
                 if task['type'] == 'workflow':
+                    from lightflow.celery_tasks import create_signal_connection
                     client = Client(create_signal_connection(), task['workflow_id'])
 
                     if client.send(Request(action='stop_workflow')).success:
@@ -224,6 +236,8 @@ def _build_task_response(task):
             'routing_key': the queue the task is in
             'workflow_id': The id of the workflow, only exists for workflow tasks
     """
+    from lightflow.celery_tasks import celery_app
+
     async_result = AsyncResult(id=task['id'], app=celery_app)
     task_response = {
         'id': task['id'],

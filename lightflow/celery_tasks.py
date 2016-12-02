@@ -3,7 +3,7 @@ from celery import Celery
 from kombu import Queue
 
 from .logger import get_logger
-from .config import Config
+from .config import config
 from .models.base_task import TaskSignal
 from .models.dag import DagSignal
 from .models.datastore import DataStore
@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 patch_celery()
 
 # configure Celery and create the main celery app
-conf = Config().get('celery')
+conf = config.get('celery')
 celery_app = Celery('lightflow',
                     broker=conf['broker'],
                     backend=conf['backend'],
@@ -24,11 +24,11 @@ celery_app = Celery('lightflow',
 
 celery_app.conf.update(
     CELERY_TASK_SERIALIZER='pickle',
-    CELERY_ACCEPT_CONTENT=['pickle'],  # Ignore other content
+    CELERY_ACCEPT_CONTENT=['pickle'],
     CELERY_RESULT_SERIALIZER='pickle',
-    CELERY_TIMEZONE='Australia/Melbourne',
+    CELERY_TIMEZONE=conf['timezone'],
     CELERY_ENABLE_UTC=True,
-    CELERYD_CONCURRENCY=8,
+    CELERYD_CONCURRENCY=conf['concurrency'],
     CELERY_DEFAULT_QUEUE='task',
     CELERY_QUEUES=(
         Queue('task', routing_key='task'),
@@ -42,7 +42,7 @@ celery_app.conf.update(
 # Celery tasks
 
 def create_data_store_connection():
-    data_store_conf = Config().get('datastore')
+    data_store_conf = config.get('datastore')
     data_store = DataStore(host=data_store_conf['host'],
                            port=data_store_conf['port'],
                            database=data_store_conf['database'])
@@ -51,7 +51,7 @@ def create_data_store_connection():
 
 
 def create_signal_connection():
-    signal_conf = Config().get('signal')
+    signal_conf = config.get('signal')
     return StrictRedis(host=signal_conf['host'], port=signal_conf['port'],
                        db=signal_conf['db'])
 
