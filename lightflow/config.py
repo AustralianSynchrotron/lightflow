@@ -152,6 +152,10 @@ class Config:
       port: 27017
       database: lightflow
 
+    graph:
+      workflow_polling_time: 0.5
+      dag_polling_time: 0.5
+
     logging:
       version: 1
       disable_existing_loggers: false
