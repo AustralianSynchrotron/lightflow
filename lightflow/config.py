@@ -144,6 +144,7 @@ class Config:
       broker: redis://localhost:6379/0
       backend: redis://localhost:6379/0
       timezone: Australia/Melbourne
+      enable_utc: True
       concurrency: 8
 
     signal:

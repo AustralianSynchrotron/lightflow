@@ -28,7 +28,7 @@ celery_app.conf.update(
     CELERY_ACCEPT_CONTENT=['pickle'],
     CELERY_RESULT_SERIALIZER='pickle',
     CELERY_TIMEZONE=conf['timezone'],
-    CELERY_ENABLE_UTC=True,
+    CELERY_ENABLE_UTC=conf['enable_utc'],
     CELERYD_CONCURRENCY=conf['concurrency'],
     CELERY_DEFAULT_QUEUE='task',
     CELERY_QUEUES=(
