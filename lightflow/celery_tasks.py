@@ -89,6 +89,7 @@ def workflow_celery_task(self, workflow, workflow_id=None):
 @celery_app.task(bind=True)
 def dag_celery_task(self, dag, workflow_id, data=None):
     logger.info('Running DAG <{}>'.format(dag.name))
+    conf_signal = config.get('signal')
 
     # store task specific meta information wth the task
     self.update_state(meta={'name': dag.name, 'type': 'dag',
@@ -96,8 +97,11 @@ def dag_celery_task(self, dag, workflow_id, data=None):
 
     # run the tasks in the DAG
     dag.run(workflow_id,
-            DagSignal(Client(create_signal_connection(), request_key=workflow_id),
-                      dag.name),
+            DagSignal(
+                Client(create_signal_connection(),
+                       request_key=workflow_id,
+                       response_polling_time=conf_signal.get('response_polling_time')),
+                dag.name),
             data,
             polling_time=config.get('graph').get('dag_polling_time'))
 
@@ -107,17 +111,20 @@ def dag_celery_task(self, dag, workflow_id, data=None):
 @celery_app.task(bind=True)
 def task_celery_task(self, task, workflow_id, data=None):
     logger.info('Running task <{}>'.format(task.name))
+    conf_signal = config.get('signal')
 
     # store task specific meta information wth the task
     self.update_state(meta={'name': task.name,  'type': 'task',
                             'workflow_id': workflow_id})
 
     # run the task and capture the result
-    result = task._run(data,
-                       create_data_store_connection().get(workflow_id),
-                       TaskSignal(Client(create_signal_connection(),
-                                         request_key=workflow_id),
-                                  task.dag_name))
+    result = task._run(
+        data,
+        create_data_store_connection().get(workflow_id),
+        TaskSignal(Client(create_signal_connection(),
+                          request_key=workflow_id,
+                          response_polling_time=conf_signal.get('response_polling_time')),
+                   task.dag_name))
 
     logger.info('Finished task <{}>'.format(task.name))
     return result

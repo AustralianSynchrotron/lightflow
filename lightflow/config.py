@@ -146,6 +146,7 @@ class Config:
       host: localhost
       port: 6379
       db: 0
+      response_polling_time: 0.5
 
     datastore:
       host: localhost

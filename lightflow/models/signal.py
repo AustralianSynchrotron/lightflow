@@ -1,5 +1,6 @@
 import pickle
 import uuid
+from time import sleep
 
 SIGNAL_REDIS_PREFIX = 'lightflow'
 
@@ -54,7 +55,7 @@ class Server:
 
     This implementation retrieves requests from a list stored in redis. Each request
     is implemented using the Request class and stored as a pickled object. The response
-    is published using redis' PUB/SUB system under a unique request id.
+    is stored under a unique response id, so the client can pick up the response.
     """
     def __init__(self, redis_db, request_key):
         """ Initialises the signal server.
@@ -85,8 +86,8 @@ class Server:
         Args:
             response (Response): Reference to the response object that should be sent.
         """
-        self._redis_db.publish('{}:{}'.format(SIGNAL_REDIS_PREFIX, response.uid),
-                               pickle.dumps(response))
+        self._redis_db.set('{}:{}'.format(SIGNAL_REDIS_PREFIX, response.uid),
+                           pickle.dumps(response))
 
     def clear(self):
         """ Deletes the list of requests from the redis database. """
@@ -98,18 +99,20 @@ class Client:
 
     This implementation sends requests to a list stored in redis. Each request
     is implemented using the Request class and stored as a pickled object. The response
-    from the server is retrieved by using redis' PUB/SUB system. The client subscribes to
-    a channel that is unique for the initial request.
+    from the server is stored under the unique response id.
     """
-    def __init__(self, redis_db, request_key):
+    def __init__(self, redis_db, request_key, response_polling_time=0.5):
         """ Initialises the signal client.
 
         Args:
             redis_db: Reference to a fully initialised redis object.
             request_key (str): The key under which the list of requests is stored.
+            response_polling_time (float): The waiting time between status checks of the
+                                           running dags in seconds.
         """
         self._redis_db = redis_db
         self._request_key = '{}:{}'.format(SIGNAL_REDIS_PREFIX, request_key)
+        self._response_polling_time = response_polling_time
 
     def send(self, request):
         """ Send a request to the server and wait for its response.
@@ -120,13 +123,16 @@ class Client:
         Returns:
             Response: The response from the server to the request.
         """
-        channel = '{}:{}'.format(SIGNAL_REDIS_PREFIX, request.uid)
-
         self._redis_db.rpush(self._request_key, pickle.dumps(request))
-        psub = self._redis_db.pubsub(ignore_subscribe_messages=True)
-        psub.subscribe(channel)
-        response = pickle.loads(next(psub.listen())['data'])
+        resp_key = '{}:{}'.format(SIGNAL_REDIS_PREFIX, request.uid)
 
-        psub.punsubscribe(channel)
-        psub.close()
-        return response
+        while True:
+            if self._response_polling_time > 0.0:
+                sleep(self._response_polling_time)
+
+            response_data = self._redis_db.get(resp_key)
+            if response_data is not None:
+                self._redis_db.delete(resp_key)
+                break
+
+        return pickle.loads(response_data)
