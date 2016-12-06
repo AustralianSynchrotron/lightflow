@@ -1,4 +1,3 @@
-from datetime import datetime
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from bson.binary import Binary
@@ -91,11 +90,13 @@ class DataStore:
         except ConnectionFailure:
             raise DataStoreNotConnected()
 
-    def add(self, name):
+    def add(self, name, meta_payload=None):
         """ Adds a new document to the data store and returns its id.
 
         Args:
             name (str): The name of the workflow that is attached to the new document.
+            meta_payload (dict): Dictionary of additional meta data that should be stored
+                                 with the document.
 
         Raises:
             DataStoreNotConnected: If the data store is not connected to the server.
@@ -107,10 +108,8 @@ class DataStore:
             db = self._client[self.database]
             col = db[WORKFLOW_DATA_COLLECTION_NAME]
             return str(col.insert_one({
-                WORKFLOW_DATA_DOCUMENT_META: {
-                    'name': name,
-                    'start_time': datetime.utcnow()
-                },
+                WORKFLOW_DATA_DOCUMENT_META:
+                    meta_payload if isinstance(meta_payload, dict) else {},
                 WORKFLOW_DATA_DOCUMENT_DATA: {}
             }).inserted_id)
 

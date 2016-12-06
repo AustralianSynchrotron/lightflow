@@ -1,6 +1,7 @@
 from redis import StrictRedis
 from celery import Celery
 from kombu import Queue
+from datetime import datetime
 
 from .logger import get_logger
 from .config import config
@@ -67,7 +68,12 @@ def workflow_celery_task(self, workflow, workflow_id=None):
     if data_store.exists(workflow_id):
         logger.info('Using existing workflow ID: {}'.format(workflow_id))
     else:
-        workflow_id = data_store.add(workflow.name)
+        workflow_id = data_store.add(workflow.name,
+                                     meta_payload={
+                                         'name': workflow.name,
+                                         'start_time': datetime.utcnow(),
+                                         'config': config.to_dict()
+                                     })
         logger.info('Created workflow ID: {}'.format(workflow_id))
 
     # create the server for the signal service

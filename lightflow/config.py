@@ -92,6 +92,10 @@ class Config:
             self.load_from_env()
         return self._config.get(key, default)
 
+    def to_dict(self):
+        """ Returns a copy of the internal configuration as a dictionary. """
+        return dict(self._config)
+
     def _update_from_file(self, filename):
         """ Helper method to update an existing configuration with the values from a file.
 
