@@ -80,7 +80,8 @@ def workflow_celery_task(self, workflow, workflow_id=None):
     # run the DAGs in the workflow
     workflow.run(data_store=data_store,
                  signal_server=signal_server,
-                 workflow_id=workflow_id)
+                 workflow_id=workflow_id,
+                 polling_time=config.get('graph').get('workflow_polling_time'))
 
     logger.info('Finished workflow <{}>'.format(workflow.name))
 
@@ -97,7 +98,8 @@ def dag_celery_task(self, dag, workflow_id, data=None):
     dag.run(workflow_id,
             DagSignal(Client(create_signal_connection(), request_key=workflow_id),
                       dag.name),
-            data)
+            data,
+            polling_time=config.get('graph').get('dag_polling_time'))
 
     logger.info('Finished DAG <{}>'.format(dag.name))
 

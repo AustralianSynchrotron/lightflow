@@ -150,7 +150,8 @@ class Workflow:
 
         # as long as there are dags in the list keep running
         while self._dags_running:
-            sleep(polling_time)
+            if polling_time > 0.0:
+                sleep(polling_time)
 
             # handle new requests from dags, tasks and the library (e.g. cli, web)
             for i in range(MAX_SIGNAL_REQUESTS):
