@@ -57,22 +57,19 @@ class Dag:
 
     Please note: this class has to be serialisable (e.g. by pickle)
     """
-    def __init__(self, name, autostart=True, polling_time=0.5, graph=None, slots=None):
+    def __init__(self, name, autostart=True, graph=None, slots=None):
         """ Initialise the dag.
 
         Args:
             name (str): The name of the dag.
             autostart (bool): Set to True in order to start the processing of the tasks
                               upon the start of the workflow.
-            polling_time (float): The waiting time between status checks of the running
-                                  tasks in seconds.
             graph (DiGraph): Reference to a networkx DiGraph object, containing a
                              pre-defined task graph.
             slots (dict): Reference to a dictionary containing the routing of the data
                           output of tasks to the labelled data input slots of tasks.
         """
         self._name = name
-        self._polling_time = polling_time
         self._autostart = autostart
         self._graph = nx.DiGraph() if graph is None else graph
         self._slots = defaultdict(dict) if slots is None else slots
@@ -130,7 +127,7 @@ class Dag:
             else:
                 self._graph.add_node(parent)
 
-    def run(self, workflow_id, signal, data=None):
+    def run(self, workflow_id, signal, data=None, polling_time=0.5):
         """ Run the dag by calling the tasks in the correct order.
 
         Args:
@@ -138,6 +135,8 @@ class Dag:
             signal (DagSignal): The signal object for dags. It wraps the construction
                                 and sending of signals into easy to use methods.
             data (MultiTaskData): The initial data that is passed on to the start tasks.
+            polling_time (float): The waiting time between status checks of the running
+                                  tasks in seconds.
 
         Raises:
             DirectedAcyclicGraphInvalid: If the graph is not a dag (e.g. contains loops).
@@ -159,7 +158,9 @@ class Dag:
         # process tasks as long as there are tasks in the task list
         stopped = False
         while tasks:
-            sleep(self._polling_time)
+            if polling_time > 0.0:
+                sleep(polling_time)
+
             for task in reversed(tasks):
                 if not stopped:
                     stopped = signal.is_stopped()
@@ -243,6 +244,5 @@ class Dag:
         self._copy_counter += 1
         return Dag('{}:{}'.format(self._name, self._copy_counter),
                    autostart=self._autostart,
-                   polling_time=self._polling_time,
                    graph=deepcopy(self._graph, memo),
                    slots=deepcopy(self._slots, memo))

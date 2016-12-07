@@ -9,7 +9,6 @@ from .exceptions import (WorkflowImportError, WorkflowArgumentError,
 from .signal import Response
 from .arguments import Arguments
 from lightflow.logger import get_logger
-from lightflow.celery_tasks import dag_celery_task
 
 MAX_SIGNAL_REQUESTS = 10
 
@@ -151,7 +150,8 @@ class Workflow:
 
         # as long as there are dags in the list keep running
         while self._dags_running:
-            sleep(polling_time)
+            if polling_time > 0.0:
+                sleep(polling_time)
 
             # handle new requests from dags, tasks and the library (e.g. cli, web)
             for i in range(MAX_SIGNAL_REQUESTS):
@@ -198,6 +198,7 @@ class Workflow:
         if name not in self._dags_blueprint:
             raise DagNameUnknown()
 
+        from lightflow.celery_tasks import dag_celery_task
         self._dags_running.append(
             dag_celery_task.apply_async(
                 (copy.deepcopy(self._dags_blueprint[name]),
