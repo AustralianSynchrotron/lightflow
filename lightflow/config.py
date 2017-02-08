@@ -133,21 +133,22 @@ class Config:
                 to_dict[key] = from_dict[key]
 
     def _update_python_paths(self):
-        """ Append the workflow paths to the PYTHONPATH. """
-        for workflow_path in self._config['workflows']:
-            if os.path.isdir(os.path.abspath(workflow_path)):
-                if workflow_path not in sys.path:
-                    sys.path.append(workflow_path)
+        """ Append the workflow and libraries paths to the PYTHONPATH. """
+        for path in self._config['workflows'] + self._config['libraries']:
+            if os.path.isdir(os.path.abspath(path)):
+                if path not in sys.path:
+                    sys.path.append(path)
             else:
-                raise ConfigLoadError('Workflow directory {} does not exist.'.
-                                      format(workflow_path))
+                raise ConfigLoadError(
+                    'Workflow directory {} does not exist.'.format(path))
 
     @staticmethod
     def default():
         """ Returns the default configuration. """
         return """
-    workflows:
-      - ./examples
+    workflows: []
+
+    libraries: []
 
     celery:
       broker: redis://localhost:6379/0
