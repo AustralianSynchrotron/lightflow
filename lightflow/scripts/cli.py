@@ -10,22 +10,16 @@ from lightflow.models.exceptions import WorkflowArgumentError
 
 
 
-@click.group(invoke_without_command=True)
-@click.pass_context
+@click.group()
+@click.version_option(version=__version__, prog_name='Lightflow')
 @click.option('--config', '-c', help='Path to configuration file.')
-@click.option('--version', '-v', help='Prints the version number.', is_flag=True)
-def cli(ctx, config, version):
+def cli(config):
     """ Command line client for lightflow. A lightweight, high performance pipeline
     system for synchrotrons.
 
     Lightflow is being developed at the Australian Synchrotron.
     """
     lf_config.load_from_file(config)
-
-    if ctx.invoked_subcommand is None and version:
-        click.echo('Lightflow {}'.format(__version__))
-    elif ctx.invoked_subcommand is None:
-        click.echo(ctx.get_help())
 
 
 @cli.group()
@@ -48,6 +42,7 @@ def config_list():
 
 @cli.group()
 def workflow():
+    """ Start, stop and list workflows """
     pass
 
 
@@ -71,24 +66,19 @@ def workflow_create():
     click.echo('workflow create command')
 
 
-@workflow.command('info')
-def workflow_info():
-    click.echo('workflow info command')
-
-
 @workflow.command('validate')
 def workflow_validate():
     click.echo('workflow validate command')
 
 
+@workflow.command('status')
+def workflow_status():
+    click.echo('workflow status command')
+
+
 @cli.group()
 def worker():
     pass
-
-
-@workflow.command('list')
-def worker_list():
-    click.echo('worker list command')
 
 
 @workflow.command('run')
@@ -104,6 +94,21 @@ def worker_stop():
 @workflow.command('restart')
 def worker_restart():
     click.echo('worker restart command')
+
+
+@workflow.command('status')
+def worker_status():
+    click.echo('worker status command')
+
+
+@cli.command()
+def status():
+    click.echo('Status')
+
+
+@cli.command()
+def monitor():
+    click.echo('Monitor')
 
 
 if __name__ == '__main__':
