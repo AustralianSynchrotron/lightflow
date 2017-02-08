@@ -12,7 +12,7 @@ flowing between tasks.
 from setuptools import setup, find_packages
 import re
 
-with open('lightflow/__init__.py') as file:
+with open('lightflow/version.py') as file:
     version = re.search(r"__version__ = '(.*)'", file.read()).group(1)
 
 setup(

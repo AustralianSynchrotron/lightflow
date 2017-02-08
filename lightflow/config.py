@@ -23,59 +23,62 @@ def expand_env_var(env_var):
             env_var = interpolated
 
 
+class ConfigLoadError(RuntimeError):
+    """ Raise this if there is a configuration loading error. """
+    pass
+
+
 class Config:
     """ Hosts the global configuration.
 
-    The configuration is read from a structured YAML file. The location of the file can
-    either be specified directly, is given in the environment variable
-    LIGHTFLOW_ENV_CONFIG, is looked for in the current execution directory or in the
-    home directory of the user.
-
-    If no configuration file is found, a default configuration is used.
+    The configuration is read from a structured YAML file or a dictionary.
+    The location of the file can either be specified directly, is given in
+    the environment variable LIGHTFLOW_CONFIG_ENV, is looked for in the
+    current execution directory or in the home directory of the user.
     """
     def __init__(self):
         """ Initialise with an empty configuration. """
         self._config = None
 
-    def reset(self):
-        """ Reset the configuration with the default configuration. """
-        self._config = yaml.load(self.default())
+    def load_from_file(self, filename=None):
+        """ Load the configuration from a file.
 
-    def load_from_env(self):
-        """ Load the configuration file from environment variables.
+        The location of the configuration file can either be specified directly in the
+        parameter filename or is searched for in the following order:
+            1) In the environment variable given by LIGHTFLOW_CONFIG_ENV
+            2) In the current execution directory
+            3) In the user's home directory
 
-        The method looks for the configuration file with the name
-        given by LIGHTFLOW_CONFIG_NAME in the following order:
-        1) In the environment variable given by LIGHTFLOW_CONFIG_ENV
-        2) In the current execution directory
-        3) In the user's home directory
+        Args:
+            filename (str): The location and name of the configuration file.
         """
-        print('Resetting configuration and loading content from env variables.')
-        self.reset()
+        self.set_to_default()
 
-        if LIGHTFLOW_CONFIG_ENV not in os.environ:
-            if os.path.isfile(os.path.join(os.getcwd(), LIGHTFLOW_CONFIG_NAME)):
-                self._update_from_file(os.path.join(os.getcwd(), LIGHTFLOW_CONFIG_NAME))
-            elif os.path.isfile(expand_env_var('~/{}'.format(LIGHTFLOW_CONFIG_NAME))):
-                self._update_from_file(
-                    expand_env_var('~/{}'.format(LIGHTFLOW_CONFIG_NAME)))
-            else:
-                print('No configuration found, using the default configuration.')
+        if filename:
+            self._update_from_file(filename)
         else:
-            self._update_from_file(expand_env_var(os.environ[LIGHTFLOW_CONFIG_ENV]))
+            if LIGHTFLOW_CONFIG_ENV not in os.environ:
+                if os.path.isfile(os.path.join(os.getcwd(), LIGHTFLOW_CONFIG_NAME)):
+                    self._update_from_file(
+                        os.path.join(os.getcwd(), LIGHTFLOW_CONFIG_NAME))
+                elif os.path.isfile(expand_env_var('~/{}'.format(LIGHTFLOW_CONFIG_NAME))):
+                    self._update_from_file(
+                        expand_env_var('~/{}'.format(LIGHTFLOW_CONFIG_NAME)))
+                else:
+                    raise ConfigLoadError('Could not find the configuration file.')
+            else:
+                self._update_from_file(expand_env_var(os.environ[LIGHTFLOW_CONFIG_ENV]))
 
         self._update_python_paths()
 
-    def load_from_file(self, filename):
-        """ Load the configuration from a given filename.
+    def load_from_dict(self, conf_dict=None):
+        """ Load the configuration from a dictionary.
 
         Args:
-            filename (str): The path and name to the configuration file.
+            conf_dict (dict): Dictionary with the configuration.
         """
-        print('Resetting configuration and loading content' +
-              ' from file: {}.'.format(filename))
-        self.reset()
-        self._update_from_file(filename)
+        self.set_to_default()
+        self._update_dict(self._config, conf_dict)
         self._update_python_paths()
 
     def get(self, key, default=None):
@@ -89,8 +92,12 @@ class Config:
             The value for the specified key name.
         """
         if self._config is None:
-            self.load_from_env()
+            raise ConfigLoadError('Configuration file has not been loaded yet.')
         return self._config.get(key, default)
+
+    def set_to_default(self):
+        """ Overwrite the configuration with the default configuration. """
+        self._config = yaml.load(self.default())
 
     def to_dict(self):
         """ Returns a copy of the internal configuration as a dictionary. """
@@ -109,7 +116,7 @@ class Config:
             with open(filename, 'r') as config_file:
                 self._update_dict(self._config, yaml.load(config_file.read()))
         else:
-            print('The config file {} does not exist!'.format(filename))
+            raise ConfigLoadError('The config file {} does not exist.'.format(filename))
 
     def _update_dict(self, to_dict, from_dict):
         """ Recursively merges the fields for two dictionaries.
@@ -119,7 +126,8 @@ class Config:
             from_dict (dict): The dictionary merged into to_dict
         """
         for key, value in from_dict.items():
-            if key in to_dict and isinstance(to_dict[key], dict) and isinstance(from_dict[key], dict):
+            if key in to_dict and isinstance(to_dict[key], dict) and \
+                    isinstance(from_dict[key], dict):
                 self._update_dict(to_dict[key], from_dict[key])
             else:
                 to_dict[key] = from_dict[key]
@@ -131,7 +139,8 @@ class Config:
                 if workflow_path not in sys.path:
                     sys.path.append(workflow_path)
             else:
-                print('Workflow directory {} does not exist!'.format(workflow_path))
+                raise ConfigLoadError('Workflow directory {} does not exist.'.
+                                      format(workflow_path))
 
     @staticmethod
     def default():
