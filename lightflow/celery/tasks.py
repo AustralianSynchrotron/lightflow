@@ -3,13 +3,15 @@ from celery import Celery
 from kombu import Queue
 from datetime import datetime
 
-from .logger import get_logger
-from .config import config
-from .models.base_task import TaskSignal
-from .models.dag import DagSignal
-from .models.datastore import DataStore
-from .models.signal import Server, Client
-from .celery_pickle import patch_celery
+from lightflow.logger import get_logger
+from lightflow.config import config
+from lightflow.models.base_task import TaskSignal
+from lightflow.models.dag import DagSignal
+from lightflow.models.datastore import DataStore
+from lightflow.models.signal import Server, Client
+from lightflow.celery.pickle import patch_celery
+
+LIGHTFLOW_INCLUDE = ['lightflow.celery_tasks', 'lightflow.models']
 
 logger = get_logger(__name__)
 
@@ -18,25 +20,26 @@ patch_celery()
 
 # configure Celery and create the main celery app
 conf = config.get('celery')
-celery_app = Celery('lightflow',
-                    broker=conf['broker'],
-                    backend=conf['backend'],
-                    include=['lightflow.celery_tasks', 'lightflow.models'])
+celery_app = Celery('lightflow')
+celery_app.conf.update(**conf)
 
+# overwrite user supplied settings to make sure celery works with lightflow
 celery_app.conf.update(
-    CELERY_TASK_SERIALIZER='pickle',
-    CELERY_ACCEPT_CONTENT=['pickle'],
-    CELERY_RESULT_SERIALIZER='pickle',
-    CELERY_TIMEZONE=conf['timezone'],
-    CELERY_ENABLE_UTC=conf['enable_utc'],
-    CELERYD_CONCURRENCY=conf['concurrency'],
-    CELERY_DEFAULT_QUEUE='task',
-    CELERY_QUEUES=(
+    task_serializer='pickle',
+    accept_content=['pickle'],
+    result_serializer='pickle',
+    task_default_queue='task',
+    task_queues=(
         Queue('task', routing_key='task'),
         Queue('workflow', routing_key='workflow'),
         Queue('dag', routing_key='dag'),
     )
 )
+
+if celery_app.conf['include'] is None:
+    celery_app.conf['include'] = LIGHTFLOW_INCLUDE
+else:
+    celery_app.conf['include'].extend(LIGHTFLOW_INCLUDE)
 
 
 # ----------------------------------------------------------------------------------------
