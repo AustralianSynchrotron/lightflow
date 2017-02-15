@@ -36,10 +36,10 @@ celery_app.conf.update(
     )
 )
 
-if celery_app.conf['include'] is None:
-    celery_app.conf['include'] = LIGHTFLOW_INCLUDE
+if isinstance(celery_app.conf.include, list):
+    celery_app.conf.include.extend(LIGHTFLOW_INCLUDE)
 else:
-    celery_app.conf['include'].extend(LIGHTFLOW_INCLUDE)
+    celery_app.conf.include = LIGHTFLOW_INCLUDE
 
 
 # ----------------------------------------------------------------------------------------
