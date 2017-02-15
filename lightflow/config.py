@@ -97,7 +97,7 @@ class Config:
 
     def set_to_default(self):
         """ Overwrite the configuration with the default configuration. """
-        self._config = yaml.load(self.default())
+        self._config = yaml.safe_load(self.default())
 
     def to_dict(self):
         """ Returns a copy of the internal configuration as a dictionary. """
@@ -114,7 +114,7 @@ class Config:
         """
         if os.path.exists(filename):
             with open(filename, 'r') as config_file:
-                self._update_dict(self._config, yaml.load(config_file.read()))
+                self._update_dict(self._config, yaml.safe_load(config_file.read()))
         else:
             raise ConfigLoadError('The config file {} does not exist.'.format(filename))
 
@@ -151,11 +151,11 @@ class Config:
     libraries: []
 
     celery:
-      broker: redis://localhost:6379/0
-      backend: redis://localhost:6379/0
+      broker_url: redis://localhost:6379/0
+      result_backend: redis://localhost:6379/0
       timezone: Australia/Melbourne
       enable_utc: True
-      concurrency: 8
+      worker_concurrency: 8
 
     signal:
       host: localhost
