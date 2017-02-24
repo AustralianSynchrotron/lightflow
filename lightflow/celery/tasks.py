@@ -4,7 +4,9 @@ from datetime import datetime
 from lightflow.logger import get_logger
 from lightflow.models.base_task import TaskSignal
 from lightflow.models.dag import DagSignal
+from lightflow.models.datastore import DataStore
 from lightflow.models.signal import Server, Client
+from lightflow.models.signal import SignalConnection
 
 logger = get_logger(__name__)
 
@@ -23,7 +25,7 @@ def execute_workflow(self, workflow, workflow_id=None):
                               this ID, if not a new ID will be auto generated.
     """
     logger.info('Running workflow <{}>'.format(workflow.name))
-    data_store = workflow.config.create_data_store_connection()
+    data_store = DataStore(**workflow.config.data_store, auto_connect=True)
 
     # create a unique workflow id for this run
     if data_store.exists(workflow_id):
@@ -35,7 +37,7 @@ def execute_workflow(self, workflow, workflow_id=None):
                                      })
         logger.info('Created workflow ID: {}'.format(workflow_id))
 
-    signal_server = Server(workflow.config.create_signal_connection(),
+    signal_server = Server(SignalConnection(**workflow.config.signal, auto_connect=True),
                            request_key=workflow_id)
 
     # store task specific meta information wth the task
@@ -75,9 +77,10 @@ def execute_dag(self, dag, workflow_id, data=None):
 
     # run the tasks in the DAG
     dag.run(workflow_id=workflow_id,
-            signal=DagSignal(Client(dag.config.create_signal_connection(),
-                                    request_key=workflow_id),
-                             dag.name),
+            signal=DagSignal(Client(
+                SignalConnection(**dag.config.signal, auto_connect=True),
+                request_key=workflow_id),
+                dag.name),
             data=data)
 
     logger.info('Finished DAG <{}>'.format(dag.name))
@@ -104,10 +107,11 @@ def execute_task(self, task, workflow_id, data=None):
 
     # run the task and capture the result
     result = task._run(data=data,
-                       data_store=task.config.create_data_store_connection(),
-                       signal=TaskSignal(Client(task.config.create_signal_connection(),
-                                                request_key=workflow_id),
-                                         task.dag_name))
+                       data_store=DataStore(**task.config.data_store, auto_connect=True),
+                       signal=TaskSignal(Client(
+                           SignalConnection(**task.config.signal, auto_connect=True),
+                           request_key=workflow_id),
+                           task.dag_name))
 
     logger.info('Finished task <{}>'.format(task.name))
     return result

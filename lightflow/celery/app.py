@@ -29,7 +29,7 @@ def create_app(config):
 
     # create the main celery app and load the configuration
     app = Celery('lightflow')
-    app.conf.update(**config.get_celery_settings())
+    app.conf.update(**config.celery)
 
     # overwrite user supplied settings to make sure celery works with lightflow
     app.conf.update(
@@ -66,4 +66,4 @@ def _initialize_logging(config, **kwargs):
                          logging settings are retrieved.
         **kwargs: Keyword arguments from the hook
     """
-    logging.config.dictConfig(config.get_logging_settings())
+    logging.config.dictConfig(config.logging)

@@ -27,13 +27,14 @@ class DataStore:
     The DataStore is implemented using a MongoDB backend. For each workflow run a
     document is created and its id is used for identifying the workflow run.
     """
-    def __init__(self, host, port, database):
+    def __init__(self, host, port, database, *, auto_connect=False):
         """ Initialise the DataStore.
 
         Args:
             host (str): The host on which the MongoDB server runs.
             port (int): The port on which the MongoDB server listens.
             database (str): The name of the MongoDB collection.
+            auto_connect (bool): Set to True to connect to the MongoDB database.
 
         Attributes:
             host (str): The host on which the MongoDB server runs.
@@ -43,7 +44,10 @@ class DataStore:
         self.host = host
         self.port = port
         self.database = database
+
         self._client = None
+        if auto_connect:
+            self.connect()
 
     @property
     def is_connected(self):

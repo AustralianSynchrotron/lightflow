@@ -2,8 +2,6 @@ import os
 import sys
 import ruamel.yaml as yaml
 
-from lightflow.models.datastore import DataStore
-from lightflow.models.signal import SignalConnection
 from lightflow.models.exceptions import ConfigLoadError
 
 
@@ -101,64 +99,31 @@ class Config:
         """ Returns a copy of the internal configuration as a dictionary. """
         return dict(self._config)
 
-    def create_data_store_connection(self, auto_connect=True):
-        """ Create a connection to the persistent data store.
+    @property
+    def data_store(self):
+        return self._config.get('store')
 
-        Args:
-            auto_connect (bool): If set to true, a connection to the store is established.
+    @property
+    def signal(self):
+        return self._config.get('signal')
 
-        Returns:
-            DataStore: The connection to the persistent data store.
-        """
-        if self._config is None:
-            raise ConfigLoadError('Configuration file has not been loaded yet.')
-
-        store_conf = self._config.get('store')
-        data_store = DataStore(host=store_conf.get('host'),
-                               port=store_conf.get('port'),
-                               database=store_conf.get('database'))
-        if auto_connect:
-            data_store.connect()
-
-        return data_store
-
-    def create_signal_connection(self, auto_connect=True):
-        """ Create a connection to the signal broker.
-
-        Args:
-            auto_connect (bool): If set to true, a connection is established.
-
-        Returns:
-            SignalConnection: The connection to the signal broker.
-        """
-        if self._config is None:
-            raise ConfigLoadError('Configuration file has not been loaded yet.')
-
-        signal_conf = self._config.get('signal')
-        signal_conn = SignalConnection(
-            host=signal_conf.get('host'),
-            port=signal_conf.get('port'),
-            database=signal_conf.get('database'),
-            polling_time=signal_conf.get('response_polling_time'))
-
-        if auto_connect:
-            signal_conn.connect()
-
-        return signal_conn
-
-    def get_logging_settings(self):
+    @property
+    def logging(self):
         """ Returns the logging settings. """
         return self._config.get('logging')
 
-    def get_celery_settings(self):
+    @property
+    def celery(self):
         """ Returns the celery settings """
         return self._config.get('celery')
 
-    def get_workflow_polling_time(self):
+    @property
+    def workflow_polling_time(self):
         """ Returns the waiting time between status checks of the running dags (sec) """
         return self._config.get('graph').get('workflow_polling_time')
 
-    def get_dag_polling_time(self):
+    @property
+    def dag_polling_time(self):
         """ Returns the waiting time between status checks of the running tasks (sec) """
         return self._config.get('graph').get('dag_polling_time')
 
@@ -224,7 +189,7 @@ class Config:
       host: localhost
       port: 6379
       database: 0
-      response_polling_time: 0.5
+      polling_time: 0.5
 
     store:
       host: localhost

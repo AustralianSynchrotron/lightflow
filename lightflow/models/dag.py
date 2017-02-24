@@ -172,8 +172,8 @@ class Dag:
         # process tasks as long as there are tasks in the task list
         stopped = False
         while tasks:
-            if self._config.get_dag_polling_time() > 0.0:
-                sleep(self._config.get_dag_polling_time())
+            if self._config.dag_polling_time > 0.0:
+                sleep(self._config.dag_polling_time)
 
             for task in reversed(tasks):
                 if not stopped:
