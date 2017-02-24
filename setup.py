@@ -39,14 +39,14 @@ setup(
     packages=find_packages(exclude=['tests', 'examples']),
 
     install_requires=[
-        'celery>=3.1.23',
-        'click>=6.6',
-        'colorlog>=2.7.0',
+        'celery>=4.0.2',
+        'click>=6.7',
+        'colorlog>=2.10.0',
         'networkx>=1.11',
-        'pymongo>=3.2.2',
-        'pytz>=2016.4',
+        'pymongo>=3.4.0',
+        'pytz>=2016.10',
         'redis>=2.10.5',
-        'ruamel.yaml>=0.11.11',
+        'ruamel.yaml>=0.13.14',
         'cloudpickle>=0.2.1'
     ],
 

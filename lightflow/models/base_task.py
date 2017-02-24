@@ -16,7 +16,7 @@ class TaskSignal:
         self._client = client
         self._dag_name = dag_name
 
-    def run_dag(self, name, data=None):
+    def run_dag(self, name, *, data=None):
         """ Schedule the execution of a dag by sending a signal to the workflow.
 
         Args:
@@ -171,7 +171,7 @@ class BaseTask:
 
     Tasks should inherit from this class and implement the run() method.
     """
-    def __init__(self, name, force_run=False, propagate_skip=True):
+    def __init__(self, name, *, force_run=False, propagate_skip=True):
         """ Initialise the base task.
 
         The dag_name attribute is filled by the dag define method.
@@ -185,6 +185,7 @@ class BaseTask:
         self._force_run = force_run
         self.propagate_skip = propagate_skip
 
+        self._config = None
         self.dag_name = None
         self.celery_result = None
         self._skip = False
@@ -238,6 +239,20 @@ class BaseTask:
             return self.celery_result.state
         else:
             return "NOT_QUEUED"
+
+    @property
+    def config(self):
+        """ Returns the task configuration. """
+        return self._config
+
+    @config.setter
+    def config(self, value):
+        """ Sets the task configuration.
+
+        Args:
+            value (Config): A reference to a Config object.
+        """
+        self._config = value
 
     def skip(self):
         """ Flag the task to be skipped. """

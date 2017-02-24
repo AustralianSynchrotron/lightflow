@@ -90,13 +90,12 @@ class DataStore:
         except ConnectionFailure:
             raise DataStoreNotConnected()
 
-    def add(self, name, meta_payload=None):
+    def add(self, payload=None):
         """ Adds a new document to the data store and returns its id.
 
         Args:
-            name (str): The name of the workflow that is attached to the new document.
-            meta_payload (dict): Dictionary of additional meta data that should be stored
-                                 with the document.
+            payload (dict): Dictionary of initial data that should be stored
+                            in the new document.
 
         Raises:
             DataStoreNotConnected: If the data store is not connected to the server.
@@ -109,7 +108,7 @@ class DataStore:
             col = db[WORKFLOW_DATA_COLLECTION_NAME]
             return str(col.insert_one({
                 WORKFLOW_DATA_DOCUMENT_META:
-                    meta_payload if isinstance(meta_payload, dict) else {},
+                    payload if isinstance(payload, dict) else {},
                 WORKFLOW_DATA_DOCUMENT_DATA: {}
             }).inserted_id)
 

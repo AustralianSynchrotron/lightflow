@@ -1,25 +1,23 @@
 import click
 import json
 
-import lightflow
-from lightflow.config import config as lf_config
+from lightflow.config import Config
 from lightflow.version import __version__
-from lightflow.models.exceptions import WorkflowArgumentError
-
-
-
+from lightflow.workers import (run_worker)
+from lightflow.workflows import (run_workflow)
 
 
 @click.group()
 @click.version_option(version=__version__, prog_name='Lightflow')
 @click.option('--config', '-c', help='Path to configuration file.')
-def cli(config):
+@click.pass_context
+def cli(ctx, config):
     """ Command line client for lightflow. A lightweight, high performance pipeline
     system for synchrotrons.
 
     Lightflow is being developed at the Australian Synchrotron.
     """
-    lf_config.load_from_file(config)
+    ctx.obj = Config.from_file(config)
 
 
 @cli.group()
@@ -31,13 +29,14 @@ def config():
 @config.command('default')
 def config_default():
     """ Print a default configuration """
-    click.echo(lf_config.default())
+    click.echo(Config.default())
 
 
 @config.command('list')
-def config_list():
+@click.pass_obj
+def config_list(conf_obj):
     """ List the current configuration """
-    click.echo(json.dumps(lf_config.to_dict(), indent=4))
+    click.echo(json.dumps(conf_obj.to_dict(), indent=4))
 
 
 @cli.group()
@@ -52,8 +51,17 @@ def workflow_list():
 
 
 @workflow.command('run')
-def workflow_run():
-    click.echo('workflow run command')
+@click.option('--keep-data', '-k', is_flag=True, default=False,
+              help='Do not delete the workflow data.')
+@click.argument('name')
+@click.argument('workflow_args', nargs=-1, type=click.UNPROCESSED)
+@click.pass_obj
+def workflow_run(conf_obj, keep_data, name, workflow_args):
+    """ Send a workflow to the queue. """
+    run_workflow(name=name,
+                 config=conf_obj,
+                 clear_data_store=not keep_data,
+                 store_args=dict([arg.split('=', maxsplit=1) for arg in workflow_args]))
 
 
 @workflow.command('stop')
@@ -78,25 +86,36 @@ def workflow_status():
 
 @cli.group()
 def worker():
+    """ Start and stop workers. """
     pass
 
 
-@workflow.command('run')
-def worker_run():
-    click.echo('worker run command')
+@worker.command('run', context_settings=dict(ignore_unknown_options=True,))
+@click.option('--queues', '-q', default='workflow,dag,task',
+              help='Comma separated list of queues to enable for this worker.')
+@click.option('--detach', '-d', is_flag=True,
+              help='Start worker as a background process.')
+@click.argument('celery_args', nargs=-1, type=click.UNPROCESSED)
+@click.pass_obj
+def worker_run(conf_obj, queues, detach, celery_args):
+    """ Start a worker process. """
+    run_worker(queues=queues.split(','),
+               config=conf_obj,
+               detach=detach,
+               celery_args=celery_args)
 
 
-@workflow.command('stop')
+@worker.command('stop')
 def worker_stop():
     click.echo('worker stop command')
 
 
-@workflow.command('restart')
+@worker.command('restart')
 def worker_restart():
     click.echo('worker restart command')
 
 
-@workflow.command('status')
+@worker.command('status')
 def worker_status():
     click.echo('worker status command')
 
@@ -112,4 +131,4 @@ def monitor():
 
 
 if __name__ == '__main__':
-    cli()
+    cli(obj={})

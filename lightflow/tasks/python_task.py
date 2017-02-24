@@ -3,7 +3,8 @@ from lightflow.models import BaseTask
 
 class PythonTask(BaseTask):
     """ The Python task executes a user-defined python method. """
-    def __init__(self, name, python_callable=None, force_run=False, propagate_skip=True):
+    def __init__(self, name, *, python_callable=None,
+                 force_run=False, propagate_skip=True):
         """ Initialise the Python task.
 
         Args:
@@ -13,7 +14,7 @@ class PythonTask(BaseTask):
             force_run (bool): Run the task even if it is flagged to be skipped.
             propagate_skip (bool): Propagate the skip flag to the next task.
         """
-        super().__init__(name, force_run, propagate_skip)
+        super().__init__(name, force_run=force_run, propagate_skip=propagate_skip)
         self._python_callable = python_callable
 
     def run(self, data, data_store, signal, **kwargs):

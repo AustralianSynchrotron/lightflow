@@ -32,7 +32,7 @@ class ChunkingTask(BaseTask):
             force_run (bool): Run the task even if it is flagged to be skipped.
             propagate_skip (bool): Propagate the skip flag to the next task.
         """
-        super().__init__(name, force_run, propagate_skip)
+        super().__init__(name, force_run=force_run, propagate_skip=propagate_skip)
         self._dag_name = dag_name
         self._in_key = in_key
         self._out_key = out_key if out_key is not None else in_key

@@ -2,14 +2,21 @@ import os
 import sys
 import ruamel.yaml as yaml
 
+from lightflow.models.datastore import DataStore
+from lightflow.models.signal import SignalConnection
+from lightflow.models.exceptions import ConfigLoadError
+
+
 LIGHTFLOW_CONFIG_ENV = 'LIGHTFLOW_CONFIG'
 LIGHTFLOW_CONFIG_NAME = 'lightflow.cfg'
 
 
 def expand_env_var(env_var):
     """ Expands, potentially nested, environment variables.
+
         Args:
             env_var (str): The environment variable that should be expanded.
+
         Returns:
             str: The fully expanded environment variable.
     """
@@ -23,11 +30,6 @@ def expand_env_var(env_var):
             env_var = interpolated
 
 
-class ConfigLoadError(RuntimeError):
-    """ Raise this if there is a configuration loading error. """
-    pass
-
-
 class Config:
     """ Hosts the global configuration.
 
@@ -39,6 +41,20 @@ class Config:
     def __init__(self):
         """ Initialise with an empty configuration. """
         self._config = None
+
+    @classmethod
+    def from_file(cls, filename):
+        """ Create a new Config object from a configuration file.
+
+        Args:
+            filename (str): The location and name of the configuration file.
+
+        Returns:
+            An instance of the Config class.
+        """
+        config = cls()
+        config.load_from_file(filename)
+        return config
 
     def load_from_file(self, filename=None):
         """ Load the configuration from a file.
@@ -81,27 +97,74 @@ class Config:
         self._update_dict(self._config, conf_dict)
         self._update_python_paths()
 
-    def get(self, key, default=None):
-        """ Return the value stored under the given key from the configuration.
+    def to_dict(self):
+        """ Returns a copy of the internal configuration as a dictionary. """
+        return dict(self._config)
+
+    def create_data_store_connection(self, auto_connect=True):
+        """ Create a connection to the persistent data store.
 
         Args:
-            key (str): The name of the key for which the value should be returned.
-            default: A default value that is returned if the key does not exist.
+            auto_connect (bool): If set to true, a connection to the store is established.
 
         Returns:
-            The value for the specified key name.
+            DataStore: The connection to the persistent data store.
         """
         if self._config is None:
             raise ConfigLoadError('Configuration file has not been loaded yet.')
-        return self._config.get(key, default)
+
+        store_conf = self._config.get('store')
+        data_store = DataStore(host=store_conf.get('host'),
+                               port=store_conf.get('port'),
+                               database=store_conf.get('database'))
+        if auto_connect:
+            data_store.connect()
+
+        return data_store
+
+    def create_signal_connection(self, auto_connect=True):
+        """ Create a connection to the signal broker.
+
+        Args:
+            auto_connect (bool): If set to true, a connection is established.
+
+        Returns:
+            SignalConnection: The connection to the signal broker.
+        """
+        if self._config is None:
+            raise ConfigLoadError('Configuration file has not been loaded yet.')
+
+        signal_conf = self._config.get('signal')
+        signal_conn = SignalConnection(
+            host=signal_conf.get('host'),
+            port=signal_conf.get('port'),
+            database=signal_conf.get('database'),
+            polling_time=signal_conf.get('response_polling_time'))
+
+        if auto_connect:
+            signal_conn.connect()
+
+        return signal_conn
+
+    def get_logging_settings(self):
+        """ Returns the logging settings. """
+        return self._config.get('logging')
+
+    def get_celery_settings(self):
+        """ Returns the celery settings """
+        return self._config.get('celery')
+
+    def get_workflow_polling_time(self):
+        """ Returns the waiting time between status checks of the running dags (sec) """
+        return self._config.get('graph').get('workflow_polling_time')
+
+    def get_dag_polling_time(self):
+        """ Returns the waiting time between status checks of the running tasks (sec) """
+        return self._config.get('graph').get('dag_polling_time')
 
     def set_to_default(self):
         """ Overwrite the configuration with the default configuration. """
         self._config = yaml.safe_load(self.default())
-
-    def to_dict(self):
-        """ Returns a copy of the internal configuration as a dictionary. """
-        return dict(self._config)
 
     def _update_from_file(self, filename):
         """ Helper method to update an existing configuration with the values from a file.
@@ -160,10 +223,10 @@ class Config:
     signal:
       host: localhost
       port: 6379
-      db: 0
+      database: 0
       response_polling_time: 0.5
 
-    datastore:
+    store:
       host: localhost
       port: 27017
       database: lightflow
@@ -199,6 +262,3 @@ class Config:
             - console
           level: INFO
     """
-
-# create a configuration object that can be used by all modules
-config = Config()

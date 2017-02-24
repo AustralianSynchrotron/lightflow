@@ -9,6 +9,7 @@ from .exceptions import (WorkflowImportError, WorkflowArgumentError,
 from .signal import Response
 from .arguments import Arguments
 from lightflow.logger import get_logger
+from lightflow.celery.app import create_app
 
 MAX_SIGNAL_REQUESTS = 10
 
@@ -22,20 +23,23 @@ class Workflow:
     running and monitoring dags.
 
     It is also the central server for the signal system, handling the incoming
-    requests from dags, tasks and the library frontend (e.g. cli, web).
+    requests from dags, tasks and the library API.
 
     The workflow class hosts the current stop flag for itself and a list of dags
     that should be stopped.
 
     Please note: this class has to be serialisable (e.g. by pickle)
     """
-    def __init__(self, clear_data_store=True):
+    def __init__(self, config, *, clear_data_store=True):
         """ Initialise the workflow.
 
         Args:
+            config (Config): Reference to the configuration object from which the
+                             settings for the workflow are retrieved.
             clear_data_store (bool): Remove any documents created during the workflow
                                      run in the data store after the run.
         """
+        self._config = config
         self._clear_data_store = clear_data_store
 
         self._dags_blueprint = {}
@@ -45,15 +49,19 @@ class Workflow:
         self._arguments = Arguments()
         self._provided_arguments = {}
 
+        self._celery = None
+
         self._stop_workflow = False
         self._stop_dags = []
 
     @classmethod
-    def from_name(cls, name, clear_data_store=True, arguments=None):
+    def from_name(cls, name, config, *, clear_data_store=True, arguments=None):
         """ Create a workflow object from a workflow script.
 
         Args:
             name (str): The name of the workflow script.
+            config (Config): Reference to the configuration object from which the
+                             settings for the workflow are retrieved.
             clear_data_store (bool): Remove any documents created during the workflow
                                      run in the data store after the run.
             arguments (dict): Dictionary of additional arguments that are ingested
@@ -62,20 +70,21 @@ class Workflow:
         Returns:
             Workflow: A fully initialised workflow object
         """
-        new_workflow = cls(clear_data_store)
-        new_workflow.load(name, arguments)
+        new_workflow = cls(config, clear_data_store=clear_data_store)
+        new_workflow.load(name, arguments=arguments)
         return new_workflow
 
     @property
     def name(self):
-        """ Returns the name of the workflow.
-
-        Returns:
-            str: The name of the workflow.
-        """
+        """ Returns the name of the workflow. """
         return self._name
 
-    def load(self, name, arguments=None):
+    @property
+    def config(self):
+        """ Returns the workflow configuration. """
+        return self._config
+
+    def load(self, name, *, arguments=None):
         """ Import the workflow script and load all known objects.
 
         The workflow script is treated like a module and imported
@@ -121,22 +130,20 @@ class Workflow:
             logger.error('Cannot import workflow {}!'.format(name))
             raise WorkflowImportError('Cannot import workflow {}!'.format(name))
 
-    def run(self, data_store, signal_server, workflow_id, polling_time=0.5):
+    def run(self, data_store, signal_server, workflow_id):
         """ Run all autostart dags in the workflow.
 
-        Only the dags that are flagged as autostart are started. If a unique workflow id
-        hasn't been assigned to this workflow yet, it is requested from the data store.
+        Only the dags that are flagged as autostart are started.
 
         Args:
             data_store (DataStore): A DataStore object that is fully initialised and
                         connected to the persistent data storage.
             signal_server (Server): A signal Server object that receives requests
                                     from dags and tasks.
-            workflow_id (str): A unique workflow id, that represents this workflow run
-            polling_time (float): The waiting time between status checks of the running
-                                  dags in seconds.
+            workflow_id (str): A unique workflow id that represents this workflow run
         """
         self._workflow_id = workflow_id
+        self._celery = create_app(self._config)
 
         # pre-fill the data store with supplied arguments
         args = self._arguments.consolidate(self._provided_arguments)
@@ -150,8 +157,8 @@ class Workflow:
 
         # as long as there are dags in the list keep running
         while self._dags_running:
-            if polling_time > 0.0:
-                sleep(polling_time)
+            if self._config.get_workflow_polling_time() > 0.0:
+                sleep(self._config.get_workflow_polling_time())
 
             # handle new requests from dags, tasks and the library (e.g. cli, web)
             for i in range(MAX_SIGNAL_REQUESTS):
@@ -177,7 +184,7 @@ class Workflow:
         if self._clear_data_store:
             data_store.remove(self._workflow_id)
 
-    def _queue_dag(self, name, data=None):
+    def _queue_dag(self, name, *, data=None):
         """ Add a new dag to the queue.
 
         If the stop workflow flag is set, no new dag can be queued.
@@ -198,14 +205,14 @@ class Workflow:
         if name not in self._dags_blueprint:
             raise DagNameUnknown()
 
-        from lightflow.celery_tasks import dag_celery_task
+        new_dag = copy.deepcopy(self._dags_blueprint[name])
+        new_dag.config = self._config
         self._dags_running.append(
-            dag_celery_task.apply_async(
-                (copy.deepcopy(self._dags_blueprint[name]),
-                 self._workflow_id, data),
-                queue='dag',
-                routing_key='dag'
-            )
+            self._celery.send_task('lightflow.celery.tasks.execute_dag',
+                                   args=(new_dag, self._workflow_id, data),
+                                   queue='dag',
+                                   routing_key='dag'
+                                   )
         )
 
         return True
@@ -255,8 +262,8 @@ class Workflow:
             Response: A response object containing the following fields:
                           - success: True if a new dag was queued successfully.
         """
-        result = self._queue_dag(request.payload['name'],
-                                 request.payload['data'])
+        result = self._queue_dag(name=request.payload['name'],
+                                 data=request.payload['data'])
         return Response(success=result, uid=request.uid)
 
     def _handle_stop_workflow(self, request):
