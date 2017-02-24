@@ -93,15 +93,12 @@ def worker():
 @worker.command('run', context_settings=dict(ignore_unknown_options=True,))
 @click.option('--queues', '-q', default='workflow,dag,task',
               help='Comma separated list of queues to enable for this worker.')
-@click.option('--detach', '-d', is_flag=True,
-              help='Start worker as a background process.')
 @click.argument('celery_args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_obj
-def worker_run(conf_obj, queues, detach, celery_args):
+def worker_run(conf_obj, queues, celery_args):
     """ Start a worker process. """
     run_worker(queues=queues.split(','),
                config=conf_obj,
-               detach=detach,
                celery_args=celery_args)
 
 
