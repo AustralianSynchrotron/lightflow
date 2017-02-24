@@ -12,6 +12,10 @@ class ConfigNotDefinedError(RuntimeError):
     pass
 
 
+class ConfigFieldError(RuntimeError):
+    pass
+
+
 class WorkflowArgumentError(RuntimeError):
     pass
 

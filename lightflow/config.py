@@ -2,7 +2,7 @@ import os
 import sys
 import ruamel.yaml as yaml
 
-from lightflow.models.exceptions import ConfigLoadError
+from lightflow.models.exceptions import ConfigLoadError, ConfigFieldError
 
 
 LIGHTFLOW_CONFIG_ENV = 'LIGHTFLOW_CONFIG'
@@ -101,30 +101,36 @@ class Config:
 
     @property
     def data_store(self):
+        """ Return the data store settings """
         return self._config.get('store')
 
     @property
     def signal(self):
+        """ Return the signal system settings """
         return self._config.get('signal')
 
     @property
     def logging(self):
-        """ Returns the logging settings. """
+        """ Return the logging settings """
         return self._config.get('logging')
 
     @property
     def celery(self):
-        """ Returns the celery settings """
+        """ Return the celery settings """
         return self._config.get('celery')
 
     @property
     def workflow_polling_time(self):
-        """ Returns the waiting time between status checks of the running dags (sec) """
+        """ Return the waiting time between status checks of the running dags (sec) """
+        if 'graph' not in self._config:
+            raise ConfigFieldError('The graph section is missing in the confoguration')
         return self._config.get('graph').get('workflow_polling_time')
 
     @property
     def dag_polling_time(self):
-        """ Returns the waiting time between status checks of the running tasks (sec) """
+        """ Return the waiting time between status checks of the running tasks (sec) """
+        if 'graph' not in self._config:
+            raise ConfigFieldError('The graph section is missing in the confoguration')
         return self._config.get('graph').get('dag_polling_time')
 
     def set_to_default(self):
