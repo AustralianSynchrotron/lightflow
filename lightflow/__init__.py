@@ -6,4 +6,4 @@ from .lightflow import (run_worker, run_workflow,
 from .config import Config
 default_config = Config.default()
 
-__version__ = '0.1'
+__version__ = '0.1.1'
