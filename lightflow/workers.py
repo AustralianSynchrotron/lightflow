@@ -43,8 +43,6 @@ def list_workers(config, *, filter_by_queues=None):
     worker_stats = celery_app.control.inspect().stats()
     queue_stats = celery_app.control.inspect().active_queues()
 
-    print(worker_stats)
-
     workers = []
     for name, w_stat in worker_stats.items():
         queues = [QueueStats.from_celery(q_stat) for q_stat in queue_stats[name]]

@@ -67,7 +67,7 @@ def workflow_start(conf_obj, keep_data, name, workflow_args):
 
     \b
     NAME: The name of the workflow that should be started.
-    ARGS: Workflow arguments in the form key1=value1 key2=value2.
+    WORKFLOW_ARGS: Workflow arguments in the form key1=value1 key2=value2.
     """
     try:
         start_workflow(name=name,
@@ -132,8 +132,9 @@ def worker_restart():
 @worker.command('status')
 @click.option('--filter-queues', '-f', default=None,
               help='Only show workers for this comma separated list of queues.')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed worker information')
 @click.pass_obj
-def worker_status(conf_obj, filter_queues):
+def worker_status(conf_obj, filter_queues, verbose):
     """ Show the status of all running workers. """
     f_queues = filter_queues.split(',') if filter_queues is not None else None
 
@@ -141,29 +142,33 @@ def worker_status(conf_obj, filter_queues):
         click.echo('{} {}'.format(click.style('Worker:', fg='blue', bold=True),
                                   click.style(ws.name, fg='blue')))
         click.echo('{:23} {}'.format(click.style('> pid:', bold=True), ws.pid))
-        click.echo('{:23} {}'.format(click.style('> concurrency:', bold=True),
-                                     ws.concurrency))
-        click.echo('{:23} {}'.format(click.style('> processes:', bold=True),
-                                     ', '.join(str(p) for p in ws.process_pids)))
-        click.echo('{:23} {}://{}:{}/{}'.format(click.style('> broker:', bold=True),
-                                                ws.broker.transport,
-                                                ws.broker.hostname,
-                                                ws.broker.port,
-                                                ws.broker.virtual_host))
+
+        if verbose:
+            click.echo('{:23} {}'.format(click.style('> concurrency:', bold=True),
+                                         ws.concurrency))
+            click.echo('{:23} {}'.format(click.style('> processes:', bold=True),
+                                         ', '.join(str(p) for p in ws.process_pids)))
+            click.echo('{:23} {}://{}:{}/{}'.format(click.style('> broker:', bold=True),
+                                                    ws.broker.transport,
+                                                    ws.broker.hostname,
+                                                    ws.broker.port,
+                                                    ws.broker.virtual_host))
 
         click.echo('{:23} {}'.format(click.style('> queues:', bold=True),
                                      ', '.join([q.name for q in ws.queues])))
 
-        click.echo('{:23} [{}]'.format(click.style('> tasks:', bold=True),
-                                       ws.total_running))
+        if verbose:
+            click.echo('{:23} [{}]'.format(click.style('> tasks:', bold=True),
+                                           ws.total_running))
 
-        for task in list_tasks(config=conf_obj, filter_by_worker=ws.name):
-            click.echo('{:15} {} {}'.format(
-                '',
-                click.style('{}'.format(task.name), bold=True, fg=TASK_COLOR[task.type]),
-                click.style('({}) [{}] <{}> on {}'.format(
-                    task.type, task.workflow_id, task.id, task.worker_pid),
-                    fg=TASK_COLOR[task.type])))
+            for task in list_tasks(config=conf_obj, filter_by_worker=ws.name):
+                click.echo('{:15} {} {}'.format(
+                    '',
+                    click.style('{}'.format(task.name), bold=True,
+                                fg=TASK_COLOR[task.type]),
+                    click.style('({}) [{}] <{}> on {}'.format(
+                        task.type, task.workflow_id, task.id, task.worker_pid),
+                        fg=TASK_COLOR[task.type])))
 
         click.echo('\n')
 
