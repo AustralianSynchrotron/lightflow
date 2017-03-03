@@ -16,11 +16,11 @@ class TaskSignal:
         self._client = client
         self._dag_name = dag_name
 
-    def run_dag(self, name, *, data=None):
+    def start_dag(self, name, *, data=None):
         """ Schedule the execution of a dag by sending a signal to the workflow.
 
         Args:
-            name (str): The name of the dag that should be run.
+            name (str): The name of the dag that should be started.
             data (MultiTaskData): The data that should be passed on to the new dag.
 
         Returns:
@@ -63,6 +63,7 @@ class TaskSignal:
         """
         return self._client.send(Request(action='stop_workflow')).success
 
+    @property
     def is_stopped(self):
         """ Check whether the task received a stop signal from the workflow.
 

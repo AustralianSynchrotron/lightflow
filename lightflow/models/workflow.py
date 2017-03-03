@@ -20,7 +20,7 @@ class Workflow:
     """ A workflow manages the execution and monitoring of dags.
 
     A workflow is a container for one or more dags. It is responsible for creating,
-    running and monitoring dags.
+    starting and monitoring dags.
 
     It is also the central server for the signal system, handling the incoming
     requests from dags, tasks and the library API.
@@ -49,7 +49,7 @@ class Workflow:
         self._arguments = Arguments()
         self._provided_arguments = {}
 
-        self._celery = None
+        self._celery_app = None
 
         self._stop_workflow = False
         self._stop_dags = []
@@ -126,9 +126,9 @@ class Workflow:
 
                 self._provided_arguments = arguments
 
-        except TypeError:
-            logger.error('Cannot import workflow {}!'.format(name))
-            raise WorkflowImportError('Cannot import workflow {}!'.format(name))
+        except (TypeError, ImportError):
+            logger.error('Cannot import workflow {}'.format(name))
+            raise WorkflowImportError('Cannot import workflow {}'.format(name))
 
     def run(self, data_store, signal_server, workflow_id):
         """ Run all autostart dags in the workflow.
@@ -143,7 +143,7 @@ class Workflow:
             workflow_id (str): A unique workflow id that represents this workflow run
         """
         self._workflow_id = workflow_id
-        self._celery = create_app(self._config)
+        self._celery_app = create_app(self._config)
 
         # pre-fill the data store with supplied arguments
         args = self._arguments.consolidate(self._provided_arguments)
@@ -208,11 +208,11 @@ class Workflow:
         new_dag = copy.deepcopy(self._dags_blueprint[name])
         new_dag.config = self._config
         self._dags_running.append(
-            self._celery.send_task('lightflow.celery.tasks.execute_dag',
-                                   args=(new_dag, self._workflow_id, data),
-                                   queue='dag',
-                                   routing_key='dag'
-                                   )
+            self._celery_app.send_task('lightflow.celery.tasks.execute_dag',
+                                       args=(new_dag, self._workflow_id, data),
+                                       queue='dag',
+                                       routing_key='dag'
+                                       )
         )
 
         return True
@@ -235,7 +235,7 @@ class Workflow:
             return Response(success=False, uid=request.uid)
 
         action_map = {
-            'run_dag': self._handle_run_dag,
+            'start_dag': self._handle_start_dag,
             'stop_workflow': self._handle_stop_workflow,
             'stop_dag': self._handle_stop_dag,
             'is_dag_stopped': self._handle_is_dag_stopped
@@ -246,16 +246,16 @@ class Workflow:
         else:
             raise RequestActionUnknown()
 
-    def _handle_run_dag(self, request):
-        """ The handler for the run_dag request.
+    def _handle_start_dag(self, request):
+        """ The handler for the start_dag request.
 
-        The run_dag request creates a new dag and adds it to the queue.
+        The start_dag request creates a new dag and adds it to the queue.
 
         Args:
             request (Request): Reference to a request object containing the
                                incoming request. The payload has to contain the
                                following fields:
-                                'name': the name of the dag that should be run
+                                'name': the name of the dag that should be started
                                 'data': the data that is passed onto the start tasks
 
         Returns:

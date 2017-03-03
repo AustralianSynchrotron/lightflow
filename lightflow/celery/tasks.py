@@ -4,6 +4,7 @@ from datetime import datetime
 from lightflow.logger import get_logger
 from lightflow.models.base_task import TaskSignal
 from lightflow.models.dag import DagSignal
+from lightflow.models.const import TaskType
 from lightflow.models.datastore import DataStore
 from lightflow.models.signal import Server, Client
 from lightflow.models.signal import SignalConnection
@@ -42,7 +43,7 @@ def execute_workflow(self, workflow, workflow_id=None):
 
     # store task specific meta information wth the task
     self.update_state(meta={'name': workflow.name,
-                            'type': 'workflow',
+                            'type': TaskType.Workflow,
                             'workflow_id': workflow_id})
 
     # run the DAGs in the workflow
@@ -72,7 +73,7 @@ def execute_dag(self, dag, workflow_id, data=None):
 
     # store task specific meta information wth the task
     self.update_state(meta={'name': dag.name,
-                            'type': 'dag',
+                            'type': TaskType.Dag,
                             'workflow_id': workflow_id})
 
     # run the tasks in the DAG
@@ -102,7 +103,7 @@ def execute_task(self, task, workflow_id, data=None):
 
     # store task specific meta information wth the task
     self.update_state(meta={'name': task.name,
-                            'type': 'task',
+                            'type': TaskType.Task,
                             'workflow_id': workflow_id})
 
     # run the task and capture the result

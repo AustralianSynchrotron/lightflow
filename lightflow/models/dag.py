@@ -25,6 +25,7 @@ class DagSignal:
         self._client = client
         self._dag_name = dag_name
 
+    @property
     def is_stopped(self):
         """ Check whether the dag received a stop signal from the workflow.
 
@@ -158,7 +159,7 @@ class Dag:
             raise ConfigNotDefinedError()
 
         # create the celery app for submitting tasks
-        celery = create_app(self._config)
+        celery_app = create_app(self._config)
 
         # add all tasks without predecessors to the initial task list and
         # set the dag_name for all tasks (which binds the task to this dag).
@@ -177,7 +178,7 @@ class Dag:
 
             for task in reversed(tasks):
                 if not stopped:
-                    stopped = signal.is_stopped()
+                    stopped = signal.is_stopped
 
                 if not task.has_result:
                     task.config = self._config
@@ -187,7 +188,7 @@ class Dag:
                     if len(pre_tasks) == 0:
                         # start a task without predecessors with the supplied initial data
                         if not stopped:
-                            task.celery_result = celery.send_task(
+                            task.celery_result = celery_app.send_task(
                                 'lightflow.celery.tasks.execute_task',
                                 args=(task, workflow_id, data),
                                 queue='task',
@@ -208,7 +209,7 @@ class Dag:
 
                         # start task with the aggregated data from its predecessors
                         if not stopped:
-                            task.celery_result = celery.send_task(
+                            task.celery_result = celery_app.send_task(
                                 'lightflow.celery.tasks.execute_task',
                                 args=(task, workflow_id, input_data),
                                 queue='task',

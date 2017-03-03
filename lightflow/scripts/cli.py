@@ -3,11 +3,17 @@ import json
 
 from lightflow.config import Config
 from lightflow.version import __version__
-from lightflow.workers import (run_worker)
-from lightflow.workflows import (run_workflow)
+from lightflow.models.const import TaskType
+from lightflow.models.exceptions import WorkflowArgumentError, WorkflowImportError
+from lightflow.workers import (start_worker, list_workers, list_tasks)
+from lightflow.workflows import (start_workflow)
+
+TASK_COLOR = {
+    TaskType.Workflow: 'green', TaskType.Dag: 'yellow', TaskType.Task: 'magenta'
+}
 
 
-@click.group()
+@click.group(context_settings=dict(help_option_names=['-h', '--help']))
 @click.version_option(version=__version__, prog_name='Lightflow')
 @click.option('--config', '-c', help='Path to configuration file.')
 @click.pass_context
@@ -50,18 +56,29 @@ def workflow_list():
     click.echo('workflow list command')
 
 
-@workflow.command('run')
+@workflow.command('start')
 @click.option('--keep-data', '-k', is_flag=True, default=False,
               help='Do not delete the workflow data.')
 @click.argument('name')
 @click.argument('workflow_args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_obj
-def workflow_run(conf_obj, keep_data, name, workflow_args):
-    """ Send a workflow to the queue. """
-    run_workflow(name=name,
-                 config=conf_obj,
-                 clear_data_store=not keep_data,
-                 store_args=dict([arg.split('=', maxsplit=1) for arg in workflow_args]))
+def workflow_start(conf_obj, keep_data, name, workflow_args):
+    """ Send a workflow to the queue.
+
+    \b
+    NAME: The name of the workflow that should be started.
+    ARGS: Workflow arguments in the form key1=value1 key2=value2.
+    """
+    try:
+        start_workflow(name=name,
+                       config=conf_obj,
+                       clear_data_store=not keep_data,
+                       store_args=dict([arg.split('=', maxsplit=1)
+                                        for arg in workflow_args]))
+    except (WorkflowArgumentError, WorkflowImportError) as e:
+        click.echo(click.style('An error occurred when trying to start the workflow',
+                               fg='red', bold=True))
+        click.echo('{}'.format(e))
 
 
 @workflow.command('stop')
@@ -90,16 +107,16 @@ def worker():
     pass
 
 
-@worker.command('run', context_settings=dict(ignore_unknown_options=True,))
+@worker.command('start', context_settings=dict(ignore_unknown_options=True,))
 @click.option('--queues', '-q', default='workflow,dag,task',
               help='Comma separated list of queues to enable for this worker.')
 @click.argument('celery_args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_obj
-def worker_run(conf_obj, queues, celery_args):
+def worker_start(conf_obj, queues, celery_args):
     """ Start a worker process. """
-    run_worker(queues=queues.split(','),
-               config=conf_obj,
-               celery_args=celery_args)
+    start_worker(queues=queues.split(','),
+                 config=conf_obj,
+                 celery_args=celery_args)
 
 
 @worker.command('stop')
@@ -113,8 +130,42 @@ def worker_restart():
 
 
 @worker.command('status')
-def worker_status():
-    click.echo('worker status command')
+@click.option('--filter-queues', '-f', default=None,
+              help='Only show workers for this comma separated list of queues.')
+@click.pass_obj
+def worker_status(conf_obj, filter_queues):
+    """ Show the status of all running workers. """
+    f_queues = filter_queues.split(',') if filter_queues is not None else None
+
+    for ws in list_workers(config=conf_obj, filter_by_queues=f_queues):
+        click.echo('{} {}'.format(click.style('Worker:', fg='blue', bold=True),
+                                  click.style(ws.name, fg='blue')))
+        click.echo('{:23} {}'.format(click.style('> pid:', bold=True), ws.pid))
+        click.echo('{:23} {}'.format(click.style('> concurrency:', bold=True),
+                                     ws.concurrency))
+        click.echo('{:23} {}'.format(click.style('> processes:', bold=True),
+                                     ', '.join(str(p) for p in ws.process_pids)))
+        click.echo('{:23} {}://{}:{}/{}'.format(click.style('> broker:', bold=True),
+                                                ws.broker.transport,
+                                                ws.broker.hostname,
+                                                ws.broker.port,
+                                                ws.broker.virtual_host))
+
+        click.echo('{:23} {}'.format(click.style('> queues:', bold=True),
+                                     ', '.join([q.name for q in ws.queues])))
+
+        click.echo('{:23} [{}]'.format(click.style('> tasks:', bold=True),
+                                       ws.total_running))
+
+        for task in list_tasks(config=conf_obj, filter_by_worker=ws.name):
+            click.echo('{:15} {} {}'.format(
+                '',
+                click.style('{}'.format(task.name), bold=True, fg=TASK_COLOR[task.type]),
+                click.style('({}) [{}] <{}> on {}'.format(
+                    task.type, task.workflow_id, task.id, task.worker_pid),
+                    fg=TASK_COLOR[task.type])))
+
+        click.echo('\n')
 
 
 @cli.command()
