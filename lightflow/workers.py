@@ -29,6 +29,18 @@ def start_worker(queues, config, *, celery_args=None):
     celery_app.worker_main(argv)
 
 
+def stop_worker(config, *, worker_ids=None):
+    if worker_ids is not None and not isinstance(worker_ids, list):
+        worker_ids = [worker_ids]
+
+    celery_app = create_app(config)
+    celery_app.control.shutdown(destination=worker_ids)
+
+
+def restart_worker():
+    pass
+
+
 def list_workers(config, *, filter_by_queues=None):
     """
 
@@ -42,6 +54,9 @@ def list_workers(config, *, filter_by_queues=None):
     celery_app = create_app(config)
     worker_stats = celery_app.control.inspect().stats()
     queue_stats = celery_app.control.inspect().active_queues()
+
+    if worker_stats is None:
+        return []
 
     workers = []
     for name, w_stat in worker_stats.items():
@@ -86,6 +101,9 @@ def list_tasks(config, *, status=TaskStatus.Active, filter_by_worker=None):
         task_map = inspect.active()
     else:
         task_map = inspect.scheduled()
+
+    if task_map is None:
+        return []
 
     result = []
     for worker_name, tasks in task_map.items():

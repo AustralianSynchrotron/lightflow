@@ -5,7 +5,7 @@ from lightflow.config import Config
 from lightflow.version import __version__
 from lightflow.models.const import TaskType
 from lightflow.models.exceptions import WorkflowArgumentError, WorkflowImportError
-from lightflow.workers import (start_worker, list_workers, list_tasks)
+from lightflow.workers import (start_worker, stop_worker, list_workers, list_tasks)
 from lightflow.workflows import (start_workflow)
 
 TASK_COLOR = {
@@ -28,26 +28,26 @@ def cli(ctx, config):
 
 @cli.group()
 def config():
-    """ Manage the configuration """
+    """ Manage the configuration. """
     pass
 
 
 @config.command('default')
 def config_default():
-    """ Print a default configuration """
+    """ Print a default configuration. """
     click.echo(Config.default())
 
 
 @config.command('list')
 @click.pass_obj
 def config_list(conf_obj):
-    """ List the current configuration """
+    """ List the current configuration. """
     click.echo(json.dumps(conf_obj.to_dict(), indent=4))
 
 
 @cli.group()
 def workflow():
-    """ Start, stop and list workflows """
+    """ Start, stop and list workflows. """
     pass
 
 
@@ -113,20 +113,26 @@ def worker():
 @click.argument('celery_args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_obj
 def worker_start(conf_obj, queues, celery_args):
-    """ Start a worker process. """
+    """ Start a worker process.
+
+    \b
+    CELERY_ARGS: Additional Celery worker command line arguments.
+    """
     start_worker(queues=queues.split(','),
                  config=conf_obj,
                  celery_args=celery_args)
 
 
 @worker.command('stop')
-def worker_stop():
-    click.echo('worker stop command')
+@click.argument('worker_ids', nargs=-1)
+@click.pass_obj
+def worker_stop(conf_obj, worker_ids):
+    """ Stop running workers.
 
-
-@worker.command('restart')
-def worker_restart():
-    click.echo('worker restart command')
+    \b
+    WORKER_IDS: The IDs of the worker that should be stopped or none to stop them all.
+    """
+    stop_worker(conf_obj, worker_ids=list(worker_ids) if len(worker_ids) > 0 else None)
 
 
 @worker.command('status')
@@ -138,7 +144,12 @@ def worker_status(conf_obj, filter_queues, verbose):
     """ Show the status of all running workers. """
     f_queues = filter_queues.split(',') if filter_queues is not None else None
 
-    for ws in list_workers(config=conf_obj, filter_by_queues=f_queues):
+    workers = list_workers(config=conf_obj, filter_by_queues=f_queues)
+    if len(workers) == 0:
+        click.echo('No workers are running at the moment.')
+        return
+
+    for ws in workers:
         click.echo('{} {}'.format(click.style('Worker:', fg='blue', bold=True),
                                   click.style(ws.name, fg='blue')))
         click.echo('{:23} {}'.format(click.style('> pid:', bold=True), ws.pid))
@@ -159,7 +170,8 @@ def worker_status(conf_obj, filter_queues, verbose):
 
         if verbose:
             click.echo('{:23} [{}]'.format(click.style('> tasks:', bold=True),
-                                           ws.total_running))
+                                           ws.total_running if ws.total_running > 0
+                                           else 'No tasks'))
 
             for task in list_tasks(config=conf_obj, filter_by_worker=ws.name):
                 click.echo('{:15} {} {}'.format(
