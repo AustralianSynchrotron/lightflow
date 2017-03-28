@@ -12,7 +12,7 @@ def start_sub_dag(name, data, data_store, signal):
     for i in range(5):
         sleep(1)
         data['image'] = np.ones((100, 100))
-        signal.start_dag('subDag', data)
+        signal.start_dag('subDag', data=data)
 
 
 def sub_dag_print(name, data, data_store, signal):

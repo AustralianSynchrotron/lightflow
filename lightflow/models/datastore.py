@@ -202,7 +202,10 @@ class DataStoreDocument:
                     is provided and the key does not exist None is returned.
         """
         key_notation = '.'.join([WORKFLOW_DATA_DOCUMENT_DATA, key])
-        return self._decode_value(self._data_from_dotnotation(key_notation, default))
+        try:
+            return self._decode_value(self._data_from_dotnotation(key_notation, default))
+        except KeyError:
+            return None
 
     def set(self, key, value):
         """ Store a value under the specified key in the data section of the document.

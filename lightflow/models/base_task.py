@@ -260,7 +260,7 @@ class BaseTask:
         if not self._force_run:
             self._skip = True
 
-    def _run(self, data, data_store, signal):
+    def _run(self, data, store, signal):
         """ The internal run method that decorates the public run method.
 
         This method makes sure data is being passed to and from the task.
@@ -268,9 +268,9 @@ class BaseTask:
         Args:
             data (MultiTaskData): The data object that has been passed from the
                                   predecessor task.
-            data_store (DataStore): The persistent data store object that allows the task
-                                    to store data for access across the current workflow
-                                    run.
+            store (DataStoreDocument): The persistent data store object that allows the
+                                       task to store data for access across the current
+                                       workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
 
@@ -287,7 +287,7 @@ class BaseTask:
             data = MultiTaskData(self._name)
 
         if not self.is_skipped or self._force_run:
-            result = self.run(data, data_store, signal)
+            result = self.run(data, store, signal)
         else:
             result = None
 
@@ -300,7 +300,7 @@ class BaseTask:
             result.data.add_task_history(self.name)
             return result.copy()
 
-    def run(self, data, data_store, signal, **kwargs):
+    def run(self, data, store, signal, **kwargs):
         """ The main run method of a task.
 
         Implement this method in inherited classes.
@@ -308,9 +308,9 @@ class BaseTask:
         Args:
             data (MultiTaskData): The data object that has been passed from the
                                   predecessor task.
-            data_store (DataStore): The persistent data store object that allows the task
-                                    to store data for access across the current workflow
-                                    run.
+            store (DataStoreDocument): The persistent data store object that allows the
+                                       task to store data for access across the current
+                                       workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
 

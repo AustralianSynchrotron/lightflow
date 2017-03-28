@@ -106,12 +106,13 @@ def execute_task(self, task, workflow_id, data=None):
                             'workflow_id': workflow_id})
 
     # run the task and capture the result
-    result = task._run(data=data,
-                       data_store=DataStore(**task.config.data_store, auto_connect=True),
-                       signal=TaskSignal(Client(
-                           SignalConnection(**task.config.signal, auto_connect=True),
-                           request_key=workflow_id),
-                           task.dag_name))
+    result = task._run(
+        data=data,
+        store=DataStore(**task.config.data_store, auto_connect=True).get(workflow_id),
+        signal=TaskSignal(Client(
+            SignalConnection(**task.config.signal, auto_connect=True),
+            request_key=workflow_id),
+            task.dag_name))
 
     logger.info('Finished task <{}>'.format(task.name))
     return result
