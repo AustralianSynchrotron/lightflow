@@ -8,7 +8,7 @@ from .task_data import MultiTaskData
 from .exceptions import DirectedAcyclicGraphInvalid, ConfigNotDefinedError
 from .const import JobType
 from lightflow.logger import get_logger
-from lightflow.celery.app import create_app
+from lightflow.queue.app import create_app
 
 
 logger = get_logger(__name__)
@@ -190,7 +190,7 @@ class Dag:
                         # start a task without predecessors with the supplied initial data
                         if not stopped:
                             task.celery_result = celery_app.send_task(
-                                'lightflow.celery.jobs.execute_task',
+                                'lightflow.queue.jobs.execute_task',
                                 args=(task, workflow_id, data),
                                 queue=JobType.Task,
                                 routing_key=JobType.Task
@@ -211,7 +211,7 @@ class Dag:
                         # start task with the aggregated data from its predecessors
                         if not stopped:
                             task.celery_result = celery_app.send_task(
-                                'lightflow.celery.jobs.execute_task',
+                                'lightflow.queue.jobs.execute_task',
                                 args=(task, workflow_id, input_data),
                                 queue=JobType.Task,
                                 routing_key=JobType.Task

@@ -1,8 +1,8 @@
 from .models import Workflow
 from .models.const import JobStatus, JobType
 from .models.signal import Client, Request, SignalConnection
-from .celery.app import create_app
-from .celery.control import JobStats
+from .queue.app import create_app
+from .queue.control import JobStats
 
 
 def start_workflow(name, config, *, clear_data_store=True, store_args=None):
@@ -27,7 +27,7 @@ def start_workflow(name, config, *, clear_data_store=True, store_args=None):
                             arguments=store_args)
 
     celery_app = create_app(config)
-    celery_app.send_task('lightflow.celery.jobs.execute_workflow',
+    celery_app.send_task('lightflow.queue.jobs.execute_workflow',
                          args=(wf,),
                          queue=JobType.Workflow,
                          routing_key=JobType.Workflow

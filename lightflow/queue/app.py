@@ -4,11 +4,11 @@ from celery import Celery
 from celery.signals import setup_logging
 from functools import partial
 
-from lightflow.celery.pickle import patch_celery
+from lightflow.queue.pickle import patch_celery
 from lightflow.models.exceptions import ConfigOverwriteError
 
 
-LIGHTFLOW_INCLUDE = ['lightflow.celery.jobs', 'lightflow.models']
+LIGHTFLOW_INCLUDE = ['lightflow.queue.jobs', 'lightflow.models']
 
 
 def create_app(config):
