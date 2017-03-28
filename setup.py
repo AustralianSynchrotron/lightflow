@@ -46,8 +46,8 @@ setup(
         'pymongo>=3.4.0',
         'pytz>=2016.10',
         'redis>=2.10.5',
-        'ruamel.yaml>=0.13.14',
-        'cloudpickle>=0.2.1'
+        'ruamel.yaml>=0.14.2',
+        'cloudpickle>=0.2.2'
     ],
 
     entry_points={
