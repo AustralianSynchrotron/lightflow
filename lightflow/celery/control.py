@@ -67,12 +67,12 @@ class WorkerStats:
         )
 
 
-class TaskStats:
-    def __init__(self, name, task_id, task_type, workflow_id, acknowledged, func_name,
+class JobStats:
+    def __init__(self, name, job_id, job_type, workflow_id, acknowledged, func_name,
                  hostname, worker_name, worker_pid, routing_key):
         self.name = name
-        self.id = task_id
-        self.type = task_type
+        self.id = job_id
+        self.type = job_type
         self.workflow_id = workflow_id
         self.acknowledged = acknowledged
         self.func_name = func_name
@@ -82,19 +82,19 @@ class TaskStats:
         self.routing_key = routing_key
 
     @classmethod
-    def from_celery(cls, worker_name, task_dict, celery_app):
-        async_result = AsyncResult(id=task_dict['id'], app=celery_app)
+    def from_celery(cls, worker_name, job_dict, celery_app):
+        async_result = AsyncResult(id=job_dict['id'], app=celery_app)
         a_info = async_result.info
 
-        return TaskStats(
+        return JobStats(
             name=a_info.get('name', '') if a_info is not None else '',
-            task_id=task_dict['id'],
-            task_type=a_info.get('type', '') if a_info is not None else '',
+            job_id=job_dict['id'],
+            job_type=a_info.get('type', '') if a_info is not None else '',
             workflow_id=a_info.get('workflow_id', '') if a_info is not None else '',
-            acknowledged=task_dict['acknowledged'],
-            func_name=task_dict['type'],
-            hostname=task_dict['hostname'],
+            acknowledged=job_dict['acknowledged'],
+            func_name=job_dict['type'],
+            hostname=job_dict['hostname'],
             worker_name=worker_name,
-            worker_pid=task_dict['worker_pid'],
-            routing_key=task_dict['delivery_info']['routing_key']
+            worker_pid=job_dict['worker_pid'],
+            routing_key=job_dict['delivery_info']['routing_key']
         )

@@ -4,19 +4,18 @@ from datetime import datetime
 from lightflow.logger import get_logger
 from lightflow.models.base_task import TaskSignal
 from lightflow.models.dag import DagSignal
-from lightflow.models.const import TaskType
+from lightflow.models.const import JobType
 from lightflow.models.datastore import DataStore
-from lightflow.models.signal import Server, Client
-from lightflow.models.signal import SignalConnection
+from lightflow.models.signal import Server, Client, SignalConnection
 
 logger = get_logger(__name__)
 
 
 @celery.task(bind=True)
 def execute_workflow(self, workflow, workflow_id=None):
-    """ Celery task that runs a workflow on a worker.
+    """ Celery task (aka job) that runs a workflow on a worker.
 
-    This task starts, manages and monitors the dags that make up a workflow.
+    This celery task starts, manages and monitors the dags that make up a workflow.
 
     Args:
         self (Task): Reference to itself, the celery task object.
@@ -41,9 +40,9 @@ def execute_workflow(self, workflow, workflow_id=None):
     signal_server = Server(SignalConnection(**workflow.config.signal, auto_connect=True),
                            request_key=workflow_id)
 
-    # store task specific meta information wth the task
+    # store job specific meta information wth the job
     self.update_state(meta={'name': workflow.name,
-                            'type': TaskType.Workflow,
+                            'type': JobType.Workflow,
                             'workflow_id': workflow_id})
 
     # run the DAGs in the workflow
@@ -58,7 +57,7 @@ def execute_workflow(self, workflow, workflow_id=None):
 def execute_dag(self, dag, workflow_id, data=None):
     """ Celery task that runs a single dag on a worker.
 
-    This task starts, manages and monitors the individual tasks of a dag.
+    This celery task starts, manages and monitors the individual tasks of a dag.
 
     Args:
         self (Task): Reference to itself, the celery task object.
@@ -71,9 +70,9 @@ def execute_dag(self, dag, workflow_id, data=None):
     """
     logger.info('Running DAG <{}>'.format(dag.name))
 
-    # store task specific meta information wth the task
+    # store job specific meta information wth the job
     self.update_state(meta={'name': dag.name,
-                            'type': TaskType.Dag,
+                            'type': JobType.Dag,
                             'workflow_id': workflow_id})
 
     # run the tasks in the DAG
@@ -101,9 +100,9 @@ def execute_task(self, task, workflow_id, data=None):
     """
     logger.info('Running task <{}>'.format(task.name))
 
-    # store task specific meta information wth the task
+    # store job specific meta information wth the job
     self.update_state(meta={'name': task.name,
-                            'type': TaskType.Task,
+                            'type': JobType.Task,
                             'workflow_id': workflow_id})
 
     # run the task and capture the result

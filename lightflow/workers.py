@@ -1,35 +1,54 @@
 from uuid import uuid4
 
+from .models.const import JobType
+from .models.exceptions import WorkerQueueUnknownError
 from .celery.app import create_app
-from .models.const import TaskStatus
-from .celery.control import WorkerStats, QueueStats, TaskStats
+from .celery.worker import WorkerLifecycle
+from .celery.control import WorkerStats, QueueStats
 
 
-def start_worker(queues, config, *, celery_args=None):
+def start_worker(queues, config, *, name=None, celery_args=None):
     """ Start a worker process.
 
     Args:
-        queues (list): List of queue names this worker accepts tasks from.
+        queues (list): List of queue names this worker accepts jobs from.
         config (Config): Reference to the configuration object from which the
                          settings for the worker are retrieved.
+        name (string): Unique name for the worker. The hostname template variables from
+                       Celery can be used. If not given, a unique name is created.
         celery_args (list): List of additional Celery worker command line arguments.
                             Please note that this depends on the version of Celery used
                             and might change. Use with caution.
     """
     celery_app = create_app(config)
 
+    for queue in queues:
+        if queue not in [JobType.Workflow, JobType.Dag, JobType.Task]:
+            raise WorkerQueueUnknownError(
+                'The queue "{}" is not a valid queue name.'.format(queue))
+
     argv = [
         'worker',
-        '-n={}'.format(uuid4()),
+        '-n={}'.format(uuid4() if name is None else name),
         '--queues={}'.format(','.join(queues))
     ]
 
     argv.extend(celery_args or [])
 
+    celery_app.steps['consumer'].add(WorkerLifecycle)
+    celery_app.user_options['workflow_signal_conf'] = config.signal
     celery_app.worker_main(argv)
 
 
 def stop_worker(config, *, worker_ids=None):
+    """ Stop a worker process.
+
+    Args:
+        config (Config): Reference to the configuration object from which the
+                         settings for the worker are retrieved.
+        worker_ids (list): An optional list of ids for the worker that should be stopped.
+
+    """
     if worker_ids is not None and not isinstance(worker_ids, list):
         worker_ids = [worker_ids]
 
@@ -37,19 +56,17 @@ def stop_worker(config, *, worker_ids=None):
     celery_app.control.shutdown(destination=worker_ids)
 
 
-def restart_worker():
-    pass
-
-
 def list_workers(config, *, filter_by_queues=None):
-    """
+    """ Return a list of all available workers.
 
     Args:
-        config:
-        filter_by_queues: OR
+        config (Config): Reference to the configuration object from which the
+                         settings are retrieved.
+        filter_by_queues (list): Restrict the returned workers to workers that listen to
+                                 at least one of the queue names in this list.
 
     Returns:
-
+        list: A list of WorkerStats objects.
     """
     celery_app = create_app(config)
     worker_stats = celery_app.control.inspect().stats()
@@ -73,41 +90,3 @@ def list_workers(config, *, filter_by_queues=None):
             workers.append(WorkerStats.from_celery(name, w_stat, queues))
 
     return workers
-
-
-def list_tasks(config, *, status=TaskStatus.Active, filter_by_worker=None):
-    """
-
-    filter_by_worker improves performance
-
-    Args:
-        config:
-        status:
-        filter_by_worker:
-
-    Returns:
-
-    """
-    celery_app = create_app(config)
-
-    # option to filter by the worker (improves performance)
-    if filter_by_worker is not None:
-        inspect = celery_app.control.inspect(destination=[filter_by_worker])
-    else:
-        inspect = celery_app.control.inspect()
-
-    # get active or scheduled tasks
-    if status == TaskStatus.Active:
-        task_map = inspect.active()
-    else:
-        task_map = inspect.scheduled()
-
-    if task_map is None:
-        return []
-
-    result = []
-    for worker_name, tasks in task_map.items():
-        for task in tasks:
-            result.append(TaskStats.from_celery(worker_name, task, celery_app))
-
-    return result

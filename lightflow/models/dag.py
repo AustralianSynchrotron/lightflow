@@ -6,6 +6,7 @@ import networkx as nx
 from .signal import Request
 from .task_data import MultiTaskData
 from .exceptions import DirectedAcyclicGraphInvalid, ConfigNotDefinedError
+from .const import JobType
 from lightflow.logger import get_logger
 from lightflow.celery.app import create_app
 
@@ -16,7 +17,7 @@ logger = get_logger(__name__)
 class DagSignal:
     """ Class to wrap the construction and sending of signals into easy to use methods """
     def __init__(self, client, dag_name):
-        """ Initialise the task signal convenience class.
+        """ Initialise the dag signal convenience class.
 
         Args:
             client (Client): A reference to a signal client object.
@@ -189,10 +190,10 @@ class Dag:
                         # start a task without predecessors with the supplied initial data
                         if not stopped:
                             task.celery_result = celery_app.send_task(
-                                'lightflow.celery.tasks.execute_task',
+                                'lightflow.celery.jobs.execute_task',
                                 args=(task, workflow_id, data),
-                                queue='task',
-                                routing_key='task'
+                                queue=JobType.Task,
+                                routing_key=JobType.Task
                                 )
                     else:
                         # compose the input data from the predecessor tasks output data
@@ -210,10 +211,10 @@ class Dag:
                         # start task with the aggregated data from its predecessors
                         if not stopped:
                             task.celery_result = celery_app.send_task(
-                                'lightflow.celery.tasks.execute_task',
+                                'lightflow.celery.jobs.execute_task',
                                 args=(task, workflow_id, input_data),
-                                queue='task',
-                                routing_key='task'
+                                queue=JobType.Task,
+                                routing_key=JobType.Task
                                 )
                 else:
                     # the task finished processing. Check whether its successor tasks can

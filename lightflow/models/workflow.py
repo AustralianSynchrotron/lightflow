@@ -8,6 +8,7 @@ from .exceptions import (WorkflowImportError, WorkflowArgumentError,
                          RequestActionUnknown, RequestFailed, DagNameUnknown)
 from .signal import Response
 from .arguments import Arguments
+from .const import JobType
 from lightflow.logger import get_logger
 from lightflow.celery.app import create_app
 
@@ -208,10 +209,10 @@ class Workflow:
         new_dag = copy.deepcopy(self._dags_blueprint[name])
         new_dag.config = self._config
         self._dags_running.append(
-            self._celery_app.send_task('lightflow.celery.tasks.execute_dag',
+            self._celery_app.send_task('lightflow.celery.jobs.execute_dag',
                                        args=(new_dag, self._workflow_id, data),
-                                       queue='dag',
-                                       routing_key='dag'
+                                       queue=JobType.Dag,
+                                       routing_key=JobType.Dag
                                        )
         )
 
