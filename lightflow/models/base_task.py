@@ -28,7 +28,7 @@ class TaskSignal:
         """
         return self._client.send(
             Request(
-                action='run_dag',
+                action='start_dag',
                 payload={'name': name,
                          'data': data if isinstance(data, MultiTaskData) else None}
             )

@@ -113,4 +113,4 @@ class ChunkingTask(BaseTask):
 
             for chunk in chunked_list:
                 data[self._out_key] = chunk[::self._decimate if self._decimate > len(chunk) else None]
-                signal.run_dag(self._dag_name, data=data)
+                signal.start_dag(self._dag_name, data=data)
