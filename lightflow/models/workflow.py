@@ -189,9 +189,10 @@ class Workflow:
                 except (RequestActionUnknown, RequestFailed):
                     signal_server.send(Response(success=False, uid=request.uid))
 
-            # remove any dags that finished running
+            # remove any dags and their result data that finished running
             for dag in reversed(self._dags_running):
                 if dag.ready():
+                    dag.forget()
                     self._dags_running.remove(dag)
 
         # remove the signal entry
