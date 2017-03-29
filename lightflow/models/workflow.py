@@ -85,6 +85,11 @@ class Workflow:
         """ Returns the workflow configuration. """
         return self._config
 
+    @property
+    def arguments(self):
+        """ Returns the workflow list of arguments. """
+        return self._arguments
+
     def load(self, name, *, arguments=None, strict_dag=False):
         """ Import the workflow script and load all known objects.
 
