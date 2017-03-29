@@ -33,7 +33,7 @@ class QueueStats:
 
 class WorkerStats:
     def __init__(self, name, broker, pid, process_pids,
-                 concurrency, total_running, queues):
+                 concurrency, job_count, queues):
 
         #dict: A dictionary of all workers, with the unique worker name as key and
         #      the fields as follows:
@@ -51,7 +51,7 @@ class WorkerStats:
         self.pid = pid
         self.process_pids = process_pids
         self.concurrency = concurrency
-        self.total_running = total_running
+        self.job_count = job_count
         self.queues = queues
 
     @classmethod
@@ -62,7 +62,7 @@ class WorkerStats:
             pid=worker_dict['pid'],
             process_pids=worker_dict['pool']['processes'],
             concurrency=worker_dict['pool']['max-concurrency'],
-            total_running=worker_dict['pool']['writes']['total'],
+            job_count=worker_dict['pool']['writes']['total'],
             queues=queues
         )
 

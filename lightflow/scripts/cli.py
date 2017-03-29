@@ -204,11 +204,14 @@ def worker_status(obj, filter_queues, verbose):
                                      ', '.join([q.name for q in ws.queues])))
 
         if verbose:
-            click.echo('{:23} [{}]'.format(_style(show_colors, '> tasks:', bold=True),
-                                           ws.total_running if ws.total_running > 0
-                                           else 'No tasks'))
+            click.echo('{:23} {}'.format(_style(show_colors, '> job count:', bold=True),
+                                         ws.job_count))
 
-            for job in list_jobs(config=obj['config'], filter_by_worker=ws.name):
+            jobs = list_jobs(config=obj['config'], filter_by_worker=ws.name)
+            click.echo('{:23} [{}]'.format(_style(show_colors, '> jobs:', bold=True),
+                                           len(jobs) if len(jobs) > 0 else 'No tasks'))
+
+            for job in jobs:
                 click.echo('{:15} {} {}'.format(
                     '',
                     _style(show_colors, '{}'.format(job.name),
