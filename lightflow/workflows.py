@@ -2,13 +2,13 @@ import os
 import sys
 import glob
 import inspect
-import importlib
 
 from .models import Workflow
 from .models.dag import Dag
 from .models.workflow import WorkflowStats
 from .models.const import JobStatus, JobType
 from .models.signal import Client, Request, SignalConnection
+from .models.exceptions import WorkflowImportError
 from .queue.app import create_app
 from .queue.control import JobStats
 
@@ -99,15 +99,12 @@ def list_workflows(config):
 
         for filename in filenames:
             module_name = os.path.splitext(os.path.basename(filename))[0]
-
-            workflow_module = importlib.import_module(module_name)
-            for key, obj in workflow_module.__dict__.items():
-                if isinstance(obj, Dag):
-                    workflows.append(WorkflowStats(module_name, filename,
-                                                   inspect.getdoc(workflow_module)))
-                    break
-
-            del sys.modules[module_name]
+            workflow = Workflow(config)
+            try:
+                workflow.load(module_name, strict_dag=True)
+                workflows.append(workflow)
+            except WorkflowImportError:
+                continue
 
     return workflows
 

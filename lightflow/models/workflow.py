@@ -101,7 +101,7 @@ class Workflow:
         """ Returns the workflow configuration. """
         return self._config
 
-    def load(self, name, *, arguments=None):
+    def load(self, name, *, arguments=None, strict_dag=False):
         """ Import the workflow script and load all known objects.
 
         The workflow script is treated like a module and imported
@@ -113,6 +113,7 @@ class Workflow:
             name (str): The name of the workflow script.
             arguments (dict): Dictionary of additional arguments that are ingested
                               into the data store prior to the execution of the workflow.
+            strict_dag (bool): If true then the loaded workflow module must contain an instance of Dag.
 
         Raises:
             WorkflowArgumentError: If the workflow requires arguments to be set that
@@ -122,15 +123,21 @@ class Workflow:
         try:
             workflow_module = importlib.import_module(name)
 
+            dag_present = False
+
             # extract objects of specific types from the workflow module
             for key, obj in workflow_module.__dict__.items():
                 if isinstance(obj, Dag):
                     self._dags_blueprint[obj.name] = obj
+                    dag_present = True
                 elif isinstance(obj, Arguments):
                     self._arguments.extend(obj)
 
             self._name = name
             del sys.modules[name]
+
+            if strict_dag and not dag_present:
+                raise WorkflowImportError('Workflow does not include a dag {}'.format(name))
 
             # check whether all arguments have been specified
             if arguments is not None:
