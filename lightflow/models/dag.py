@@ -165,6 +165,7 @@ class Dag:
         # add all tasks without predecessors to the initial task list and
         # set the dag_name for all tasks (which binds the task to this dag).
         tasks = []
+        cleanup = []
         linearised_graph = nx.topological_sort(self._graph)
         for node in linearised_graph:
             node.dag_name = self.name
@@ -173,10 +174,17 @@ class Dag:
 
         # process tasks as long as there are tasks in the task list
         stopped = False
-        while tasks:
+        while tasks or cleanup:
             if self._config.dag_polling_time > 0.0:
                 sleep(self._config.dag_polling_time)
 
+            # delete task results that are not required anymore
+            for task in cleanup:
+                if all([s.has_result for s in self._graph.successors(task)]):
+                    task.celery_result.forget()
+                    cleanup.remove(task)
+
+            # iterate over the scheduled tasks
             for task in reversed(tasks):
                 if not stopped:
                     stopped = signal.is_stopped
@@ -246,6 +254,7 @@ class Dag:
                         # if all the successor tasks are queued, the task has done
                         # its duty and can be removed from the task list
                         if all_successors_queued:
+                            cleanup.append(task)
                             tasks.remove(task)
 
     def __deepcopy__(self, memo):
