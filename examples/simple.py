@@ -1,3 +1,7 @@
+""" Very simple workflow with two consecutive tasks. 
+
+"""
+
 from lightflow.models import Dag, Action
 from lightflow.tasks import PythonTask
 

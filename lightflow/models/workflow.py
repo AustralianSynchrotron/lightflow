@@ -1,7 +1,8 @@
 import sys
 import copy
-from time import sleep
+import inspect
 import importlib
+from time import sleep
 
 from .dag import Dag
 from .exceptions import (WorkflowImportError, WorkflowArgumentError,
@@ -55,6 +56,8 @@ class Workflow:
         self._stop_workflow = False
         self._stop_dags = []
 
+        self._docstring = None
+
     @classmethod
     def from_name(cls, name, config, *, clear_data_store=True, arguments=None):
         """ Create a workflow object from a workflow script.
@@ -79,6 +82,11 @@ class Workflow:
     def name(self):
         """ Returns the name of the workflow. """
         return self._name
+
+    @property
+    def docstring(self):
+        """ Returns the docstring of the workflow or None if empty. """
+        return self._docstring
 
     @property
     def config(self):
@@ -123,6 +131,7 @@ class Workflow:
                     self._arguments.extend(obj)
 
             self._name = name
+            self._docstring = inspect.getdoc(workflow_module)
             del sys.modules[name]
 
             if strict_dag and not dag_present:

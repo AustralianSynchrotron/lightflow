@@ -60,10 +60,10 @@ def workflow():
 @click.pass_obj
 def workflow_list(obj):
     """ List all available workflows. """
-    workflows = list_workflows(config=obj['config'])
-    for wf in workflows:
-        click.echo('{:23} {}'.format(_style(obj['show_color'], wf.name, bold=True),
-                                     wf.title))
+    for wf in list_workflows(config=obj['config']):
+        click.echo('{:23} {}'.format(
+            _style(obj['show_color'], wf.name, bold=True),
+            wf.docstring.split('\n')[0] if wf.docstring is not None else ''))
 
 
 @workflow.command('start')
@@ -229,8 +229,9 @@ def status():
 
 
 @cli.command()
-def monitor():
-    click.echo('Monitor')
+@click.pass_obj
+def monitor(obj):
+    pass
 
 
 def _style(enabled, text, **kwargs):
