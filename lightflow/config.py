@@ -195,6 +195,7 @@ class Config:
       timezone: Australia/Melbourne
       enable_utc: True
       worker_concurrency: 8
+      result_expires: 0
 
     signal:
       host: localhost
