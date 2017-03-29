@@ -1,3 +1,4 @@
+from .dag import Dag
 from .action import Action
 from .task_data import MultiTaskData
 from .exceptions import TaskReturnActionInvalid
@@ -16,11 +17,11 @@ class TaskSignal:
         self._client = client
         self._dag_name = dag_name
 
-    def start_dag(self, name, *, data=None):
+    def start_dag(self, dag, *, data=None):
         """ Schedule the execution of a dag by sending a signal to the workflow.
 
         Args:
-            name (str): The name of the dag that should be started.
+            dag (Dag, str): The dag object or the name of the dag that should be started.
             data (MultiTaskData): The data that should be passed on to the new dag.
 
         Returns:
@@ -29,7 +30,7 @@ class TaskSignal:
         return self._client.send(
             Request(
                 action='start_dag',
-                payload={'name': name,
+                payload={'name': dag.name if isinstance(dag, Dag) else dag,
                          'data': data if isinstance(data, MultiTaskData) else None}
             )
         ).success
