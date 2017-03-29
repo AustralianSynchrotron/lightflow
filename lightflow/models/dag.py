@@ -3,20 +3,21 @@ from copy import deepcopy
 from collections import defaultdict
 import networkx as nx
 
-from lightflow.logger import get_logger
-from .exceptions import DirectedAcyclicGraphInvalid
-from .task_data import MultiTaskData
 from .signal import Request
+from .task_data import MultiTaskData
+from .exceptions import DirectedAcyclicGraphInvalid, ConfigNotDefinedError
+from .const import JobType
+from lightflow.logger import get_logger
+from lightflow.queue.app import create_app
+
 
 logger = get_logger(__name__)
 
 
 class DagSignal:
-    """ Class to wrap the construction and sending of signals into easy to use methods.
-
-    """
+    """ Class to wrap the construction and sending of signals into easy to use methods """
     def __init__(self, client, dag_name):
-        """ Initialise the task signal convenience class.
+        """ Initialise the dag signal convenience class.
 
         Args:
             client (Client): A reference to a signal client object.
@@ -25,6 +26,7 @@ class DagSignal:
         self._client = client
         self._dag_name = dag_name
 
+    @property
     def is_stopped(self):
         """ Check whether the dag received a stop signal from the workflow.
 
@@ -57,23 +59,20 @@ class Dag:
 
     Please note: this class has to be serialisable (e.g. by pickle)
     """
-    def __init__(self, name, autostart=True, graph=None, slots=None):
+    def __init__(self, name, *, autostart=True):
         """ Initialise the dag.
 
         Args:
             name (str): The name of the dag.
             autostart (bool): Set to True in order to start the processing of the tasks
                               upon the start of the workflow.
-            graph (DiGraph): Reference to a networkx DiGraph object, containing a
-                             pre-defined task graph.
-            slots (dict): Reference to a dictionary containing the routing of the data
-                          output of tasks to the labelled data input slots of tasks.
         """
         self._name = name
         self._autostart = autostart
-        self._graph = nx.DiGraph() if graph is None else graph
-        self._slots = defaultdict(dict) if slots is None else slots
 
+        self._config = None
+        self._graph = nx.DiGraph()
+        self._slots = defaultdict(dict)
         self._copy_counter = 0
 
     @property
@@ -85,6 +84,20 @@ class Dag:
     def autostart(self):
         """ Return whether the dag is automatically run upon the start of the workflow."""
         return self._autostart
+
+    @property
+    def config(self):
+        """ Returns the dag configuration. """
+        return self._config
+
+    @config.setter
+    def config(self, value):
+        """ Sets the dag configuration.
+
+        Args:
+            value (Config): A reference to a Config object.
+        """
+        self._config = value
 
     def define(self, schema):
         """ Constructs the task graph (dag) from a given schema.
@@ -127,7 +140,7 @@ class Dag:
             else:
                 self._graph.add_node(parent)
 
-    def run(self, workflow_id, signal, data=None, polling_time=0.5):
+    def run(self, workflow_id, signal, *, data=None):
         """ Run the dag by calling the tasks in the correct order.
 
         Args:
@@ -135,20 +148,24 @@ class Dag:
             signal (DagSignal): The signal object for dags. It wraps the construction
                                 and sending of signals into easy to use methods.
             data (MultiTaskData): The initial data that is passed on to the start tasks.
-            polling_time (float): The waiting time between status checks of the running
-                                  tasks in seconds.
 
         Raises:
             DirectedAcyclicGraphInvalid: If the graph is not a dag (e.g. contains loops).
+            ConfigNotDefinedError: If the configuration for the dag is empty.
         """
-        from lightflow.celery_tasks import task_celery_task
-
         if not nx.is_directed_acyclic_graph(self._graph):
             raise DirectedAcyclicGraphInvalid()
+
+        if self._config is None:
+            raise ConfigNotDefinedError()
+
+        # create the celery app for submitting tasks
+        celery_app = create_app(self._config)
 
         # add all tasks without predecessors to the initial task list and
         # set the dag_name for all tasks (which binds the task to this dag).
         tasks = []
+        cleanup = []
         linearised_graph = nx.topological_sort(self._graph)
         for node in linearised_graph:
             node.dag_name = self.name
@@ -157,25 +174,35 @@ class Dag:
 
         # process tasks as long as there are tasks in the task list
         stopped = False
-        while tasks:
-            if polling_time > 0.0:
-                sleep(polling_time)
+        while tasks or cleanup:
+            if self._config.dag_polling_time > 0.0:
+                sleep(self._config.dag_polling_time)
 
+            # delete task results that are not required anymore
+            for task in cleanup:
+                if all([s.has_result for s in self._graph.successors(task)]):
+                    task.celery_result.forget()
+                    cleanup.remove(task)
+
+            # iterate over the scheduled tasks
             for task in reversed(tasks):
                 if not stopped:
-                    stopped = signal.is_stopped()
+                    stopped = signal.is_stopped
 
                 if not task.has_result:
+                    task.config = self._config
+
                     # a task is in the task list but has never been queued or ran.
                     pre_tasks = self._graph.predecessors(task)
                     if len(pre_tasks) == 0:
                         # start a task without predecessors with the supplied initial data
                         if not stopped:
-                            task.celery_result = task_celery_task.apply_async(
-                                (task, workflow_id, data),
-                                queue='task',
-                                routing_key='task'
-                            )
+                            task.celery_result = celery_app.send_task(
+                                'lightflow.queue.jobs.execute_task',
+                                args=(task, workflow_id, data),
+                                queue=JobType.Task,
+                                routing_key=JobType.Task
+                                )
                     else:
                         # compose the input data from the predecessor tasks output data
                         input_data = MultiTaskData()
@@ -191,11 +218,12 @@ class Dag:
 
                         # start task with the aggregated data from its predecessors
                         if not stopped:
-                            task.celery_result = task_celery_task.apply_async(
-                                (task, workflow_id, input_data),
-                                queue='task',
-                                routing_key='task'
-                            )
+                            task.celery_result = celery_app.send_task(
+                                'lightflow.queue.jobs.execute_task',
+                                args=(task, workflow_id, input_data),
+                                queue=JobType.Task,
+                                routing_key=JobType.Task
+                                )
                 else:
                     # the task finished processing. Check whether its successor tasks can
                     # be added to the task list
@@ -226,6 +254,7 @@ class Dag:
                         # if all the successor tasks are queued, the task has done
                         # its duty and can be removed from the task list
                         if all_successors_queued:
+                            cleanup.append(task)
                             tasks.remove(task)
 
     def __deepcopy__(self, memo):
@@ -242,7 +271,9 @@ class Dag:
             Dag: a copy of the dag object
         """
         self._copy_counter += 1
-        return Dag('{}:{}'.format(self._name, self._copy_counter),
-                   autostart=self._autostart,
-                   graph=deepcopy(self._graph, memo),
-                   slots=deepcopy(self._slots, memo))
+        new_dag = Dag('{}:{}'.format(self._name, self._copy_counter),
+                      autostart=self._autostart)
+
+        new_dag._graph = deepcopy(self._graph, memo)
+        new_dag._slots = deepcopy(self._slots, memo)
+        return new_dag

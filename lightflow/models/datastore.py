@@ -27,13 +27,14 @@ class DataStore:
     The DataStore is implemented using a MongoDB backend. For each workflow run a
     document is created and its id is used for identifying the workflow run.
     """
-    def __init__(self, host, port, database):
+    def __init__(self, host, port, database, *, auto_connect=False):
         """ Initialise the DataStore.
 
         Args:
             host (str): The host on which the MongoDB server runs.
             port (int): The port on which the MongoDB server listens.
             database (str): The name of the MongoDB collection.
+            auto_connect (bool): Set to True to connect to the MongoDB database.
 
         Attributes:
             host (str): The host on which the MongoDB server runs.
@@ -43,7 +44,10 @@ class DataStore:
         self.host = host
         self.port = port
         self.database = database
+
         self._client = None
+        if auto_connect:
+            self.connect()
 
     @property
     def is_connected(self):
@@ -90,13 +94,12 @@ class DataStore:
         except ConnectionFailure:
             raise DataStoreNotConnected()
 
-    def add(self, name, meta_payload=None):
+    def add(self, payload=None):
         """ Adds a new document to the data store and returns its id.
 
         Args:
-            name (str): The name of the workflow that is attached to the new document.
-            meta_payload (dict): Dictionary of additional meta data that should be stored
-                                 with the document.
+            payload (dict): Dictionary of initial data that should be stored
+                            in the new document.
 
         Raises:
             DataStoreNotConnected: If the data store is not connected to the server.
@@ -109,7 +112,7 @@ class DataStore:
             col = db[WORKFLOW_DATA_COLLECTION_NAME]
             return str(col.insert_one({
                 WORKFLOW_DATA_DOCUMENT_META:
-                    meta_payload if isinstance(meta_payload, dict) else {},
+                    payload if isinstance(payload, dict) else {},
                 WORKFLOW_DATA_DOCUMENT_DATA: {}
             }).inserted_id)
 

@@ -1,8 +1,53 @@
 import pickle
 import uuid
 from time import sleep
+from redis import StrictRedis
 
 SIGNAL_REDIS_PREFIX = 'lightflow'
+
+
+class SignalConnection:
+    """ The connection to the redis signal broker database. """
+    def __init__(self, host, port, database, *, auto_connect=False, polling_time=0.5):
+        """ Initialise the SignalConnection object.
+
+        Args:
+            host (str): The host of the redis database.
+            port (int): The port of the redis database.
+            database (int): The number of the database.
+            auto_connect (bool): Set to True to connect to the redis broker database.
+            polling_time (float): The polling time for signal requests in seconds.
+        """
+        self._host = host
+        self._port = port
+        self._database = database
+        self._polling_time = polling_time
+
+        self._connection = None
+        if auto_connect:
+            self.connect()
+
+    @property
+    def is_connected(self):
+        """ Returns the status of the signal connection. """
+        return self._connection is not None
+
+    @property
+    def connection(self):
+        """ Returns the connection object or None if the connection is not open. """
+        return self._connection
+
+    @property
+    def polling_time(self):
+        """ Returns the polling time for signal requests in seconds. """
+        return self._polling_time
+
+    def connect(self):
+        """ Connects to the redis database. """
+        self._connection = StrictRedis(
+            host=self._host,
+            port=self._port,
+            db=self._database)
 
 
 class Request:
@@ -15,7 +60,7 @@ class Request:
                    The content depends on the type of action.
         - uid: A unique ID that is used to tag the response that follows this request.
         """
-    def __init__(self, action, payload=None):
+    def __init__(self, action, *, payload=None):
         """ Initialise the request object.
 
         Args:
@@ -37,7 +82,7 @@ class Response:
                    on the type of response.
         - uid: A unique ID that matches the id of the initial request.
     """
-    def __init__(self, success, uid, payload=None):
+    def __init__(self, success, uid, *, payload=None):
         """ Initialise the response object.
 
         Args:
@@ -57,14 +102,14 @@ class Server:
     is implemented using the Request class and stored as a pickled object. The response
     is stored under a unique response id, so the client can pick up the response.
     """
-    def __init__(self, redis_db, request_key):
+    def __init__(self, connection, request_key):
         """ Initialises the signal server.
 
         Args:
-            redis_db: Reference to a fully initialised redis object.
+            connection: Reference to a signal connection object.
             request_key (str): The key under which the list of requests is stored.
         """
-        self._redis_db = redis_db
+        self._connection = connection
         self._request_key = '{}:{}'.format(SIGNAL_REDIS_PREFIX, request_key)
 
     def receive(self):
@@ -77,7 +122,7 @@ class Server:
             Response: If a new request is available a Request object is returned,
                       otherwise None is returned.
         """
-        pickled_request = self._redis_db.lpop(self._request_key)
+        pickled_request = self._connection.connection.lpop(self._request_key)
         return pickle.loads(pickled_request) if pickled_request is not None else None
 
     def send(self, response):
@@ -86,12 +131,12 @@ class Server:
         Args:
             response (Response): Reference to the response object that should be sent.
         """
-        self._redis_db.set('{}:{}'.format(SIGNAL_REDIS_PREFIX, response.uid),
-                           pickle.dumps(response))
+        self._connection.connection.set('{}:{}'.format(SIGNAL_REDIS_PREFIX, response.uid),
+                                        pickle.dumps(response))
 
     def clear(self):
         """ Deletes the list of requests from the redis database. """
-        self._redis_db.delete(self._request_key)
+        self._connection.connection.delete(self._request_key)
 
 
 class Client:
@@ -101,18 +146,15 @@ class Client:
     is implemented using the Request class and stored as a pickled object. The response
     from the server is stored under the unique response id.
     """
-    def __init__(self, redis_db, request_key, response_polling_time=0.5):
+    def __init__(self, connection, request_key):
         """ Initialises the signal client.
 
         Args:
-            redis_db: Reference to a fully initialised redis object.
+            connection: Reference to a signal connection object.
             request_key (str): The key under which the list of requests is stored.
-            response_polling_time (float): The waiting time between status checks of the
-                                           running dags in seconds.
         """
-        self._redis_db = redis_db
+        self._connection = connection
         self._request_key = '{}:{}'.format(SIGNAL_REDIS_PREFIX, request_key)
-        self._response_polling_time = response_polling_time
 
     def send(self, request):
         """ Send a request to the server and wait for its response.
@@ -123,16 +165,16 @@ class Client:
         Returns:
             Response: The response from the server to the request.
         """
-        self._redis_db.rpush(self._request_key, pickle.dumps(request))
+        self._connection.connection.rpush(self._request_key, pickle.dumps(request))
         resp_key = '{}:{}'.format(SIGNAL_REDIS_PREFIX, request.uid)
 
         while True:
-            if self._response_polling_time > 0.0:
-                sleep(self._response_polling_time)
+            if self._connection.polling_time > 0.0:
+                sleep(self._connection.polling_time)
 
-            response_data = self._redis_db.get(resp_key)
+            response_data = self._connection.connection.get(resp_key)
             if response_data is not None:
-                self._redis_db.delete(resp_key)
+                self._connection.connection.delete(resp_key)
                 break
 
         return pickle.loads(response_data)

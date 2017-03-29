@@ -62,10 +62,14 @@ class MultiTaskData:
             data_copy._aliases = self._aliases.copy()
             data_copy._alias_lookup = self._alias_lookup.copy()
         else:
-            data_copy._datasets = {self.selected_key: deepcopy(self._datasets[self.selected_key])}
+            data_copy._datasets = {
+                self.selected_key: deepcopy(self._datasets[self.selected_key])
+            }
             data_copy._aliases = {alias: self.selected_key for alias in
                                   self._alias_lookup[self.selected_key]}
-            data_copy._alias_lookup = {self.selected_key: self._alias_lookup[self.selected_key]}
+            data_copy._alias_lookup = {
+                self.selected_key: self._alias_lookup[self.selected_key]
+            }
             data_copy.select_by_index(0)
 
         return data_copy

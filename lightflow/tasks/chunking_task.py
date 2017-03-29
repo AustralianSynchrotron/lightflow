@@ -32,7 +32,7 @@ class ChunkingTask(BaseTask):
             force_run (bool): Run the task even if it is flagged to be skipped.
             propagate_skip (bool): Propagate the skip flag to the next task.
         """
-        super().__init__(name, force_run, propagate_skip)
+        super().__init__(name, force_run=force_run, propagate_skip=propagate_skip)
         self._dag_name = dag_name
         self._in_key = in_key
         self._out_key = out_key if out_key is not None else in_key
@@ -42,15 +42,15 @@ class ChunkingTask(BaseTask):
         self._force_consecutive = force_consecutive
         self._decimate = decimate
 
-    def run(self, data, data_store, signal, **kwargs):
+    def run(self, data, store, signal, **kwargs):
         """ The main run method of the Chunking task.
 
         Args:
             data (MultiTaskData): The data object that has been passed from the
                                   predecessor task.
-            data_store (DataStore): The persistent data store object that allows the task
-                                    to store data for access across the current workflow
-                                    run.
+            store (DataStoreDocument): The persistent data store object that allows the
+                                       task to store data for access across the current
+                                       workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
 
@@ -60,10 +60,7 @@ class ChunkingTask(BaseTask):
                     should be executed.
         """
         if self._pattern is not None and self._in_key is not None:
-            try:
-                saved_list = data_store.get('chunking_list')
-            except KeyError:
-                saved_list = []
+            saved_list = store.get('chunking_list', default=[])
 
             try:
                 new_list = data[self._in_key]
@@ -107,7 +104,7 @@ class ChunkingTask(BaseTask):
                         chunked_list[-1].append(new_list[num])
 
                 if not self._flush_on_end:
-                    data_store.set('chunking_list', chunked_list.pop())
+                    store.set('chunking_list', chunked_list.pop())
 
             else:
                 unique_matches = set(matches)
@@ -116,4 +113,4 @@ class ChunkingTask(BaseTask):
 
             for chunk in chunked_list:
                 data[self._out_key] = chunk[::self._decimate if self._decimate > len(chunk) else None]
-                signal.run_dag(self._dag_name, data=data)
+                signal.start_dag(self._dag_name, data=data)

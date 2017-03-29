@@ -1,3 +1,4 @@
+from .dag import Dag
 from .action import Action
 from .task_data import MultiTaskData
 from .exceptions import TaskReturnActionInvalid
@@ -16,11 +17,11 @@ class TaskSignal:
         self._client = client
         self._dag_name = dag_name
 
-    def run_dag(self, name, data=None):
+    def start_dag(self, dag, *, data=None):
         """ Schedule the execution of a dag by sending a signal to the workflow.
 
         Args:
-            name (str): The name of the dag that should be run.
+            dag (Dag, str): The dag object or the name of the dag that should be started.
             data (MultiTaskData): The data that should be passed on to the new dag.
 
         Returns:
@@ -28,8 +29,8 @@ class TaskSignal:
         """
         return self._client.send(
             Request(
-                action='run_dag',
-                payload={'name': name,
+                action='start_dag',
+                payload={'name': dag.name if isinstance(dag, Dag) else dag,
                          'data': data if isinstance(data, MultiTaskData) else None}
             )
         ).success
@@ -63,6 +64,7 @@ class TaskSignal:
         """
         return self._client.send(Request(action='stop_workflow')).success
 
+    @property
     def is_stopped(self):
         """ Check whether the task received a stop signal from the workflow.
 
@@ -171,7 +173,7 @@ class BaseTask:
 
     Tasks should inherit from this class and implement the run() method.
     """
-    def __init__(self, name, force_run=False, propagate_skip=True):
+    def __init__(self, name, *, force_run=False, propagate_skip=True):
         """ Initialise the base task.
 
         The dag_name attribute is filled by the dag define method.
@@ -185,6 +187,7 @@ class BaseTask:
         self._force_run = force_run
         self.propagate_skip = propagate_skip
 
+        self._config = None
         self.dag_name = None
         self.celery_result = None
         self._skip = False
@@ -239,12 +242,26 @@ class BaseTask:
         else:
             return "NOT_QUEUED"
 
+    @property
+    def config(self):
+        """ Returns the task configuration. """
+        return self._config
+
+    @config.setter
+    def config(self, value):
+        """ Sets the task configuration.
+
+        Args:
+            value (Config): A reference to a Config object.
+        """
+        self._config = value
+
     def skip(self):
         """ Flag the task to be skipped. """
         if not self._force_run:
             self._skip = True
 
-    def _run(self, data, data_store, signal):
+    def _run(self, data, store, signal):
         """ The internal run method that decorates the public run method.
 
         This method makes sure data is being passed to and from the task.
@@ -252,9 +269,9 @@ class BaseTask:
         Args:
             data (MultiTaskData): The data object that has been passed from the
                                   predecessor task.
-            data_store (DataStore): The persistent data store object that allows the task
-                                    to store data for access across the current workflow
-                                    run.
+            store (DataStoreDocument): The persistent data store object that allows the
+                                       task to store data for access across the current
+                                       workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
 
@@ -271,7 +288,7 @@ class BaseTask:
             data = MultiTaskData(self._name)
 
         if not self.is_skipped or self._force_run:
-            result = self.run(data, data_store, signal)
+            result = self.run(data, store, signal)
         else:
             result = None
 
@@ -284,7 +301,7 @@ class BaseTask:
             result.data.add_task_history(self.name)
             return result.copy()
 
-    def run(self, data, data_store, signal, **kwargs):
+    def run(self, data, store, signal, **kwargs):
         """ The main run method of a task.
 
         Implement this method in inherited classes.
@@ -292,9 +309,9 @@ class BaseTask:
         Args:
             data (MultiTaskData): The data object that has been passed from the
                                   predecessor task.
-            data_store (DataStore): The persistent data store object that allows the task
-                                    to store data for access across the current workflow
-                                    run.
+            store (DataStoreDocument): The persistent data store object that allows the
+                                       task to store data for access across the current
+                                       workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
 

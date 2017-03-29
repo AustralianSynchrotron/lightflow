@@ -10,22 +10,22 @@ arguments = Arguments([
 ])
 
 
-def print_filename(name, data, data_store, signal):
-    print('The filepath is:', data_store.get('filepath'))
+def print_filename(name, data, store, signal):
+    print('The filepath is:', store.get('filepath'))
 
 
-def print_iterations(name, data, data_store, signal):
-    print('Number of iterations:', data_store.get('iterations'))
+def print_iterations(name, data, store, signal):
+    print('Number of iterations:', store.get('iterations'))
 
 
 
 d = Dag('myDag')
 
 print_1 = PythonTask(name='print_filename',
-                     python_callable=print_filename)
+                     callable=print_filename)
 
 print2 = PythonTask(name='print_number',
-                    python_callable=print_iterations)
+                    callable=print_iterations)
 
 d.define({
     print_1: print2

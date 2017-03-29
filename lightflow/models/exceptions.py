@@ -1,4 +1,25 @@
 
+class ConfigLoadError(RuntimeError):
+    """ Raise this if there is a configuration loading error. """
+    pass
+
+
+class ConfigOverwriteError(RuntimeError):
+    pass
+
+
+class ConfigNotDefinedError(RuntimeError):
+    pass
+
+
+class ConfigFieldError(RuntimeError):
+    pass
+
+
+class WorkerQueueUnknownError(RuntimeError):
+    pass
+
+
 class WorkflowArgumentError(RuntimeError):
     pass
 

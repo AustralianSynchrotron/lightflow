@@ -12,7 +12,7 @@ flowing between tasks.
 from setuptools import setup, find_packages
 import re
 
-with open('lightflow/__init__.py') as file:
+with open('lightflow/version.py') as file:
     version = re.search(r"__version__ = '(.*)'", file.read()).group(1)
 
 setup(
@@ -39,15 +39,15 @@ setup(
     packages=find_packages(exclude=['tests', 'examples']),
 
     install_requires=[
-        'celery==3.1.23',
-        'click==6.6',
-        'colorlog==2.7.0',
-        'networkx==1.11',
-        'pymongo==3.2.2',
-        'pytz==2016.4',
-        'redis==2.10.5',
-        'ruamel.yaml==0.11.11',
-        'cloudpickle==0.2.1'
+        'celery>=4.0.2',
+        'click>=6.7',
+        'colorlog>=2.10.0',
+        'networkx>=1.11',
+        'pymongo>=3.4.0',
+        'pytz>=2016.10',
+        'redis>=2.10.5',
+        'ruamel.yaml>=0.14.2',
+        'cloudpickle>=0.2.2'
     ],
 
     entry_points={
