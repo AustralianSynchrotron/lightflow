@@ -8,7 +8,8 @@ from lightflow.models.exceptions import (WorkflowArgumentError,
                                          WorkflowImportError,
                                          WorkerQueueUnknownError)
 from lightflow.workers import (start_worker, stop_worker, list_workers)
-from lightflow.workflows import (start_workflow, stop_workflow, list_jobs)
+from lightflow.workflows import (start_workflow, stop_workflow, list_workflows,
+                                 list_jobs)
 
 JOB_COLOR = {
     JobType.Workflow: 'green', JobType.Dag: 'yellow', JobType.Task: 'magenta'
@@ -56,8 +57,13 @@ def workflow():
 
 
 @workflow.command('list')
-def workflow_list():
-    click.echo('workflow list command')
+@click.pass_obj
+def workflow_list(obj):
+    """ List all available workflows. """
+    workflows = list_workflows(config=obj['config'])
+    for wf in workflows:
+        click.echo('{:23} {}'.format(_style(obj['show_color'], wf.name, bold=True),
+                                     wf.title))
 
 
 @workflow.command('start')
@@ -90,6 +96,12 @@ def workflow_start(obj, keep_data, name, workflow_args):
 @click.argument('names', nargs=-1)
 @click.pass_obj
 def workflow_stop(obj, names):
+    """ Stop one or more running workflows.
+    
+    \b
+    NAMES: The names, ids or job ids of the workflows that should be stopped.
+           Leave empty to stop all running workflows.
+    """
     if len(names) == 0:
         msg = 'Would you like to stop all workflows?'
     else:
@@ -98,16 +110,6 @@ def workflow_stop(obj, names):
 
     if click.confirm(msg, default=True, abort=True):
         stop_workflow(obj['config'], names=names if len(names) > 0 else None)
-
-
-@workflow.command('create')
-def workflow_create():
-    click.echo('workflow create command')
-
-
-@workflow.command('validate')
-def workflow_validate():
-    click.echo('workflow validate command')
 
 
 @workflow.command('status')
@@ -168,7 +170,7 @@ def worker_stop(obj, worker_ids):
 @worker.command('status')
 @click.option('--filter-queues', '-f', default=None,
               help='Only show workers for this comma separated list of queues.')
-@click.option('--verbose', '-v', is_flag=True, help='Show detailed worker information')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed worker information.')
 @click.pass_obj
 def worker_status(obj, filter_queues, verbose):
     """ Show the status of all running workers. """

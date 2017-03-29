@@ -1,4 +1,12 @@
+import os
+import sys
+import glob
+import inspect
+import importlib
+
 from .models import Workflow
+from .models.dag import Dag
+from .models.workflow import WorkflowStats
 from .models.const import JobStatus, JobType
 from .models.signal import Client, Request, SignalConnection
 from .queue.app import create_app
@@ -70,6 +78,38 @@ def stop_workflow(config, *, names=None):
             failed.append(job)
 
     return success, failed
+
+
+def list_workflows(config):
+    """ List all available workflows.
+    
+    Returns a list of all workflows that are available from the paths specified
+    in the config. A workflow is defined as a Python file with at least one DAG.
+    
+    Args:
+        config (Config): Reference to the configuration object from which the
+                         settings are retrieved. 
+
+    Returns:
+        list: A list of WorkflowStats.
+    """
+    workflows = []
+    for path in config.workflows:
+        filenames = glob.glob(os.path.join(os.path.abspath(path), '*.py'))
+
+        for filename in filenames:
+            module_name = os.path.splitext(os.path.basename(filename))[0]
+
+            workflow_module = importlib.import_module(module_name)
+            for key, obj in workflow_module.__dict__.items():
+                if isinstance(obj, Dag):
+                    workflows.append(WorkflowStats(module_name, filename,
+                                                   inspect.getdoc(workflow_module)))
+                    break
+
+            del sys.modules[module_name]
+
+    return workflows
 
 
 def list_jobs(config, *, status=JobStatus.Active,

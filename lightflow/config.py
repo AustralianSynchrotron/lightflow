@@ -100,6 +100,11 @@ class Config:
         return dict(self._config)
 
     @property
+    def workflows(self):
+        """ Return the workflow folders """
+        return self._config.get('workflows')
+
+    @property
     def data_store(self):
         """ Return the data store settings """
         return self._config.get('store')
