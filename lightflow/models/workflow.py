@@ -17,22 +17,6 @@ MAX_SIGNAL_REQUESTS = 10
 logger = get_logger(__name__)
 
 
-class WorkflowStats:
-    """ Basic stats about a workflow definition. """
-    def __init__(self, name, path, docstring):
-        self.name = name
-        self.path = path
-        self.docstring = docstring
-
-    @property
-    def title(self):
-        """ Returns the first line of the documentation or None if not available. """
-        if self.docstring is not None:
-            return self.docstring.split('\n')[0]
-        else:
-            return ''
-
-
 class Workflow:
     """ A workflow manages the execution and monitoring of dags.
 

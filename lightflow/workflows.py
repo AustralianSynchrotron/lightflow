@@ -1,11 +1,7 @@
 import os
-import sys
 import glob
-import inspect
 
 from .models import Workflow
-from .models.dag import Dag
-from .models.workflow import WorkflowStats
 from .models.const import JobStatus, JobType
 from .models.signal import Client, Request, SignalConnection
 from .models.exceptions import WorkflowImportError
