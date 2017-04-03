@@ -127,14 +127,26 @@ def execute_task(self, task, workflow_id, data=None):
         data (MultiTaskData): An optional MultiTaskData object that contains the data
                               that has been passed down from upstream tasks.
     """
-    logger.info('Running task <{}>'.format(task.name))
 
-    # send custom celery event that the task has been started
-    self.send_event(JobEventName.Started,
-                    job_type=JobType.Task,
-                    name=task.name,
-                    start_time=datetime.utcnow(),
-                    workflow_id=workflow_id)
+    def handle_start():
+        logger.info('Running task <{}>'.format(task.name))
+
+        # send custom celery event that the task has been started
+        self.send_event(JobEventName.Started,
+                        job_type=JobType.Task,
+                        name=task.name,
+                        start_time=datetime.utcnow(),
+                        workflow_id=workflow_id)
+
+    def handle_end():
+        logger.info('Finished task <{}>'.format(task.name))
+
+        # send custom celery event that the task has succeeded
+        self.send_event(JobEventName.Succeeded,
+                        job_type=JobType.Task,
+                        name=task.name,
+                        end_time=datetime.utcnow(),
+                        workflow_id=workflow_id)
 
     # store job specific meta information wth the job
     self.update_state(meta={'name': task.name,
@@ -142,20 +154,12 @@ def execute_task(self, task, workflow_id, data=None):
                             'workflow_id': workflow_id})
 
     # run the task and capture the result
-    result = task._run(
+    return task._run(
         data=data,
         store=DataStore(**task.config.data_store, auto_connect=True).get(workflow_id),
         signal=TaskSignal(Client(
             SignalConnection(**task.config.signal, auto_connect=True),
             request_key=workflow_id),
-            task.dag_name))
-
-    # send custom celery event that the task has succeeded
-    self.send_event(JobEventName.Succeeded,
-                    job_type=JobType.Task,
-                    name=task.name,
-                    end_time=datetime.utcnow(),
-                    workflow_id=workflow_id)
-
-    logger.info('Finished task <{}>'.format(task.name))
-    return result
+            task.dag_name),
+        start_callback=handle_start,
+        end_callback=handle_end)

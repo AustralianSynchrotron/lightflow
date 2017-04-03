@@ -261,7 +261,7 @@ class BaseTask:
         if not self._force_run:
             self._skip = True
 
-    def _run(self, data, store, signal):
+    def _run(self, data, store, signal, *, start_callback=None, end_callback=None):
         """ The internal run method that decorates the public run method.
 
         This method makes sure data is being passed to and from the task.
@@ -274,6 +274,10 @@ class BaseTask:
                                        workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
+            start_callback: This function is called before the task is being run.
+                            It takes no parameters.
+            end_callback: This function is called after the task completed running.
+                          It takes no parameters.
 
         Raises:
             TaskReturnActionInvalid: If the return value of the task is not
@@ -288,7 +292,13 @@ class BaseTask:
             data = MultiTaskData(self._name)
 
         if not self.is_skipped or self._force_run:
+            if start_callback is not None:
+                start_callback()
+
             result = self.run(data, store, signal)
+
+            if end_callback is not None:
+                end_callback()
         else:
             result = None
 
