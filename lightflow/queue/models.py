@@ -1,4 +1,7 @@
 from celery.result import AsyncResult
+from time import sleep
+
+from .const import JobExecPath, JobType
 
 
 class BrokerStats:
@@ -97,4 +100,58 @@ class JobStats:
             worker_name=worker_name,
             worker_pid=job_dict['worker_pid'],
             routing_key=job_dict['delivery_info']['routing_key']
+        )
+
+
+class JobEvent:
+    def __init__(self, uuid, job_type, event_type, *, label=''):
+        self.label = label
+        self.uuid = uuid
+        self.type = job_type
+        self.event = event_type
+
+
+class JobStartedEvent(JobEvent):
+    def __init__(self, uuid, job_type, event_type, hostname, pid, name, workflow_id, start_time):
+        super().__init__(uuid, job_type, event_type, label='started')
+        self.hostname = hostname
+        self.pid = pid
+        self.name = name
+        self.workflow_id = workflow_id
+        self.start_time = start_time
+
+    @classmethod
+    def from_event(cls, event):
+        return cls(
+            uuid=event['uuid'],
+            job_type=event['job_type'],
+            event_type=event['type'],
+            hostname=event['hostname'],
+            pid=event['pid'],
+            name=event['name'],
+            workflow_id=event['workflow_id'],
+            start_time=event['start_time']
+        )
+
+
+class JobSucceededEvent(JobEvent):
+    def __init__(self, uuid, job_type, event_type, hostname, pid, name, workflow_id, end_time):
+        super().__init__(uuid, job_type, event_type, label='succeeded')
+        self.hostname = hostname
+        self.pid = pid
+        self.name = name
+        self.workflow_id = workflow_id
+        self.end_time = end_time
+
+    @classmethod
+    def from_event(cls, event):
+        return cls(
+            uuid=event['uuid'],
+            job_type=event['job_type'],
+            event_type=event['type'],
+            hostname=event['hostname'],
+            pid=event['pid'],
+            name=event['name'],
+            workflow_id=event['workflow_id'],
+            end_time=event['end_time']
         )
