@@ -233,12 +233,12 @@ def monitor(obj):
     show_colors = obj['show_color']
 
     click.echo('\n')
-    click.echo('{:>10} {:>12} {:12} [{}]'.format('Status',
+    click.echo('{:>10} {:>12} {:20} [{}]'.format('Status',
                                                  'Type',
                                                  'Name', 'Workflow ID'))
     click.echo('-' * 63)
     for event in workflow_events(obj['config']):
-        click.echo('{:>10} {:>{}} {:12} [{}]'.format(
+        click.echo('{:>10} {:>{}} {:20} [{}]'.format(
             event.label.upper(),
             _style(show_colors, event.type, bold=True, fg=JOB_COLOR[event.type]),
             25 if show_colors else 12,
