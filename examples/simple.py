@@ -7,13 +7,15 @@ from lightflow.tasks import PythonTask
 
 
 def put_data_me(data, store, signal, context):
-    print(context.name)
+    print(context.task_name)
+    print(context.dag_name)
+    print(context.workflow_id)
     data['value'] = 5
     return Action(data)
 
 
 def print_value(data, store, signal, context):
-    print(context.name)
+    print(context.task_name)
     print(data['value'])
 
 

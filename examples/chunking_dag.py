@@ -3,14 +3,14 @@ from lightflow.tasks import PythonTask, ChunkingTask
 
 
 def make_list(data, store, signal, context):
-    print(context.name)
+    print(context.task_name)
     data['my_list'] = ['asdf_0001.dat', 'asdf_0002.dat', 'sdfa_0001.dat', 'sdfa_0002.dat', 'sdfa_0003.dat',
                        'blah_0001.dat', '|', 'blah_0002.dat', 'blah2_0001.dat']
     return Action(data)
 
 
 def print_list(data, store, signal, context):
-    print(context.name)
+    print(context.task_name)
     print('==================================')
     print(data['my_list'])
     print('==================================')

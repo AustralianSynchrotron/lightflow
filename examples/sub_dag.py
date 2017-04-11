@@ -5,7 +5,7 @@ import numpy as np
 
 
 def print_name(data, store, signal, context):
-    print('>>>>>>>>>>> {}'.format(context.name))
+    print('>>>>>>>>>>> {}'.format(context.task_name))
 
 
 def start_sub_dag(data, store, signal, context):

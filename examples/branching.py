@@ -3,7 +3,7 @@ from lightflow.tasks import PythonTask
 
 
 def put_data_me(data, store, signal, context):
-    print(context.name)
+    print(context.task_name)
     data['value'] = 5
     return Action(data)
 
@@ -13,7 +13,7 @@ def branch_me(data, store, signal, context):
 
 
 def print_value(data, store, signal, context):
-    print(context.name)
+    print(context.task_name)
     print(data['value'])
 
 

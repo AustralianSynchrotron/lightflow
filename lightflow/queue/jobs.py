@@ -2,7 +2,7 @@ import celery
 from datetime import datetime
 
 from lightflow.logger import get_logger
-from lightflow.models.base_task import TaskSignal
+from lightflow.models.base_task import TaskSignal, TaskContext
 from lightflow.models.dag import DagSignal
 from lightflow.models.datastore import DataStore
 from lightflow.models.signal import Server, Client, SignalConnection
@@ -161,5 +161,6 @@ def execute_task(self, task, workflow_id, data=None):
             SignalConnection(**task.config.signal, auto_connect=True),
             request_key=workflow_id),
             task.dag_name),
+        context=TaskContext(task.name, task.dag_name, workflow_id),
         start_callback=handle_start,
         end_callback=handle_end)

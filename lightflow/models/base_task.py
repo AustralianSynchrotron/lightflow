@@ -170,13 +170,17 @@ class TaskParameters(dict):
 
 class TaskContext:
     """ This class contains information about the context the task is running in. """
-    def __init__(self, name):
+    def __init__(self, task_name, dag_name, workflow_id):
         """ Initialize the task context object.
         
         Args:
             name (str): The name of the task.
+            dag_name (str): The name of the DAG the task was started from.
+            workflow_id (str): The id of the workflow this task is member of.
         """
-        self.name = name
+        self.task_name = task_name
+        self.dag_name = dag_name
+        self.workflow_id = workflow_id
 
 
 class BaseTask:
@@ -272,7 +276,7 @@ class BaseTask:
         if not self._force_run:
             self._skip = True
 
-    def _run(self, data, store, signal, *, start_callback=None, end_callback=None):
+    def _run(self, data, store, signal, context, *, start_callback=None, end_callback=None):
         """ The internal run method that decorates the public run method.
 
         This method makes sure data is being passed to and from the task.
@@ -285,6 +289,7 @@ class BaseTask:
                                        workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
+            context (TaskContext): The context in which the tasks runs.
             start_callback: This function is called before the task is being run.
                             It takes no parameters.
             end_callback: This function is called after the task completed running.
@@ -306,8 +311,7 @@ class BaseTask:
             if start_callback is not None:
                 start_callback()
 
-            result = self.run(data, store, signal,
-                              TaskContext(self.name))
+            result = self.run(data, store, signal, context)
 
             if end_callback is not None:
                 end_callback()
