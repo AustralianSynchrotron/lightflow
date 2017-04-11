@@ -1,10 +1,11 @@
 from uuid import uuid4
 
-from .models.const import JobType
 from .models.exceptions import WorkerQueueUnknownError
+
+from .queue.const import JobType
 from .queue.app import create_app
 from .queue.worker import WorkerLifecycle
-from .queue.control import WorkerStats, QueueStats
+from .queue.models import WorkerStats, QueueStats
 
 
 def start_worker(queues, config, *, name=None, celery_args=None):

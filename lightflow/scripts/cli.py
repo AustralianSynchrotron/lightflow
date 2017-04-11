@@ -3,13 +3,16 @@ import json
 
 from lightflow.config import Config
 from lightflow.version import __version__
-from lightflow.models.const import JobType
+from lightflow.queue.const import JobType
 from lightflow.models.exceptions import (WorkflowArgumentError,
                                          WorkflowImportError,
                                          WorkerQueueUnknownError)
+
 from lightflow.workers import (start_worker, stop_worker, list_workers)
 from lightflow.workflows import (start_workflow, stop_workflow, list_workflows,
                                  list_jobs)
+from lightflow.workflows import events as workflow_events
+
 
 JOB_COLOR = {
     JobType.Workflow: 'green', JobType.Dag: 'yellow', JobType.Task: 'magenta'
@@ -110,11 +113,6 @@ def workflow_stop(obj, names):
 
     if click.confirm(msg, default=True, abort=True):
         stop_workflow(obj['config'], names=names if len(names) > 0 else None)
-
-
-@workflow.command('status')
-def workflow_status():
-    click.echo('workflow status command')
 
 
 @cli.group()
@@ -223,15 +221,24 @@ def worker_status(obj, filter_queues, verbose):
         click.echo('\n')
 
 
-@cli.command()
-def status():
-    click.echo('Status')
-
-
-@cli.command()
+@cli.command('monitor')
 @click.pass_obj
 def monitor(obj):
-    pass
+    """ Show the worker and workflow event stream. """
+    show_colors = obj['show_color']
+
+    click.echo('\n')
+    click.echo('{:>10} {:>12} {:20} [{}]'.format('Status',
+                                                 'Type',
+                                                 'Name', 'Workflow ID'))
+    click.echo('-' * 63)
+    for event in workflow_events(obj['config']):
+        click.echo('{:>10} {:>{}} {:20} [{}]'.format(
+            event.label.upper(),
+            _style(show_colors, event.type, bold=True, fg=JOB_COLOR[event.type]),
+            25 if show_colors else 12,
+            event.name,
+            event.workflow_id))
 
 
 def _style(enabled, text, **kwargs):

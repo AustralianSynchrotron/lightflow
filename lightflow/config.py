@@ -196,6 +196,7 @@ class Config:
       enable_utc: True
       worker_concurrency: 8
       result_expires: 0
+      worker_send_task_events: True
 
     signal:
       host: localhost

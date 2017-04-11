@@ -9,9 +9,9 @@ from .exceptions import (WorkflowImportError, WorkflowArgumentError,
                          RequestActionUnknown, RequestFailed, DagNameUnknown)
 from .signal import Response
 from .arguments import Arguments
-from .const import JobType
 from lightflow.logger import get_logger
 from lightflow.queue.app import create_app
+from lightflow.queue.const import JobExecPath, JobType
 
 MAX_SIGNAL_REQUESTS = 10
 
@@ -110,7 +110,8 @@ class Workflow:
             name (str): The name of the workflow script.
             arguments (dict): Dictionary of additional arguments that are ingested
                               into the data store prior to the execution of the workflow.
-            strict_dag (bool): If true then the loaded workflow module must contain an instance of Dag.
+            strict_dag (bool): If true then the loaded workflow module must contain an
+                               instance of Dag.
 
         Raises:
             WorkflowArgumentError: If the workflow requires arguments to be set that
@@ -135,7 +136,8 @@ class Workflow:
             del sys.modules[name]
 
             if strict_dag and not dag_present:
-                raise WorkflowImportError('Workflow does not include a dag {}'.format(name))
+                raise WorkflowImportError(
+                    'Workflow does not include a dag {}'.format(name))
 
             # check whether all arguments have been specified
             if arguments is not None:
@@ -231,7 +233,7 @@ class Workflow:
         new_dag = copy.deepcopy(self._dags_blueprint[name])
         new_dag.config = self._config
         self._dags_running.append(
-            self._celery_app.send_task('lightflow.queue.jobs.execute_dag',
+            self._celery_app.send_task(JobExecPath.Dag,
                                        args=(new_dag, self._workflow_id, data),
                                        queue=JobType.Dag,
                                        routing_key=JobType.Dag

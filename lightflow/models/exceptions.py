@@ -66,3 +66,15 @@ class RequestFailed(RuntimeError):
 
 class DagNameUnknown(RuntimeError):
     pass
+
+
+class EventTypeUnknown(RuntimeError):
+    pass
+
+
+class JobEventTypeUnsupported(RuntimeError):
+    pass
+
+
+class WorkerEventTypeUnsupported(RuntimeError):
+    pass

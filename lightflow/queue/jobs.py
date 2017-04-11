@@ -4,9 +4,9 @@ from datetime import datetime
 from lightflow.logger import get_logger
 from lightflow.models.base_task import TaskSignal
 from lightflow.models.dag import DagSignal
-from lightflow.models.const import JobType
 from lightflow.models.datastore import DataStore
 from lightflow.models.signal import Server, Client, SignalConnection
+from .const import JobType, JobEventName
 
 logger = get_logger(__name__)
 
@@ -37,6 +37,14 @@ def execute_workflow(self, workflow, workflow_id=None):
                                      })
         logger.info('Created workflow ID: {}'.format(workflow_id))
 
+    # send custom celery event that the workflow has been started
+    self.send_event(JobEventName.Started,
+                    job_type=JobType.Workflow,
+                    name=workflow.name,
+                    start_time=datetime.utcnow(),
+                    workflow_id=workflow_id)
+
+    # create server for inter-task messaging
     signal_server = Server(SignalConnection(**workflow.config.signal, auto_connect=True),
                            request_key=workflow_id)
 
@@ -49,6 +57,13 @@ def execute_workflow(self, workflow, workflow_id=None):
     workflow.run(data_store=data_store,
                  signal_server=signal_server,
                  workflow_id=workflow_id)
+
+    # send custom celery event that the workflow has succeeded
+    self.send_event(JobEventName.Succeeded,
+                    job_type=JobType.Workflow,
+                    name=workflow.name,
+                    end_time=datetime.utcnow(),
+                    workflow_id=workflow_id)
 
     logger.info('Finished workflow <{}>'.format(workflow.name))
 
@@ -70,6 +85,13 @@ def execute_dag(self, dag, workflow_id, data=None):
     """
     logger.info('Running DAG <{}>'.format(dag.name))
 
+    # send custom celery event that the dag has been started
+    self.send_event(JobEventName.Started,
+                    job_type=JobType.Dag,
+                    name=dag.name,
+                    start_time=datetime.utcnow(),
+                    workflow_id=workflow_id)
+
     # store job specific meta information wth the job
     self.update_state(meta={'name': dag.name,
                             'type': JobType.Dag,
@@ -82,6 +104,13 @@ def execute_dag(self, dag, workflow_id, data=None):
                 request_key=workflow_id),
                 dag.name),
             data=data)
+
+    # send custom celery event that the dag has succeeded
+    self.send_event(JobEventName.Succeeded,
+                    job_type=JobType.Dag,
+                    name=dag.name,
+                    end_time=datetime.utcnow(),
+                    workflow_id=workflow_id)
 
     logger.info('Finished DAG <{}>'.format(dag.name))
 
@@ -98,7 +127,26 @@ def execute_task(self, task, workflow_id, data=None):
         data (MultiTaskData): An optional MultiTaskData object that contains the data
                               that has been passed down from upstream tasks.
     """
-    logger.info('Running task <{}>'.format(task.name))
+
+    def handle_start():
+        logger.info('Running task <{}>'.format(task.name))
+
+        # send custom celery event that the task has been started
+        self.send_event(JobEventName.Started,
+                        job_type=JobType.Task,
+                        name=task.name,
+                        start_time=datetime.utcnow(),
+                        workflow_id=workflow_id)
+
+    def handle_end():
+        logger.info('Finished task <{}>'.format(task.name))
+
+        # send custom celery event that the task has succeeded
+        self.send_event(JobEventName.Succeeded,
+                        job_type=JobType.Task,
+                        name=task.name,
+                        end_time=datetime.utcnow(),
+                        workflow_id=workflow_id)
 
     # store job specific meta information wth the job
     self.update_state(meta={'name': task.name,
@@ -106,13 +154,12 @@ def execute_task(self, task, workflow_id, data=None):
                             'workflow_id': workflow_id})
 
     # run the task and capture the result
-    result = task._run(
+    return task._run(
         data=data,
         store=DataStore(**task.config.data_store, auto_connect=True).get(workflow_id),
         signal=TaskSignal(Client(
             SignalConnection(**task.config.signal, auto_connect=True),
             request_key=workflow_id),
-            task.dag_name))
-
-    logger.info('Finished task <{}>'.format(task.name))
-    return result
+            task.dag_name),
+        start_callback=handle_start,
+        end_callback=handle_end)

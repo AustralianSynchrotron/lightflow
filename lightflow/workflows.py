@@ -2,11 +2,13 @@ import os
 import glob
 
 from .models import Workflow
-from .models.const import JobStatus, JobType
 from .models.signal import Client, Request, SignalConnection
-from .models.exceptions import WorkflowImportError
+from .models.exceptions import WorkflowImportError, JobEventTypeUnsupported
+
 from .queue.app import create_app
-from .queue.control import JobStats
+from .queue.models import JobStats
+from .queue.event import event_stream, create_event_model
+from .queue.const import JobExecPath, JobStatus, JobType
 
 
 def start_workflow(name, config, *, clear_data_store=True, store_args=None):
@@ -31,7 +33,7 @@ def start_workflow(name, config, *, clear_data_store=True, store_args=None):
                             arguments=store_args)
 
     celery_app = create_app(config)
-    celery_app.send_task('lightflow.queue.jobs.execute_workflow',
+    celery_app.send_task(JobExecPath.Workflow,
                          args=(wf,),
                          queue=JobType.Workflow,
                          routing_key=JobType.Workflow
@@ -148,3 +150,26 @@ def list_jobs(config, *, status=JobStatus.Active,
                 result.append(job_stats)
 
     return result
+
+
+def events(config):
+    """ Return a generator that yields workflow events.
+    
+    For every workflow event that is sent from celery this generator yields an event
+    object.
+    
+    Args:
+        config (Config): Reference to the configuration object from which the
+                         settings are retrieved. 
+
+    Returns:
+        generator: A generator that returns workflow events. 
+
+    """
+    celery_app = create_app(config)
+
+    for event in event_stream(celery_app, filter_by_prefix='task'):
+        try:
+            yield create_event_model(event)
+        except JobEventTypeUnsupported:
+            pass
