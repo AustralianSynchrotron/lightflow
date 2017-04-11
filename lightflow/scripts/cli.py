@@ -115,11 +115,6 @@ def workflow_stop(obj, names):
         stop_workflow(obj['config'], names=names if len(names) > 0 else None)
 
 
-@workflow.command('status')
-def workflow_status():
-    click.echo('workflow status command')
-
-
 @cli.group()
 def worker():
     """ Start and stop workers. """
