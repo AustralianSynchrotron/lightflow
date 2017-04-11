@@ -4,7 +4,7 @@ from lightflow.tasks import PythonTask
 import numpy as np
 
 
-def first_call(name, data, store, signal):
+def first_call(data, store, signal, context):
     store.set('number', 5)
     store.set('buffer.observable', 20)
     store.push('sample.spectra', 7)
@@ -14,7 +14,7 @@ def first_call(name, data, store, signal):
     return Action(data)
 
 
-def second_call(name, data, store, signal):
+def second_call(data, store, signal, context):
     number = store.get('number')
     img = store.get('image')
     print(img.shape)
@@ -23,11 +23,11 @@ def second_call(name, data, store, signal):
     store.push('filenames', 'file_a.spec')
 
 
-def third_a_call(name, data, store, signal):
+def third_a_call(data, store, signal, context):
     store.push('filenames', 'file_b.spec')
 
 
-def third_b_call(name, data, store, signal):
+def third_b_call(data, store, signal, context):
     store.push('filenames', ['nested_a', 'nested_b'])
     store.extend('filenames', ['file_c.spec', 'file_d.spec'])
 

@@ -2,31 +2,31 @@ from lightflow.models import Dag, Action
 from lightflow.tasks import PythonTask
 
 
-def square_value(name, data, store, signal):
-    print(name)
+def square_value(data, store, signal, context):
+    print(context.name)
     data['value'] = data['value']*data['value']
     return Action(data)
 
 
-def print_value(name, data, store, signal):
-    print(name)
+def print_value(data, store, signal, context):
+    print(context.name)
     print(data['value'])
 
 
-def put_data_me(name, data, store, signal):
-    print(name)
+def put_data_me(data, store, signal, context):
+    print(context.name)
     data['value'] = 5
     return Action(data)
 
 
-def mult_data(name, data, store, signal):
-    print(name)
+def mult_data(data, store, signal, context):
+    print(context.name)
     data['value'] = data['value']*data.dataset_from_index(1)['value']
     return Action(data)
 
 
-def sub_data(name, data, store, signal):
-    print(name)
+def sub_data(data, store, signal, context):
+    print(context.name)
     data['value'] = data.dataset_from_alias('first')['value']-data.dataset_from_alias('second')['value']
     return Action(data)
 

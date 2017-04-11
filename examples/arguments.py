@@ -10,11 +10,11 @@ arguments = Arguments([
 ])
 
 
-def print_filename(name, data, store, signal):
+def print_filename(data, store, signal, context):
     print('The filepath is:', store.get('filepath'))
 
 
-def print_iterations(name, data, store, signal):
+def print_iterations(data, store, signal, context):
     print('Number of iterations:', store.get('iterations'))
 
 

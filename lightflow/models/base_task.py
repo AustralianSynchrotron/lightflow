@@ -168,6 +168,17 @@ class TaskParameters(dict):
         return TaskParameters(result)
 
 
+class TaskContext:
+    """ This class contains information about the context the task is running in. """
+    def __init__(self, name):
+        """ Initialize the task context object.
+        
+        Args:
+            name (str): The name of the task.
+        """
+        self.name = name
+
+
 class BaseTask:
     """ The base class for all tasks.
 
@@ -295,7 +306,8 @@ class BaseTask:
             if start_callback is not None:
                 start_callback()
 
-            result = self.run(data, store, signal)
+            result = self.run(data, store, signal,
+                              TaskContext(self.name))
 
             if end_callback is not None:
                 end_callback()
@@ -311,7 +323,7 @@ class BaseTask:
             result.data.add_task_history(self.name)
             return result.copy()
 
-    def run(self, data, store, signal, **kwargs):
+    def run(self, data, store, signal, context, **kwargs):
         """ The main run method of a task.
 
         Implement this method in inherited classes.
@@ -324,6 +336,7 @@ class BaseTask:
                                        workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
+            context (TaskContext): The context in which the tasks runs.
 
         Returns:
             Action: An Action object containing the data that should be passed on

@@ -4,18 +4,18 @@ from time import sleep
 import numpy as np
 
 
-def print_name(name, data, store, signal):
-    print('>>>>>>>>>>> {}'.format(name))
+def print_name(data, store, signal, context):
+    print('>>>>>>>>>>> {}'.format(context.name))
 
 
-def start_sub_dag(name, data, store, signal):
+def start_sub_dag(data, store, signal, context):
     for i in range(5):
         sleep(1)
         data['image'] = np.ones((100, 100))
         signal.start_dag('subDag', data=data)
 
 
-def sub_dag_print(name, data, store, signal):
+def sub_dag_print(data, store, signal, context):
     print('<<<<<<<<<<< {}'.format(data['image'].shape))
 
 

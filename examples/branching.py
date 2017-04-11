@@ -2,18 +2,18 @@ from lightflow.models import Dag, Action
 from lightflow.tasks import PythonTask
 
 
-def put_data_me(name, data, store, signal):
-    print(name)
+def put_data_me(data, store, signal, context):
+    print(context.name)
     data['value'] = 5
     return Action(data)
 
 
-def branch_me(name, data, store, signal):
+def branch_me(data, store, signal, context):
     return Action(data, ['t_lane1_print_me'])
 
 
-def print_value(name, data, store, signal):
-    print(name)
+def print_value(data, store, signal, context):
+    print(context.name)
     print(data['value'])
 
 

@@ -42,7 +42,7 @@ class ChunkingTask(BaseTask):
         self._force_consecutive = force_consecutive
         self._decimate = decimate
 
-    def run(self, data, store, signal, **kwargs):
+    def run(self, data, store, signal, context, **kwargs):
         """ The main run method of the Chunking task.
 
         Args:
@@ -53,6 +53,7 @@ class ChunkingTask(BaseTask):
                                        workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
+            context (TaskContext): The context in which the tasks runs.
 
         Returns:
             Action: An Action object containing the data that should be passed on
