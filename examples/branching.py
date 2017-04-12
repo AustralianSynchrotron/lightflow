@@ -1,44 +1,76 @@
+""" Process tasks in parallel with branches and wait for their completion
+
+This workflow shows how to run tasks in parallel by branching into multiple lanes. A join
+task waits for the tasks in the lanes to finish. The workflow also demonstrates the
+use of the 'limit' parameter in the returned Action of the branch_task to select which
+successor task, and thus which lane, will be processed. In the example below lane 1 and
+lane 2 will run in parallel, while lane 3 is skipped.
+
+
+The graph is as following: 
+
+                        /-> lane1_print_task \  
+put_task -> branch_task --> lane2_print_task  --> join_task
+                        \-> lane3_print_task /
+
+"""
+
 from lightflow.models import Dag, Action
 from lightflow.tasks import PythonTask
 
 
-def put_data_me(data, store, signal, context):
-    print(context.task_name)
+# the callable function for the task that stores the value 5
+def put_data(data, store, signal, context):
+    print('Task {task_name} being run in DAG {dag_name} '
+          'for workflow {workflow_name} ({workflow_id})'.format(**context.to_dict()))
+
     data['value'] = 5
     return Action(data)
 
 
-def branch_me(data, store, signal, context):
-    return Action(data, ['t_lane1_print_me'])
+# the callable function for the branch task that limits the successor tasks to the
+# print tasks in lane 1 and lane 2. The successor tasks can be specified by either their
+# name or the task object itself. Both methods are shown here.
+def branch_with_limit(data, store, signal, context):
+    return Action(data, limit=[lane1_print_task, 'lane2_print_task'])
 
 
+# the callable function for tasks that print the data
 def print_value(data, store, signal, context):
-    print(context.task_name)
-    print(data['value'])
+    print('Task {} and value {}'.format(context.task_name, data['value']))
 
 
-d = Dag('myDag')
+# create the main DAG
+d = Dag('main_dag')
 
-t_put_me = PythonTask(name='t_put_me',
-                      callable=put_data_me)
+# task for storing the data
+put_task = PythonTask(name='put_task',
+                      callable=put_data)
 
-t_branch_me = PythonTask(name='t_branch_me',
-                         callable=branch_me)
+# task that limits the branching to certain successor tasks
+branch_task = PythonTask(name='branch_task',
+                         callable=branch_with_limit)
 
-t_lane1_print_me = PythonTask(name='t_lane1_print_me',
+# first task, first lane, simply prints the value stored in the put_task
+lane1_print_task = PythonTask(name='lane1_print_task',
                               callable=print_value)
 
-t_lane2_print_me = PythonTask(name='t_lane2_print_me',
+# first task, second lane, simply prints the value stored in the put_task
+lane2_print_task = PythonTask(name='lane2_print_task',
                               callable=print_value)
 
-t_lane3_print_me = PythonTask(name='t_lane3_print_me',
+# first task, third lane, simply prints the value stored in the put_task
+lane3_print_task = PythonTask(name='lane3_print_task',
                               callable=print_value)
 
-t_join_me = PythonTask(name='t_join_me',
+# joins all three lanes together and waits for the predecessor tasks to finish processing
+join_task = PythonTask(name='t_join_me',
                        callable=print_value)
 
-d.define({t_put_me: t_branch_me,
-          t_branch_me: [t_lane1_print_me, t_lane2_print_me, t_lane3_print_me],
-          t_lane1_print_me: t_join_me,
-          t_lane2_print_me: t_join_me,
-          t_lane3_print_me: t_join_me})
+# set up the graph of the DAG as illustrated above. Please note how a list of tasks
+# defines tasks that are run in parallel (branched out).
+d.define({put_task: branch_task,
+          branch_task: [lane1_print_task, lane2_print_task, lane3_print_task],
+          lane1_print_task: join_task,
+          lane2_print_task: join_task,
+          lane3_print_task: join_task})

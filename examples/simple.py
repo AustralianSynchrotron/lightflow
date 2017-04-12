@@ -1,7 +1,8 @@
-""" Simple workflow of two tasks exchanging data. 
+""" Simple workflow of two tasks exchanging data
 
 The first task (put_task) stores the value 5 in the key 'value', that is then read
 and displayed by the second task (print_task).
+
 """
 
 from lightflow.models import Dag, Action
@@ -23,7 +24,7 @@ def print_value(data, store, signal, context):
 
 
 # create the main DAG
-d = Dag('main_Dag')
+d = Dag('main_dag')
 
 # create the two tasks for storing and retrieving data
 put_task = PythonTask(name='put_task',
