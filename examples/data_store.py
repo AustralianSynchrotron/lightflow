@@ -15,7 +15,7 @@ them.
 
 """
 
-from lightflow.models import Dag, Action
+from lightflow.models import Dag
 from lightflow.tasks import PythonTask
 
 import numpy as np
