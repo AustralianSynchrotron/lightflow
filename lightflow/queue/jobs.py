@@ -2,7 +2,8 @@ import celery
 from datetime import datetime
 
 from lightflow.logger import get_logger
-from lightflow.models.base_task import TaskSignal, TaskContext
+from lightflow.models.task_signal import TaskSignal
+from lightflow.models.task_context import TaskContext
 from lightflow.models.dag import DagSignal
 from lightflow.models.datastore import DataStore
 from lightflow.models.signal import Server, Client, SignalConnection

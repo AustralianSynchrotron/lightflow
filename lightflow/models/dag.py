@@ -3,6 +3,7 @@ from copy import deepcopy
 from collections import defaultdict
 import networkx as nx
 
+from .task import BaseTask
 from .signal import Request
 from .task_data import MultiTaskData
 from .exceptions import DirectedAcyclicGraphInvalid, ConfigNotDefinedError
@@ -250,7 +251,11 @@ class Dag:
 
                             # check whether the task imposes a limit on its successors
                             if task.celery_result.result.limit is not None:
-                                if next_task.name not in task.celery_result.result.limit:
+                                limit_names = [
+                                    name.name if isinstance(name, BaseTask) else name
+                                    for name in task.celery_result.result.limit
+                                ]
+                                if next_task.name not in limit_names:
                                     next_task.skip()
 
                             # consider queuing the successor task if it is not in the list
