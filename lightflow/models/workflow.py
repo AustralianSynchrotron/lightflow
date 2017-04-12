@@ -232,6 +232,7 @@ class Workflow:
 
         new_dag = copy.deepcopy(self._dags_blueprint[name])
         new_dag.config = self._config
+        new_dag.workflow_name = self.name
         self._dags_running.append(
             self._celery_app.send_task(JobExecPath.Dag,
                                        args=(new_dag, self._workflow_id, data),

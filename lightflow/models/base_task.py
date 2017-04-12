@@ -170,16 +170,18 @@ class TaskParameters(dict):
 
 class TaskContext:
     """ This class contains information about the context the task is running in. """
-    def __init__(self, task_name, dag_name, workflow_id):
+    def __init__(self, task_name, dag_name, workflow_name, workflow_id):
         """ Initialize the task context object.
         
         Args:
-            name (str): The name of the task.
+            task_name (str): The name of the task.
             dag_name (str): The name of the DAG the task was started from.
+            workflow_name (str): The name of the workflow the task was started from.
             workflow_id (str): The id of the workflow this task is member of.
         """
         self.task_name = task_name
         self.dag_name = dag_name
+        self.workflow_name = workflow_name
         self.workflow_id = workflow_id
 
 
@@ -202,10 +204,12 @@ class BaseTask:
         self._force_run = force_run
         self.propagate_skip = propagate_skip
 
-        self._config = None
-        self.dag_name = None
-        self.celery_result = None
         self._skip = False
+
+        self._config = None
+        self._celery_result = None
+        self._workflow_name = None
+        self._dag_name = None
 
     @property
     def name(self):
@@ -271,12 +275,55 @@ class BaseTask:
         """
         self._config = value
 
+    @property
+    def celery_result(self):
+        """ Returns the celery result object for this task. """
+        return self._celery_result
+
+    @celery_result.setter
+    def celery_result(self, result):
+        """ Sets the celery result object for this task.
+
+        Args:
+            result (AsyncResult): The result of the celery queuing call.
+        """
+        self._celery_result = result
+
+    @property
+    def workflow_name(self):
+        """ Returns the name of the workflow this task belongs to. """
+        return self._workflow_name
+
+    @workflow_name.setter
+    def workflow_name(self, name):
+        """ Set the name of the workflow this task belongs to.
+
+        Args:
+            name (str): The name of the workflow.
+        """
+        self._workflow_name = name
+
+    @property
+    def dag_name(self):
+        """ Returns the name of the dag this task belongs to. """
+        return self._dag_name
+
+    @dag_name.setter
+    def dag_name(self, name):
+        """ Set the name of the dag this task belongs to.
+
+        Args:
+            name (str): The name of the dag.
+        """
+        self._dag_name = name
+
     def skip(self):
         """ Flag the task to be skipped. """
         if not self._force_run:
             self._skip = True
 
-    def _run(self, data, store, signal, context, *, start_callback=None, end_callback=None):
+    def _run(self, data, store, signal, context, *,
+             start_callback=None, end_callback=None):
         """ The internal run method that decorates the public run method.
 
         This method makes sure data is being passed to and from the task.

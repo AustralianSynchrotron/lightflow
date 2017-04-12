@@ -161,6 +161,6 @@ def execute_task(self, task, workflow_id, data=None):
             SignalConnection(**task.config.signal, auto_connect=True),
             request_key=workflow_id),
             task.dag_name),
-        context=TaskContext(task.name, task.dag_name, workflow_id),
+        context=TaskContext(task.name, task.dag_name, task.workflow_name, workflow_id),
         start_callback=handle_start,
         end_callback=handle_end)

@@ -70,10 +70,12 @@ class Dag:
         self._name = name
         self._autostart = autostart
 
-        self._config = None
         self._graph = nx.DiGraph()
         self._slots = defaultdict(dict)
         self._copy_counter = 0
+
+        self._config = None
+        self._workflow_name = None
 
     @property
     def name(self):
@@ -92,12 +94,26 @@ class Dag:
 
     @config.setter
     def config(self, value):
-        """ Sets the dag configuration.
+        """ Set the dag configuration.
 
         Args:
             value (Config): A reference to a Config object.
         """
         self._config = value
+
+    @property
+    def workflow_name(self):
+        """ Returns the name of the workflow this dag belongs to. """
+        return self._workflow_name
+
+    @workflow_name.setter
+    def workflow_name(self, name):
+        """ Set the name of the workflow this dag belongs to.
+
+        Args:
+            name (str): The name of the workflow.
+        """
+        self._workflow_name = name
 
     def define(self, schema):
         """ Constructs the task graph (dag) from a given schema.
@@ -168,6 +184,7 @@ class Dag:
         cleanup = []
         linearised_graph = nx.topological_sort(self._graph)
         for node in linearised_graph:
+            node.workflow_name = self.workflow_name
             node.dag_name = self.name
             if len(self._graph.predecessors(node)) == 0:
                 tasks.append(node)
