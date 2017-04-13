@@ -21,7 +21,7 @@ from lightflow.tasks import PythonTask
 import numpy as np
 
 
-# the callable function to store data in the persistent data store. It stores a single
+# the callback function to store data in the persistent data store. It stores a single
 # integer value in 'number', a single integer value into the hierarchical key
 # 'buffer' -> 'observable' and a numpy array into 'image'. Additionally it adds an integer
 # value to a list in 'sample' -> 'spectra'.
@@ -32,7 +32,7 @@ def store_data(data, store, signal, context):
     store.push('sample.spectra', 7)
 
 
-# the callable function for the task that retrieves and prints the 'number' and 'image'
+# the callback function for the task that retrieves and prints the 'number' and 'image'
 # values then modifies the 'number' value and creates a new list of 'filenames'.
 def modify_data(data, store, signal, context):
     number = store.get('number')
@@ -45,12 +45,12 @@ def modify_data(data, store, signal, context):
     store.push('filenames', 'file_a.spec')
 
 
-# the callable function for the task that adds another filename to the list.
+# the callback function for the task that adds another filename to the list.
 def add_filename(data, store, signal, context):
     store.push('filenames', 'file_b.spec')
 
 
-# the callable function for the task that adds a nested list to the list of filenames and
+# the callback function for the task that adds a nested list to the list of filenames and
 # then extends the list of filenames with two more entries.
 def add_more_filenames(data, store, signal, context):
     store.push('filenames', ['nested_a', 'nested_b'])
@@ -62,16 +62,16 @@ d = Dag('main_dag')
 
 # create the tasks that call the functions above
 store_task = PythonTask(name='store_task',
-                        callable=store_data)
+                        callback=store_data)
 
 modify_task = PythonTask(name='modify_task',
-                         callable=modify_data)
+                         callback=modify_data)
 
 add_filename_task = PythonTask(name='add_filename_task',
-                               callable=add_filename)
+                               callback=add_filename)
 
 add_more_filename_task = PythonTask(name='add_more_filename_task',
-                                    callable=add_more_filenames)
+                                    callback=add_more_filenames)
 
 # set up the graph of the DAG, in which the store_task and modify_task are called
 # in sequence while the add_filename_task and add_more_filename_task are run in parallel.

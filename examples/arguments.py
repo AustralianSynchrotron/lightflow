@@ -28,12 +28,12 @@ arguments = Arguments([
 ])
 
 
-# the callable function that prints the value of the filepath argument
+# the callback function that prints the value of the filepath argument
 def print_filepath(data, store, signal, context):
     print('The filepath is:', store.get('filepath'))
 
 
-# the callable function that prints the value of the iterations argument
+# the callback function that prints the value of the iterations argument
 def print_iterations(data, store, signal, context):
     print('Number of iterations:', store.get('iterations'))
 
@@ -43,11 +43,11 @@ d = Dag('main_dag')
 
 # task for printing the value of the filepath argument
 print_filepath_task = PythonTask(name='print_filepath_task',
-                                 callable=print_filepath)
+                                 callback=print_filepath)
 
 # task for printing the value of the iterations argument
 print_iterations_task = PythonTask(name='print_iterations_task',
-                                   callable=print_iterations)
+                                   callback=print_iterations)
 
 # set up the graph of the DAG, in which the print_filepath_task has to be executed first,
 # followed by the print_iterations_task.
