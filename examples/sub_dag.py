@@ -15,13 +15,13 @@ from lightflow.models import Dag
 from lightflow.tasks import PythonTask
 
 
-# the callable function for the init task
+# the callback function for the init task
 def print_name(data, store, signal, context):
     print('Task {task_name} being run in DAG {dag_name} '
           'for workflow {workflow_name} ({workflow_id})'.format(**context.to_dict()))
 
 
-# this callable function starts five dags. For each dag the function waits a second,
+# this callback function starts five dags. For each dag the function waits a second,
 # then creates a numpy array and stores it into the data that is then passed to the
 # sub dag. The dag that should be started can either be given by its name or the dag
 # object itself.
@@ -32,16 +32,16 @@ def start_sub_dag(data, store, signal, context):
         signal.start_dag(sub_dag, data=data)
 
 
-# this callable function prints the dimensions of the received numpy array
+# this callback function prints the dimensions of the received numpy array
 def sub_dag_print(data, store, signal, context):
     print('Received an image with dimensions: {}'.format(data['image'].shape))
 
 
 init_task = PythonTask(name='init_task',
-                       callable=print_name)
+                       callback=print_name)
 
 call_dag_task = PythonTask(name='call_dag_task',
-                           callable=start_sub_dag)
+                           callback=start_sub_dag)
 
 # create the main dag that runs the init task first, followed by the call_dag task.
 main_dag = Dag('main_dag')
@@ -53,7 +53,7 @@ main_dag.define({
 # create the tasks for the sub dag that simply prints the shape of the numpy array
 # passed down from the main dag.
 print_task = PythonTask(name='print_task',
-                        callable=sub_dag_print)
+                        callback=sub_dag_print)
 
 # create the sub dag that is being called by the main dag. In order to stop the
 # system from automatically starting the dag when the workflow is run, set the autostart

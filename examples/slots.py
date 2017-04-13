@@ -34,28 +34,28 @@ def sub_data(data, store, signal, context):
 d = Dag('myDag')
 
 put_me = PythonTask(name='put_me',
-                    callable=put_data_me)
+                    callback=put_data_me)
 
 print_me = PythonTask(name='print_me',
-                      callable=print_value)
+                      callback=print_value)
 
 square_me = PythonTask(name='square_me',
-                       callable=square_value)
+                       callback=square_value)
 
 print_me2 = PythonTask(name='print_me2',
-                       callable=print_value)
+                       callback=print_value)
 
 mult_me = PythonTask(name='mult_me',
-                     callable=mult_data)
+                     callback=mult_data)
 
 print_me3 = PythonTask(name='print_me3',
-                       callable=print_value)
+                       callback=print_value)
 
 sub_me = PythonTask(name='sub_me',
-                    callable=sub_data)
+                    callback=sub_data)
 
 print_me4 = PythonTask(name='print_me4',
-                       callable=print_value)
+                       callback=print_value)
 
 
 d.define({put_me: {print_me: '', square_me: '', mult_me: '', sub_me: 'first'},
