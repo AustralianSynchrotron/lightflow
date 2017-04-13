@@ -16,7 +16,7 @@ class PythonTask(BaseTask):
         super().__init__(name, force_run=force_run, propagate_skip=propagate_skip)
         self._callable = callable
 
-    def run(self, data, store, signal, **kwargs):
+    def run(self, data, store, signal, context, **kwargs):
         """ The main run method of the Python task.
 
         Args:
@@ -27,6 +27,7 @@ class PythonTask(BaseTask):
                                        workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
+            context (TaskContext): The context in which the tasks runs.
 
         Returns:
             Action: An Action object containing the data that should be passed on
@@ -34,4 +35,4 @@ class PythonTask(BaseTask):
                     should be executed.
         """
         if self._callable is not None:
-            return self._callable(self.name, data, store, signal, **kwargs)
+            return self._callable(data, store, signal, context, **kwargs)

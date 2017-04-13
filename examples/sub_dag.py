@@ -1,39 +1,65 @@
-from lightflow.models import Dag
-from lightflow.tasks import PythonTask
+""" Implement dynamic workflows by calling other dags from within a task
+
+In order to change the workflow at runtime, a task can request the execution of another
+dag via the start_dag function of the signal system.
+
+This example requires the numpy module to be installed and available to workers as well
+as the workflow.
+
+"""
+
 from time import sleep
 import numpy as np
 
+from lightflow.models import Dag
+from lightflow.tasks import PythonTask
 
-def print_name(name, data, store, signal):
-    print('>>>>>>>>>>> {}'.format(name))
+
+# the callable function for the init task
+def print_name(data, store, signal, context):
+    print('Task {task_name} being run in DAG {dag_name} '
+          'for workflow {workflow_name} ({workflow_id})'.format(**context.to_dict()))
 
 
-def start_sub_dag(name, data, store, signal):
+# this callable function starts five dags. For each dag the function waits a second,
+# then creates a numpy array and stores it into the data that is then passed to the
+# sub dag. The dag that should be started can either be given by its name or the dag
+# object itself.
+def start_sub_dag(data, store, signal, context):
     for i in range(5):
         sleep(1)
         data['image'] = np.ones((100, 100))
-        signal.start_dag('subDag', data=data)
+        signal.start_dag(sub_dag, data=data)
 
 
-def sub_dag_print(name, data, store, signal):
-    print('<<<<<<<<<<< {}'.format(data['image'].shape))
+# this callable function prints the dimensions of the received numpy array
+def sub_dag_print(data, store, signal, context):
+    print('Received an image with dimensions: {}'.format(data['image'].shape))
 
 
-md_one = PythonTask(name='md_one',
-                    callable=print_name)
+init_task = PythonTask(name='init_task',
+                       callable=print_name)
 
-md_two = PythonTask(name='md_two',
-                    callable=start_sub_dag)
+call_dag_task = PythonTask(name='call_dag_task',
+                           callable=start_sub_dag)
 
-main_dag = Dag('mainDag')
-main_dag.define({md_one: [md_two]})
+# create the main dag that runs the init task first, followed by the call_dag task.
+main_dag = Dag('main_dag')
+main_dag.define({
+    init_task: call_dag_task
+})
 
 
-sd_one = PythonTask(name='sd_one',
-                    callable=sub_dag_print)
+# create the tasks for the sub dag that simply prints the shape of the numpy array
+# passed down from the main dag.
+print_task = PythonTask(name='print_task',
+                        callable=sub_dag_print)
 
-sd_two = PythonTask(name='sd_two',
-                    callable=sub_dag_print)
+# create the sub dag that is being called by the main dag. In order to stop the
+# system from automatically starting the dag when the workflow is run, set the autostart
+# parameter to false.
+sub_dag = Dag('sub_dag', autostart=False)
 
-sub_dag = Dag('subDag', autostart=False)
-sub_dag.define({sd_one: [sd_two]})
+sub_dag.define({
+    print_task: None
+})
