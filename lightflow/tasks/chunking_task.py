@@ -1,6 +1,7 @@
 import re
 from lightflow.models import BaseTask
 from lightflow.models import Action
+from lightflow.queue import JobType
 from lightflow.models.utils import find_indices
 
 
@@ -9,9 +10,12 @@ class ChunkingTask(BaseTask):
 
     def __init__(self, name, dag_name, match_pattern, in_key, out_key=None,
                  flush_string='|', flush_on_end=True,
-                 force_consecutive=True, decimate=1,
-                 force_run=False, propagate_skip=True):
+                 force_consecutive=True, decimate=1,  *,
+                 queue=JobType.Task, force_run=False, propagate_skip=True):
         """ Initialise the Chunking task.
+
+        All task parameters except the name, callback, queue, force_run and propagate_skip
+        can either be their native type or a callable returning the native type.
 
         Args:
             name (str): The name of the task.
@@ -32,7 +36,8 @@ class ChunkingTask(BaseTask):
             force_run (bool): Run the task even if it is flagged to be skipped.
             propagate_skip (bool): Propagate the skip flag to the next task.
         """
-        super().__init__(name, force_run=force_run, propagate_skip=propagate_skip)
+        super().__init__(name, queue=queue,
+                         force_run=force_run, propagate_skip=propagate_skip)
         self._dag_name = dag_name
         self._in_key = in_key
         self._out_key = out_key if out_key is not None else in_key

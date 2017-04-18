@@ -16,10 +16,6 @@ class ConfigFieldError(RuntimeError):
     pass
 
 
-class WorkerQueueUnknownError(RuntimeError):
-    pass
-
-
 class WorkflowArgumentError(RuntimeError):
     pass
 

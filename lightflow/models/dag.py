@@ -186,7 +186,7 @@ class Dag:
                             task.celery_result = celery_app.send_task(
                                 JobExecPath.Task,
                                 args=(task, workflow_id, data),
-                                queue=JobType.Task,
+                                queue=task.queue,
                                 routing_key=JobType.Task
                                 )
                     else:
@@ -207,7 +207,7 @@ class Dag:
                             task.celery_result = celery_app.send_task(
                                 JobExecPath.Task,
                                 args=(task, workflow_id, input_data),
-                                queue=JobType.Task,
+                                queue=task.queue,
                                 routing_key=JobType.Task
                                 )
                 else:

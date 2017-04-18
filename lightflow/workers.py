@@ -1,8 +1,5 @@
 from uuid import uuid4
 
-from .models.exceptions import WorkerQueueUnknownError
-
-from .queue.const import JobType
 from .queue.app import create_app
 from .queue.worker import WorkerLifecycle
 from .queue.models import WorkerStats, QueueStats
@@ -22,11 +19,6 @@ def start_worker(queues, config, *, name=None, celery_args=None):
                             and might change. Use with caution.
     """
     celery_app = create_app(config)
-
-    for queue in queues:
-        if queue not in [JobType.Workflow, JobType.Dag, JobType.Task]:
-            raise WorkerQueueUnknownError(
-                'The queue "{}" is not a valid queue name.'.format(queue))
 
     argv = [
         'worker',

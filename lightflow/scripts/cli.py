@@ -5,8 +5,7 @@ from lightflow.config import Config
 from lightflow.version import __version__
 from lightflow.queue.const import JobType
 from lightflow.models.exceptions import (WorkflowArgumentError,
-                                         WorkflowImportError,
-                                         WorkerQueueUnknownError)
+                                         WorkflowImportError)
 
 from lightflow.workers import (start_worker, stop_worker, list_workers)
 from lightflow.workflows import (start_workflow, stop_workflow, list_workflows,
@@ -134,15 +133,10 @@ def worker_start(obj, queues, name, celery_args):
     \b
     CELERY_ARGS: Additional Celery worker command line arguments.
     """
-    try:
-        start_worker(queues=queues.split(','),
-                     config=obj['config'],
-                     name=name,
-                     celery_args=celery_args)
-    except WorkerQueueUnknownError:
-        click.echo(_style(obj['show_color'],
-                          'One of the specified queues is not a valid queue name',
-                          fg='red', bold=True))
+    start_worker(queues=queues.split(','),
+                 config=obj['config'],
+                 name=name,
+                 celery_args=celery_args)
 
 
 @worker.command('stop')
