@@ -1,19 +1,24 @@
 from lightflow.models import BaseTask
+from lightflow.queue import JobType
 
 
 class PythonTask(BaseTask):
     """ The Python task executes a user-defined python method. """
-    def __init__(self, name, *, callback=None, force_run=False, propagate_skip=True):
+    def __init__(self, name, callback=None, *,
+                 queue=JobType.Task, force_run=False, propagate_skip=True):
         """ Initialize the Python task.
 
         Args:
             name (str): The name of the task.
             callback: A reference to the Python method that should be called by
                       the task as soon as it is run.
+            queue (str): Name of the queue the task should be scheduled to. Defaults to
+                         the general task queue.
             force_run (bool): Run the task even if it is flagged to be skipped.
             propagate_skip (bool): Propagate the skip flag to the next task.
         """
-        super().__init__(name, force_run=force_run, propagate_skip=propagate_skip)
+        super().__init__(name, queue=queue,
+                         force_run=force_run, propagate_skip=propagate_skip)
         self._callback = callback
 
     def run(self, data, store, signal, context, **kwargs):

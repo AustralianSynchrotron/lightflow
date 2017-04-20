@@ -1,6 +1,7 @@
 from .action import Action
 from .task_data import MultiTaskData
 from .exceptions import TaskReturnActionInvalid
+from lightflow.queue import JobType
 
 
 class BaseTask:
@@ -8,17 +9,19 @@ class BaseTask:
 
     Tasks should inherit from this class and implement the run() method.
     """
-    def __init__(self, name, *, force_run=False, propagate_skip=True):
+    def __init__(self, name, *, queue=JobType.Task, force_run=False, propagate_skip=True):
         """ Initialise the base task.
 
         The dag_name attribute is filled by the dag define method.
 
         Args:
             name (str): The name of the task.
+            queue (str): Name of the queue the task should be scheduled to.
             force_run (bool): Run the task even if it is flagged to be skipped.
             propagate_skip (bool): Propagate the skip flag to the next task.
         """
         self._name = name
+        self._queue = queue
         self._force_run = force_run
         self.propagate_skip = propagate_skip
 
@@ -33,6 +36,11 @@ class BaseTask:
     def name(self):
         """ Returns the name of the task. """
         return self._name
+
+    @property
+    def queue(self):
+        """ Returns the queue the task should be scheduled to. """
+        return self._queue
 
     @property
     def has_result(self):
