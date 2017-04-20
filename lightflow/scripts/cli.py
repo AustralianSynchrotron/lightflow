@@ -1,10 +1,12 @@
 import click
 import json
+from functools import update_wrapper
 
 from lightflow.config import Config
 from lightflow.version import __version__
 from lightflow.queue.const import JobType
-from lightflow.models.exceptions import (WorkflowArgumentError,
+from lightflow.models.exceptions import (ConfigLoadError,
+                                         WorkflowArgumentError,
                                          WorkflowImportError,
                                          WorkerQueueUnknownError)
 
@@ -19,6 +21,19 @@ JOB_COLOR = {
 }
 
 
+def config_required(f):
+    """ Decorator that checks whether a configuration file was set. """
+    def new_func(obj, *args, **kwargs):
+        if 'config' not in obj:
+            click.echo(_style(obj.get('show_color', False),
+                              'Could not find a valid configuration file!',
+                              fg='red', bold=True))
+            raise click.Abort()
+        else:
+            return f(obj, *args, **kwargs)
+    return update_wrapper(new_func, f)
+
+
 @click.group(context_settings=dict(help_option_names=['-h', '--help']))
 @click.version_option(version=__version__, prog_name='Lightflow')
 @click.option('--config', '-c', help='Path to configuration file.')
@@ -30,8 +45,14 @@ def cli(ctx, config, no_color):
 
     Lightflow is being developed at the Australian Synchrotron.
     """
-    ctx.obj = {'config': Config.from_file(config),
-               'show_color': not no_color if no_color is not None else True}
+    ctx.obj = {
+        'show_color': not no_color if no_color is not None else True
+    }
+
+    try:
+        ctx.obj['config'] = Config.from_file(config)
+    except ConfigLoadError:
+        pass
 
 
 @cli.group()
@@ -48,6 +69,7 @@ def config_default():
 
 @config.command('list')
 @click.pass_obj
+@config_required
 def config_list(obj):
     """ List the current configuration. """
     click.echo(json.dumps(obj['config'].to_dict(), indent=4))
@@ -61,6 +83,7 @@ def workflow():
 
 @workflow.command('list')
 @click.pass_obj
+@config_required
 def workflow_list(obj):
     """ List all available workflows. """
     for wf in list_workflows(config=obj['config']):
@@ -75,6 +98,7 @@ def workflow_list(obj):
 @click.argument('name')
 @click.argument('workflow_args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_obj
+@config_required
 def workflow_start(obj, keep_data, name, workflow_args):
     """ Send a workflow to the queue.
 
@@ -98,6 +122,7 @@ def workflow_start(obj, keep_data, name, workflow_args):
 @workflow.command('stop')
 @click.argument('names', nargs=-1)
 @click.pass_obj
+@config_required
 def workflow_stop(obj, names):
     """ Stop one or more running workflows.
     
@@ -128,6 +153,7 @@ def worker():
 @click.option('--name', '-n', default=None, help='Name of the worker.')
 @click.argument('celery_args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_obj
+@config_required
 def worker_start(obj, queues, name, celery_args):
     """ Start a worker process.
 
@@ -148,6 +174,7 @@ def worker_start(obj, queues, name, celery_args):
 @worker.command('stop')
 @click.argument('worker_ids', nargs=-1)
 @click.pass_obj
+@config_required
 def worker_stop(obj, worker_ids):
     """ Stop running workers.
 
@@ -170,6 +197,7 @@ def worker_stop(obj, worker_ids):
               help='Only show workers for this comma separated list of queues.')
 @click.option('--verbose', '-v', is_flag=True, help='Show detailed worker information.')
 @click.pass_obj
+@config_required
 def worker_status(obj, filter_queues, verbose):
     """ Show the status of all running workers. """
     show_colors = obj['show_color']
@@ -223,6 +251,7 @@ def worker_status(obj, filter_queues, verbose):
 
 @cli.command('monitor')
 @click.pass_obj
+@config_required
 def monitor(obj):
     """ Show the worker and workflow event stream. """
     show_colors = obj['show_color']
