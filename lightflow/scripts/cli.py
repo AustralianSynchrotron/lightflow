@@ -7,8 +7,7 @@ from lightflow.version import __version__
 from lightflow.queue.const import JobType
 from lightflow.models.exceptions import (ConfigLoadError,
                                          WorkflowArgumentError,
-                                         WorkflowImportError,
-                                         WorkerQueueUnknownError)
+                                         WorkflowImportError)
 
 from lightflow.workers import (start_worker, stop_worker, list_workers)
 from lightflow.workflows import (start_workflow, stop_workflow, list_workflows,
