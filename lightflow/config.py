@@ -128,14 +128,14 @@ class Config:
     def workflow_polling_time(self):
         """ Return the waiting time between status checks of the running dags (sec) """
         if 'graph' not in self._config:
-            raise ConfigFieldError('The graph section is missing in the confoguration')
+            raise ConfigFieldError('The graph section is missing in the configuration')
         return self._config.get('graph').get('workflow_polling_time')
 
     @property
     def dag_polling_time(self):
         """ Return the waiting time between status checks of the running tasks (sec) """
         if 'graph' not in self._config:
-            raise ConfigFieldError('The graph section is missing in the confoguration')
+            raise ConfigFieldError('The graph section is missing in the configuration')
         return self._config.get('graph').get('dag_polling_time')
 
     def set_to_default(self):
