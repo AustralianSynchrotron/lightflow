@@ -12,7 +12,7 @@ like this:
 
 """
 
-from lightflow.models import Dag, Action
+from lightflow.models import Dag
 from lightflow.tasks import PythonTask
 
 
