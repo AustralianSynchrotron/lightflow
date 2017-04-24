@@ -2,6 +2,7 @@ import os
 import sys
 from time import sleep
 from threading import Thread
+from functools import partial
 from subprocess import Popen, PIPE
 from tempfile import TemporaryFile
 
@@ -18,10 +19,10 @@ class BashTaskOutputReader(Thread):
     def __init__(self, process, stdout_file, stderr_file,
                  callback_stdout, callback_stderr, refresh_time,
                  data, store, signal, context):
-        """ Initializes the bash task reader thread. 
+        """ Initializes the reader for the process output. 
 
         Args:
-            process: Reference to the Popen object.
+            process: Reference to a Popen object representing the running process.
             stdout_file: The file object for the standard output of the process.
             stderr_file: The file object for the standard error of the process.
             callback_stdout: The callback that should be called for every line of the
@@ -57,34 +58,45 @@ class BashTaskOutputReader(Thread):
         return self._data
 
     def run(self):
-        """ Drain the subprocesse's output streams. """
-        while self._process.poll():
-            if not self._read_output(self._process.stdout,
-                                     self._callback_stdout,
-                                     self._stdout_file):
-                sleep(0.5 * self._refresh_time)
+        """ Drain the process output streams. """
+        read_stdout = partial(self._read_output, stream=self._process.stdout,
+                              callback=self._callback_stdout,
+                              output_file=self._stdout_file)
 
-            if not self._read_output(self._process.stderr,
-                                     self._callback_stderr,
-                                     self._stderr_file):
-                sleep(0.5 * self._refresh_time)
+        read_stderr = partial(self._read_output, stream=self._process.stderr,
+                              callback=self._callback_stderr,
+                              output_file=self._stderr_file)
+
+        # capture the process output as long as the process is active
+        while self._process.poll():
+            result_stdout = read_stdout()
+            result_stderr = read_stderr()
+            if not result_stdout and not result_stderr:
+                sleep(self._refresh_time)
 
         # read remaining lines
-        while not self._process.stdout.closed:
-            if not self._read_output(self._process.stdout,
-                                     self._callback_stdout,
-                                     self._stdout_file):
-                break
+        while read_stdout():
+            pass
 
-        while not self._process.stderr.closed:
-            if not self._read_output(self._process.stderr,
-                                     self._callback_stderr,
-                                     self._stderr_file):
-                break
+        while read_stderr():
+            pass
 
     def _read_output(self, stream, callback, output_file):
-        line = stream.readline()
+        """ Read the output of the process, executed the callback and save the output.
+        
+        Args:
+            stream: A file object pointing to the output stream that should be read.
+            callback(callable, None): A callback function that is called for each new
+                                      line of output.
+            output_file: A file object to which the full output is written. 
 
+        Returns:
+            bool: True if a line was read from the output, otherwise False.
+        """
+        if (callback is None and output_file is None) or stream.closed:
+            return False
+
+        line = stream.readline()
         if line:
             if callback is not None:
                 callback(line.decode(),
@@ -101,8 +113,7 @@ class BashTaskOutputReader(Thread):
 class BashTask(BaseTask):
     """ The Bash task executes a user-defined bash command or bash file. """
     def __init__(self, name, command, cwd=None, env=None, user=None, group=None,
-                 stdin=None, refresh_time=0.1,
-                 aggregate_stdout=False, aggregate_stderr=False,
+                 stdin=None, refresh_time=0.1, capture_stdout=False, capture_stderr=False,
                  callback_start=None, callback_end=None,
                  callback_stdout=None, callback_stderr=None,
                  *, queue=JobType.Task, force_run=False, propagate_skip=True):
@@ -124,10 +135,10 @@ class BashTask(BaseTask):
             stdin (str, None): An input string that should be passed on to the process.
             refresh_time (float): The time in seconds the internal output handling waits
                                   before checking for new output from the process.
-            aggregate_stdout (bool): Set to true to capture all standard output in a
-                                     temporary file.
-            aggregate_stderr (bool): Set to true to capture all standard errors in a
-                                     temporary file.
+            capture_stdout (bool): Set to true to capture all standard output in a
+                                   temporary file.
+            capture_stderr (bool): Set to true to capture all standard errors in a
+                                   temporary file.
             callback_start: A callable that is called after the process started.
                             The definition is:
                               def (pid, data, store, signal, context)
@@ -140,7 +151,7 @@ class BashTask(BaseTask):
                                  signal, context)
                           where returncode is the return code of the process and
                           stdout_file/stderr_file a file object with the standard/error
-                          output if the flag aggregate_stdout/aggregate_stderr was set to
+                          output if the flag capture_stdout/capture_stderr was set to
                           True, otherwise None. The remaining parameters are identical
                           to callback_start.
             callback_stdout: A callable that is called for every line of output the
@@ -171,8 +182,8 @@ class BashTask(BaseTask):
             group=group,
             stdin=stdin,
             refresh_time=refresh_time,
-            aggregate_stdout=aggregate_stdout,
-            aggregate_stderr=aggregate_stderr
+            capture_stdout=capture_stdout,
+            capture_stderr=capture_stderr
         )
 
         self._callback_start = callback_start
@@ -200,17 +211,14 @@ class BashTask(BaseTask):
         """
         params = self.params.eval(data, store)
 
-        # check whether the output should be captured
-        capture_output = self._callback_stdout is not None or \
-            self._callback_stderr is not None or \
-            params.aggregate_stdout or params.aggregate_stderr
+        capture_stdout = self._callback_stdout is not None or params.capture_stdout
+        capture_stderr = self._callback_stderr is not None or params.capture_stderr
 
-        if capture_output:
-            stdout = PIPE
-            stderr = PIPE
-        else:
-            stdout = None
-            stderr = None
+        stdout_file = TemporaryFile() if params.capture_stdout else None
+        stderr_file = TemporaryFile() if params.capture_stderr else None
+
+        stdout = PIPE if capture_stdout else None
+        stderr = PIPE if capture_stderr else None
 
         # change the user or group under which the process should run
         if params.user is not None or params.group is not None:
@@ -231,19 +239,8 @@ class BashTask(BaseTask):
         if self._callback_start is not None:
             self._callback_start(proc.pid, data, store, signal, context)
 
-        # create a temp file if the output should be aggregated
-        if params.aggregate_stdout:
-            stdout_file = TemporaryFile()
-        else:
-            stdout_file = None
-
-        if params.aggregate_stderr:
-            stderr_file = TemporaryFile()
-        else:
-            stderr_file = None
-
         # send the output handling to a thread
-        if capture_output:
+        if capture_stdout or capture_stderr:
             output_reader = BashTaskOutputReader(proc, stdout_file, stderr_file,
                                                  self._callback_stdout,
                                                  self._callback_stderr,
@@ -265,8 +262,11 @@ class BashTask(BaseTask):
 
         # send a notification that the process has completed
         if self._callback_end is not None:
-            stdout_file.seek(0)
-            stderr_file.seek(0)
+            if stdout_file is not None:
+                stdout_file.seek(0)
+            if stderr_file is not None:
+                stderr_file.seek(0)
+
             self._callback_end(proc.returncode, stdout_file, stderr_file,
                                data, store, signal, context)
 
