@@ -34,15 +34,33 @@ class Option:
 
     @property
     def default(self):
-        """ Returns the default value of the option.
+        """ Return the default value of the option.
 
         Returns:
             str: the default value of the option
         """
         return self._default
 
+    @property
+    def type(self):
+        """ Return the type of the option.
+        
+        Returns:
+            type: the type of the option. 
+        """
+        return self._type
+
+    @property
+    def help(self):
+        """ Return the help text of the option.
+        
+        Returns:
+            str: the help text of the option.
+        """
+        return self._help
+
     def convert(self, value):
-        """ Converts the specified value to the type of the option.
+        """ Convert the specified value to the type of the option.
 
         Args:
             value: The value that should be converted.
