@@ -23,6 +23,8 @@ def start_workflow(name, config, *, clear_data_store=True, store_args=None):
                                  run in the data store after the run.
         store_args (dict): Dictionary of additional arguments that are ingested into the
                            data store prior to the execution of the workflow.
+    Returns:
+        str: The ID of the workflow job.
     Raises:
         WorkflowArgumentError: If the workflow requires arguments to be set in store_args
                                that were not supplied to the workflow.
@@ -33,11 +35,12 @@ def start_workflow(name, config, *, clear_data_store=True, store_args=None):
                             arguments=store_args)
 
     celery_app = create_app(config)
-    celery_app.send_task(JobExecPath.Workflow,
-                         args=(wf,),
-                         queue=JobType.Workflow,
-                         routing_key=JobType.Workflow
-                         )
+    result = celery_app.send_task(JobExecPath.Workflow,
+                                  args=(wf,),
+                                  queue=JobType.Workflow,
+                                  routing_key=JobType.Workflow
+                                  )
+    return result.id
 
 
 def stop_workflow(config, *, names=None):

@@ -25,7 +25,6 @@ def put_data(data, store, signal, context):
           'for workflow {workflow_name} ({workflow_id})'.format(**context.to_dict()))
 
     data['value'] = 5
-    return Action(data)
 
 
 # the callback function for the branch task that limits the successor tasks to the

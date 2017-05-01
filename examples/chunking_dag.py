@@ -1,4 +1,4 @@
-from lightflow.models import Dag, Action
+from lightflow.models import Dag
 from lightflow.tasks import PythonTask, ChunkingTask
 
 
@@ -6,7 +6,6 @@ def make_list(data, store, signal, context):
     print(context.task_name)
     data['my_list'] = ['asdf_0001.dat', 'asdf_0002.dat', 'sdfa_0001.dat', 'sdfa_0002.dat', 'sdfa_0003.dat',
                        'blah_0001.dat', '|', 'blah_0002.dat', 'blah2_0001.dat']
-    return Action(data)
 
 
 def print_list(data, store, signal, context):
@@ -14,7 +13,6 @@ def print_list(data, store, signal, context):
     print('==================================')
     print(data['my_list'])
     print('==================================')
-    return Action(data)
 
 
 print_dag = Dag('print_dag', autostart=False)

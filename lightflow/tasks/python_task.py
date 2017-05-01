@@ -1,4 +1,4 @@
-from lightflow.models import BaseTask
+from lightflow.models import BaseTask, Action
 from lightflow.queue import JobType
 
 
@@ -40,4 +40,5 @@ class PythonTask(BaseTask):
                     should be executed.
         """
         if self._callback is not None:
-            return self._callback(data, store, signal, context, **kwargs)
+            result = self._callback(data, store, signal, context, **kwargs)
+            return result if result is not None else Action(data)
