@@ -125,6 +125,14 @@ class Config:
         return self._config.get('celery')
 
     @property
+    def extensions(self):
+        """ Return the custom settings of extensions """
+        if 'extensions' not in self._config:
+            raise ConfigFieldError(
+                'The extensions section is missing in the configuration')
+        return self._config.get('extensions')
+
+    @property
     def workflow_polling_time(self):
         """ Return the waiting time between status checks of the running dags (sec) """
         if 'graph' not in self._config:
@@ -212,6 +220,8 @@ class Config:
     graph:
       workflow_polling_time: 0.5
       dag_polling_time: 0.5
+
+    extensions: {}
 
     logging:
       version: 1
