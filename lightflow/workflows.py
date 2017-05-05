@@ -3,7 +3,8 @@ import glob
 
 from .models import Workflow
 from .models.signal import Client, Request, SignalConnection
-from .models.exceptions import WorkflowImportError, JobEventTypeUnsupported
+from .models.exceptions import (WorkflowImportError,
+                                JobEventTypeUnsupported, JobStatInvalid)
 
 from .queue.app import create_app
 from .queue.models import JobStats
@@ -152,10 +153,13 @@ def list_jobs(config, *, status=JobStatus.Active,
     result = []
     for worker_name, jobs in job_map.items():
         for job in jobs:
-            job_stats = JobStats.from_celery(worker_name, job, celery_app)
+            try:
+                job_stats = JobStats.from_celery(worker_name, job, celery_app)
 
-            if (filter_by_type is None) or (job_stats.type == filter_by_type):
-                result.append(job_stats)
+                if (filter_by_type is None) or (job_stats.type == filter_by_type):
+                    result.append(job_stats)
+            except JobStatInvalid:
+                pass
 
     return result
 

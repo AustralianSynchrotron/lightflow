@@ -1,5 +1,7 @@
 from celery.result import AsyncResult
 
+from lightflow.models.exceptions import JobStatInvalid
+
 
 class BrokerStats:
     """ Represents the broker information returned from the celery stats. """
@@ -192,6 +194,9 @@ class JobStats:
         Returns:
             JobStats: A fully initialized JobStats object.
         """
+        if not isinstance(job_dict, dict) or 'id' not in job_dict:
+            raise JobStatInvalid('The job description is missing important fields.')
+
         async_result = AsyncResult(id=job_dict['id'], app=celery_app)
         a_info = async_result.info
 

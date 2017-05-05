@@ -74,3 +74,7 @@ class JobEventTypeUnsupported(RuntimeError):
 
 class WorkerEventTypeUnsupported(RuntimeError):
     pass
+
+
+class JobStatInvalid(RuntimeError):
+    pass

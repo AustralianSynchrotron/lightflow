@@ -189,10 +189,10 @@ def worker_stop(obj, worker_ids):
 @worker.command('status')
 @click.option('--filter-queues', '-f', default=None,
               help='Only show workers for this comma separated list of queues.')
-@click.option('--verbose', '-v', is_flag=True, help='Show detailed worker information.')
+@click.option('--details', '-d', is_flag=True, help='Show detailed worker information.')
 @click.pass_obj
 @config_required
-def worker_status(obj, filter_queues, verbose):
+def worker_status(obj, filter_queues, detail):
     """ Show the status of all running workers. """
     show_colors = obj['show_color']
 
@@ -208,7 +208,7 @@ def worker_status(obj, filter_queues, verbose):
                                   _style(show_colors, ws.name, fg='blue')))
         click.echo('{:23} {}'.format(_style(show_colors, '> pid:', bold=True), ws.pid))
 
-        if verbose:
+        if detail:
             click.echo('{:23} {}'.format(_style(show_colors, '> concurrency:', bold=True),
                                          ws.concurrency))
             click.echo('{:23} {}'.format(_style(show_colors, '> processes:', bold=True),
@@ -223,7 +223,7 @@ def worker_status(obj, filter_queues, verbose):
         click.echo('{:23} {}'.format(_style(show_colors, '> queues:', bold=True),
                                      ', '.join([q.name for q in ws.queues])))
 
-        if verbose:
+        if detail:
             click.echo('{:23} {}'.format(_style(show_colors, '> job count:', bold=True),
                                          ws.job_count))
 
