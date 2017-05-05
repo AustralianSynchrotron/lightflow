@@ -34,6 +34,19 @@ class BrokerStats:
             virtual_host=broker_dict['virtual_host']
         )
 
+    def to_dict(self):
+        """ Return a dictionary of the broker stats.
+
+        Returns:
+            dict: Dictionary of the stats.
+        """
+        return {
+            'hostname': self.hostname,
+            'port': self.port,
+            'transport': self.transport,
+            'virtual_host': self.virtual_host
+        }
+
 
 class QueueStats:
     """ Represents the queue information returned from the celery stats. """
@@ -61,6 +74,17 @@ class QueueStats:
             name=queue_dict['name'],
             routing_key=queue_dict['routing_key']
         )
+
+    def to_dict(self):
+        """ Return a dictionary of the queue stats.
+
+        Returns:
+            dict: Dictionary of the stats.
+        """
+        return {
+            'name': self.name,
+            'routing_key': self.routing_key
+        }
 
 
 class WorkerStats:
@@ -109,6 +133,22 @@ class WorkerStats:
             job_count=worker_dict['pool']['writes']['total'],
             queues=queues
         )
+
+    def to_dict(self):
+        """ Return a dictionary of the worker stats.
+
+        Returns:
+            dict: Dictionary of the stats.
+        """
+        return {
+            'name': self.name,
+            'broker': self.broker.to_dict(),
+            'pid': self.pid,
+            'process_pids': self.process_pids,
+            'concurrency': self.concurrency,
+            'job_count': self.job_count,
+            'queues': [q.to_dict() for q in self.queues]
+        }
 
 
 class JobStats:
@@ -167,6 +207,25 @@ class JobStats:
             worker_pid=job_dict['worker_pid'],
             routing_key=job_dict['delivery_info']['routing_key']
         )
+
+    def to_dict(self):
+        """ Return a dictionary of the job stats.
+        
+        Returns:
+            dict: Dictionary of the stats.
+        """
+        return {
+            'name': self.name,
+            'id': self.id,
+            'type': self.type,
+            'workflow_id': self.workflow_id,
+            'acknowledged': self.acknowledged,
+            'func_name': self.func_name,
+            'hostname': self.hostname,
+            'worker_name': self.worker_name,
+            'worker_pid': self.worker_pid,
+            'routing_key': self.routing_key
+        }
 
 
 class JobEvent:
