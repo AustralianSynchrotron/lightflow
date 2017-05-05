@@ -8,7 +8,8 @@ class JobExecPath:
 
 class JobStatus:
     Active = 0
-    Scheduled = 1
+    Registered = 1
+    Reserved = 2
 
 
 class JobType:

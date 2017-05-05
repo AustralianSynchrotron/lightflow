@@ -121,8 +121,9 @@ def list_jobs(config, *, status=JobStatus.Active,
                          settings are retrieved.
         status (JobStatus): The status of the jobs that should be returned.
         filter_by_type (list): Restrict the returned jobs to the types in this list.
-        filter_by_worker (list): Only return jobs that were scheduled or are running on
-                                 the workers given in this list of worker names.
+        filter_by_worker (list): Only return jobs that were registered, reserved or are
+                                 running on the workers given in this
+                                 list of worker names.
 
     Returns:
         list: A list of JobStats.
@@ -135,11 +136,15 @@ def list_jobs(config, *, status=JobStatus.Active,
     else:
         inspect = celery_app.control.inspect()
 
-    # get active or scheduled jobs
+    # get active, registered or reserved jobs
     if status == JobStatus.Active:
         job_map = inspect.active()
+    elif status == JobStatus.Registered:
+        job_map = inspect.registered()
+    elif status == JobStatus.Reserved:
+        job_map = inspect.reserved()
     else:
-        job_map = inspect.scheduled()
+        job_map = None
 
     if job_map is None:
         return []
