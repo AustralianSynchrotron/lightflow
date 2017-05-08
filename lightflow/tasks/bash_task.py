@@ -52,15 +52,15 @@ class BashTaskOutputReader(Thread):
         self._store = store
         self._signal = signal
         self._context = context
-        self._exc_info = None
+        self._exc_obj = None
 
     @property
     def data(self):
         return self._data
 
     @property
-    def exc_info(self):
-        return self._exc_info
+    def exc_obj(self):
+        return self._exc_obj
 
     def run(self):
         """ Drain the process output streams. """
@@ -88,8 +88,8 @@ class BashTaskOutputReader(Thread):
             while read_stderr():
                 pass
 
-        except (Stop, Abort):
-            self._exc_info = sys.exc_info()
+        except (Stop, Abort) as exc:
+            self._exc_obj = exc
 
     def _read_output(self, stream, callback, output_file):
         """ Read the output of the process, executed the callback and save the output.
@@ -276,10 +276,10 @@ class BashTask(BaseTask):
             data = output_reader.data
 
             # if a stop or abort exception was raised, stop the bash process and re-raise
-            if output_reader.exc_info is not None:
+            if output_reader.exc_obj is not None:
                 if proc.poll():
                     proc.terminate()
-                raise output_reader.exc_info[1].with_traceback(output_reader.exc_info[2])
+                raise output_reader.exc_obj
 
         # send a notification that the process has completed
         if self._callback_end is not None:
