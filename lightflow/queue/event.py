@@ -1,7 +1,8 @@
 import threading
 from queue import Queue
 
-from .models import JobStartedEvent, JobSucceededEvent
+from .const import JobEventName
+from .models import JobStartedEvent, JobSucceededEvent, JobStoppedEvent, JobAbortedEvent
 from lightflow.models.exceptions import (EventTypeUnknown, JobEventTypeUnsupported,
                                          WorkerEventTypeUnsupported)
 
@@ -59,8 +60,10 @@ def create_event_model(event):
     """
     if event['type'].startswith('task'):
         factory = {
-            'task-lightflow-started': JobStartedEvent,
-            'task-lightflow-succeeded': JobSucceededEvent
+            JobEventName.Started: JobStartedEvent,
+            JobEventName.Succeeded: JobSucceededEvent,
+            JobEventName.Stopped: JobStoppedEvent,
+            JobEventName.Aborted: JobAbortedEvent
         }
         if event['type'] in factory:
             return factory[event['type']].from_event(event)
