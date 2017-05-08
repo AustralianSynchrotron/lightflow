@@ -21,3 +21,5 @@ class JobType:
 class JobEventName:
     Started = 'task-lightflow-started'
     Succeeded = 'task-lightflow-succeeded'
+    Stopped = 'task-lightflow-stopped'
+    Aborted = 'task-lightflow-aborted'

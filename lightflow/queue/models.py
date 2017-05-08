@@ -235,106 +235,78 @@ class JobStats:
 
 class JobEvent:
     """ The base class for job events from celery. """
-    def __init__(self, uuid, job_type, event_type, *, label=''):
+    def __init__(self, uuid, job_type, event_type, hostname, pid,
+                 name, workflow_id, event_time):
         """ Initialize the job event object.
         
         Args:
-            uuid (str): The internal event id.
-            job_type (str): The type of job that caused this event (workflow, dag, task).
+            uuid (str): The internal event id. 
+            job_type (str): The type of job that caused this event (workflow, dag, task). 
             event_type (str): The internal event type name.
-            label (str): An optional, short label for the event.
+            hostname (str): The name of the host on which the job is running.
+            pid (int): The pid of the process that runs the job.
+            name (str): The name of the workflow, dag or task that caused this event.
+            workflow_id (str): The id of the workflow that hosts this job.
+            event_time (datetime): The time when the event was triggered.
         """
         self.uuid = uuid
         self.type = job_type
         self.event = event_type
-        self.label = label
+        self.hostname = hostname
+        self.pid = pid
+        self.name = name
+        self.workflow_id = workflow_id
+        self.event_time = event_time
+
+    @classmethod
+    def from_event(cls, event):
+        """ Create a JobEvent object from the event dictionary returned by celery.
+
+        Args:
+            event (dict): The dictionary as returned by celery. 
+
+        Returns:
+            JobEvent: A fully initialized JobEvent object.
+        """
+        return cls(
+            uuid=event['uuid'],
+            job_type=event['job_type'],
+            event_type=event['type'],
+            hostname=event['hostname'],
+            pid=event['pid'],
+            name=event['name'],
+            workflow_id=event['workflow_id'],
+            event_time=event['time']
+        )
 
 
 class JobStartedEvent(JobEvent):
     """ This event is triggered when a new job starts running. """
-    def __init__(self, uuid, job_type, event_type, hostname, pid, name, workflow_id,
-                 start_time):
-        """ Initialize the job started event object.
-        
-        Args:
-            uuid (str): The internal event id. 
-            job_type (str): The type of job that caused this event (workflow, dag, task). 
-            event_type (str): The internal event type name.
-            hostname (str): The name of the host on which the job is running.
-            pid (int): The pid of the process that runs the job.
-            name (str): The name of the workflow, dag or task that caused this event.
-            workflow_id (str): The id of the workflow that hosts this job.
-            start_time (datetime): The start time of the job.
-        """
-        super().__init__(uuid, job_type, event_type, label='started')
-        self.hostname = hostname
-        self.pid = pid
-        self.name = name
-        self.workflow_id = workflow_id
-        self.start_time = start_time
-
-    @classmethod
-    def from_event(cls, event):
-        """ Create a JobStartedEvent object from the event dictionary returned by celery.
-        
-        Args:
-            event (dict): The dictionary as returned by celery. 
-
-        Returns:
-            JobStartedEvent: A fully initialized JobStartedEvent object.
-        """
-        return cls(
-            uuid=event['uuid'],
-            job_type=event['job_type'],
-            event_type=event['type'],
-            hostname=event['hostname'],
-            pid=event['pid'],
-            name=event['name'],
-            workflow_id=event['workflow_id'],
-            start_time=event['start_time']
-        )
+    def __init__(self, uuid, job_type, event_type, hostname, pid,
+                 name, workflow_id, event_time):
+        super().__init__(uuid, job_type, event_type, hostname, pid,
+                         name, workflow_id, event_time)
 
 
 class JobSucceededEvent(JobEvent):
     """ This event is triggered when a job completed successfully. """
-    def __init__(self, uuid, job_type, event_type, hostname, pid, name, workflow_id,
-                 end_time):
-        """ Initialize the job completed successfully event object.
-        
-        Args:
-            uuid (str): The internal event id. 
-            job_type (str): The type of job that caused this event (workflow, dag, task). 
-            event_type (str): The internal event type name.
-            hostname (str): The name of the host on which the job is running.
-            pid (int): The pid of the process that runs the job.
-            name (str): The name of the workflow, dag or task that caused this event.
-            workflow_id (str): The id of the workflow that hosts this job.
-            end_time (datetime): The end time of the job.
-        """
-        super().__init__(uuid, job_type, event_type, label='succeeded')
-        self.hostname = hostname
-        self.pid = pid
-        self.name = name
-        self.workflow_id = workflow_id
-        self.end_time = end_time
+    def __init__(self, uuid, job_type, event_type, hostname, pid,
+                 name, workflow_id, event_time):
+        super().__init__(uuid, job_type, event_type, hostname, pid,
+                         name, workflow_id, event_time)
 
-    @classmethod
-    def from_event(cls, event):
-        """ Create a JobSucceededEvent object from the event dictionary returned by celery.
 
-        Args:
-            event (dict): The dictionary as returned by celery. 
+class JobStoppedEvent(JobEvent):
+    """ This event is triggered when a job was stopped. """
+    def __init__(self, uuid, job_type, event_type, hostname, pid,
+                 name, workflow_id, event_time):
+        super().__init__(uuid, job_type, event_type, hostname, pid,
+                         name, workflow_id, event_time)
 
-        Returns:
-            JobSucceededEvent: A fully initialized JobSucceededEvent object.
-        """
-        return cls(
-            uuid=event['uuid'],
-            job_type=event['job_type'],
-            event_type=event['type'],
-            hostname=event['hostname'],
-            pid=event['pid'],
-            name=event['name'],
-            workflow_id=event['workflow_id'],
-            end_time=event['end_time']
-        )
+
+class JobAbortedEvent(JobEvent):
+    """ This event is triggered when a job was aborted. """
+    def __init__(self, uuid, job_type, event_type, hostname, pid,
+                 name, workflow_id, event_time):
+        super().__init__(uuid, job_type, event_type, hostname, pid,
+                         name, workflow_id, event_time)

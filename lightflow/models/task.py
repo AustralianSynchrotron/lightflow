@@ -1,6 +1,6 @@
 from .action import Action
 from .task_data import MultiTaskData
-from .exceptions import TaskReturnActionInvalid
+from .exceptions import TaskReturnActionInvalid, Abort, Stop
 from lightflow.queue import JobType
 
 
@@ -149,7 +149,8 @@ class BaseTask:
             self._skip = True
 
     def _run(self, data, store, signal, context, *,
-             start_callback=None, end_callback=None):
+             start_callback=None, success_callback=None,
+             stop_callback=None, abort_callback=None):
         """ The internal run method that decorates the public run method.
 
         This method makes sure data is being passed to and from the task.
@@ -164,9 +165,9 @@ class BaseTask:
                                  and sending of signals into easy to use methods.
             context (TaskContext): The context in which the tasks runs.
             start_callback: This function is called before the task is being run.
-                            It takes no parameters.
-            end_callback: This function is called after the task completed running.
-                          It takes no parameters.
+            success_callback: This function is called when the task completed successfully
+            stop_callback: This function is called when a Stop exception was raised.
+            abort_callback: This function is called when an Abort exception was raised.
 
         Raises:
             TaskReturnActionInvalid: If the return value of the task is not
@@ -184,21 +185,37 @@ class BaseTask:
             if start_callback is not None:
                 start_callback()
 
-            result = self.run(data, store, signal, context)
+            try:
+                result = self.run(data, store, signal, context)
+                if success_callback is not None:
+                    success_callback()
 
-            if end_callback is not None:
-                end_callback()
+            except Stop as err:
+                # the task should be stopped and optionally all successor tasks skipped
+                if stop_callback is not None:
+                    stop_callback(exc=err)
+
+                result = Action(data, limit=[]) if err.skip_successors else None
+
+            except Abort as err:
+                # the workflow should be stopped immediately
+                if abort_callback is not None:
+                    abort_callback(exc=err)
+
+                result = None
+                signal.stop_workflow()
+
         else:
             result = None
 
         if result is None:
-            return Action(data.copy())
+            return Action(data)
         else:
             if not isinstance(result, Action):
                 raise TaskReturnActionInvalid()
 
             result.data.add_task_history(self.name)
-            return result.copy()
+            return result
 
     def run(self, data, store, signal, context, **kwargs):
         """ The main run method of a task.
