@@ -8,7 +8,7 @@ from tempfile import TemporaryFile
 
 from lightflow.queue import JobType
 from lightflow.logger import get_logger
-from lightflow.models import BaseTask, TaskParameters, Action
+from lightflow.models import BaseTask, TaskParameters, Action, Stop, Abort
 
 
 logger = get_logger(__name__)
@@ -52,10 +52,15 @@ class BashTaskOutputReader(Thread):
         self._store = store
         self._signal = signal
         self._context = context
+        self._exc_info = None
 
     @property
     def data(self):
         return self._data
+
+    @property
+    def exc_info(self):
+        return self._exc_info
 
     def run(self):
         """ Drain the process output streams. """
@@ -68,18 +73,23 @@ class BashTaskOutputReader(Thread):
                               output_file=self._stderr_file)
 
         # capture the process output as long as the process is active
-        while self._process.poll():
-            result_stdout = read_stdout()
-            result_stderr = read_stderr()
-            if not result_stdout and not result_stderr:
-                sleep(self._refresh_time)
+        try:
+            while self._process.poll():
+                result_stdout = read_stdout()
+                result_stderr = read_stderr()
 
-        # read remaining lines
-        while read_stdout():
-            pass
+                if not result_stdout and not result_stderr:
+                    sleep(self._refresh_time)
 
-        while read_stderr():
-            pass
+            # read remaining lines
+            while read_stdout():
+                pass
+
+            while read_stderr():
+                pass
+
+        except (Stop, Abort):
+            self._exc_info = sys.exc_info()
 
     def _read_output(self, stream, callback, output_file):
         """ Read the output of the process, executed the callback and save the output.
@@ -236,8 +246,12 @@ class BashTask(BaseTask):
             proc.stdin.write(params.stdin.encode(sys.getfilesystemencoding()))
 
         # send a notification that the process has been started
-        if self._callback_start is not None:
-            self._callback_start(proc.pid, data, store, signal, context)
+        try:
+            if self._callback_start is not None:
+                self._callback_start(proc.pid, data, store, signal, context)
+        except (Stop, Abort):
+            proc.terminate()
+            raise
 
         # send the output handling to a thread
         if capture_stdout or capture_stderr:
@@ -251,7 +265,8 @@ class BashTask(BaseTask):
             output_reader = None
 
         # wait for the process to complete and watch for a stop signal
-        while proc.poll() is None:
+        while proc.poll() is None or\
+                (output_reader is not None and output_reader.is_alive()):
             sleep(params.refresh_time)
             if signal.is_stopped:
                 proc.terminate()
@@ -259,6 +274,12 @@ class BashTask(BaseTask):
         if output_reader is not None:
             output_reader.join()
             data = output_reader.data
+
+            # if a stop or abort exception was raised, stop the bash process and re-raise
+            if output_reader.exc_info is not None:
+                if proc.poll():
+                    proc.terminate()
+                raise output_reader.exc_info[1].with_traceback(output_reader.exc_info[2])
 
         # send a notification that the process has completed
         if self._callback_end is not None:
