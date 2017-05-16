@@ -135,20 +135,22 @@ class BashTask(BaseTask):
 
         Args:
             name (str): The name of the task.
-            command (str): The command or bash file that should be executed.
-            cwd (str, None): The working directory for the command.
-            env (dict, None): A dictionary of environment variables.
-            user (int, None): The user ID of the user with which the command should be
-                              executed.
-            group (int, None): The group ID of the group with which the command should be
-                               executed.
-            stdin (str, None): An input string that should be passed on to the process.
-            refresh_time (float): The time in seconds the internal output handling waits
+            command (function, str): The command or bash file that should be executed.
+            cwd (function, str, None): The working directory for the command.
+            env (function, dict, None): A dictionary of environment variables.
+            user (function, int, None): The user ID of the user with which the command
+                                        should be executed.
+            group (function, int, None): The group ID of the group with which the command
+                                         should be executed.
+            stdin (function, str, None): An input string that should be passed on to the
+                                         process.
+            refresh_time (function, float): The time in seconds the internal output
+                                            handling waits
                                   before checking for new output from the process.
-            capture_stdout (bool): Set to true to capture all standard output in a
-                                   temporary file.
-            capture_stderr (bool): Set to true to capture all standard errors in a
-                                   temporary file.
+            capture_stdout (function, bool): Set to true to capture all standard output
+                                             in a temporary file.
+            capture_stderr (function, bool): Set to true to capture all standard errors
+                                             in a temporary file.
             callback_start: A callable that is called before the process is started.
                             The definition is:
                               def (pid, data, store, signal, context)
