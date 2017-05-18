@@ -92,11 +92,11 @@ class JobStatInvalid(RuntimeError):
     pass
 
 
-class Abort(LightflowException):
+class AbortWorkflow(LightflowException):
     pass
 
 
-class Stop(LightflowException):
+class StopTask(LightflowException):
     def __init__(self, message='', *, skip_successors=True):
         super().__init__(message)
         self.skip_successors = skip_successors

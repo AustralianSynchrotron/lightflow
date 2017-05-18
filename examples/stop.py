@@ -11,7 +11,7 @@ is stopped immediately but 'print_task_2' will be executed. The third path is si
 to the second path but will skip 'print_task_3'. 
 """
 
-from lightflow.models import Dag, Stop
+from lightflow.models import Dag, StopTask
 from lightflow.tasks import PythonTask, BashTask
 
 
@@ -23,20 +23,20 @@ def start_all(data, store, signal, context):
 # callback function that is called for each new line of the stdout of the bash process
 def bash_stdout(line, data, store, signal, context):
     if int(line) == 5:
-        raise Stop('Reached line number 5')
+        raise StopTask('Reached line number 5')
     else:
         print('Content of current line is {}'.format(line))
 
 
 # callback function for a task that immediately stops but will not affect successor tasks
 def stop_noskip(data, store, signal, context):
-    raise Stop('Stop task {} but not successor tasks'.format(context.task_name),
-               skip_successors=False)
+    raise StopTask('Stop task {} but not successor tasks'.format(context.task_name),
+                   skip_successors=False)
 
 
 # callback function for a task that immediately stops and also skips its successor tasks
 def stop(data, store, signal, context):
-    raise Stop('Stop task {} and all successor tasks'.format(context.task_name))
+    raise StopTask('Stop task {} and all successor tasks'.format(context.task_name))
 
 
 # callback for printing the current task context

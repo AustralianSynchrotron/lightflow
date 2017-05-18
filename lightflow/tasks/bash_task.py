@@ -8,7 +8,7 @@ from tempfile import TemporaryFile
 
 from lightflow.queue import JobType
 from lightflow.logger import get_logger
-from lightflow.models import BaseTask, TaskParameters, Action, Stop, Abort
+from lightflow.models import BaseTask, TaskParameters, Action, StopTask, AbortWorkflow
 
 
 logger = get_logger(__name__)
@@ -88,7 +88,7 @@ class BashTaskOutputReader(Thread):
             while read_stderr():
                 pass
 
-        except (Stop, Abort) as exc:
+        except (StopTask, AbortWorkflow) as exc:
             self._exc_obj = exc
 
     def _read_output(self, stream, callback, output_file):
@@ -262,7 +262,7 @@ class BashTask(BaseTask):
         try:
             if self._callback_process is not None:
                 self._callback_process(proc.pid, data, store, signal, context)
-        except (Stop, Abort):
+        except (StopTask, AbortWorkflow):
             proc.terminate()
             raise
 

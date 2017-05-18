@@ -1,6 +1,6 @@
 from .action import Action
 from .task_data import MultiTaskData
-from .exceptions import TaskReturnActionInvalid, Abort, Stop
+from .exceptions import TaskReturnActionInvalid, AbortWorkflow, StopTask
 from lightflow.queue import JobType
 
 
@@ -166,8 +166,9 @@ class BaseTask:
             context (TaskContext): The context in which the tasks runs.
             start_callback: This function is called before the task is being run.
             success_callback: This function is called when the task completed successfully
-            stop_callback: This function is called when a Stop exception was raised.
-            abort_callback: This function is called when an Abort exception was raised.
+            stop_callback: This function is called when a StopTask exception was raised.
+            abort_callback: This function is called when an AbortWorkflow exception
+                            was raised.
 
         Raises:
             TaskReturnActionInvalid: If the return value of the task is not
@@ -190,14 +191,14 @@ class BaseTask:
                 if success_callback is not None:
                     success_callback()
 
-            except Stop as err:
+            except StopTask as err:
                 # the task should be stopped and optionally all successor tasks skipped
                 if stop_callback is not None:
                     stop_callback(exc=err)
 
                 result = Action(data, limit=[]) if err.skip_successors else None
 
-            except Abort as err:
+            except AbortWorkflow as err:
                 # the workflow should be stopped immediately
                 if abort_callback is not None:
                     abort_callback(exc=err)

@@ -7,7 +7,7 @@ accomplished by using the Abort exception.
 
 """
 
-from lightflow.models import Dag, Abort
+from lightflow.models import Dag, AbortWorkflow
 from lightflow.tasks import PythonTask
 
 
@@ -19,7 +19,7 @@ def collect_data(data, store, signal, context):
 # the callback function for the task that checks the number of stored file names
 def check_data(data, store, signal, context):
     if len(data['images']) < 5:
-        raise Abort('At least 5 images are required')
+        raise AbortWorkflow('At least 5 images are required')
 
 
 # create the main DAG
