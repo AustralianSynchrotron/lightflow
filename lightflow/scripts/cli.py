@@ -192,7 +192,7 @@ def worker_stop(obj, worker_ids):
 @click.option('--details', '-d', is_flag=True, help='Show detailed worker information.')
 @click.pass_obj
 @config_required
-def worker_status(obj, filter_queues, detail):
+def worker_status(obj, filter_queues, details):
     """ Show the status of all running workers. """
     show_colors = obj['show_color']
 
@@ -208,7 +208,7 @@ def worker_status(obj, filter_queues, detail):
                                   _style(show_colors, ws.name, fg='blue')))
         click.echo('{:23} {}'.format(_style(show_colors, '> pid:', bold=True), ws.pid))
 
-        if detail:
+        if details:
             click.echo('{:23} {}'.format(_style(show_colors, '> concurrency:', bold=True),
                                          ws.concurrency))
             click.echo('{:23} {}'.format(_style(show_colors, '> processes:', bold=True),
@@ -223,7 +223,7 @@ def worker_status(obj, filter_queues, detail):
         click.echo('{:23} {}'.format(_style(show_colors, '> queues:', bold=True),
                                      ', '.join([q.name for q in ws.queues])))
 
-        if detail:
+        if details:
             click.echo('{:23} {}'.format(_style(show_colors, '> job count:', bold=True),
                                          ws.job_count))
 
