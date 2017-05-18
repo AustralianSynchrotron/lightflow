@@ -1,4 +1,16 @@
 
+class LightflowException(RuntimeError):
+    """ Lightflow base class for all exceptions. """
+    def __init__(self, message=''):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
+    def __repr__(self):
+        return "<LightflowException - {}>".format(self.message)
+
+
 class ConfigLoadError(RuntimeError):
     """ Raise this if there is a configuration loading error. """
     pass
@@ -78,3 +90,13 @@ class WorkerEventTypeUnsupported(RuntimeError):
 
 class JobStatInvalid(RuntimeError):
     pass
+
+
+class AbortWorkflow(LightflowException):
+    pass
+
+
+class StopTask(LightflowException):
+    def __init__(self, message='', *, skip_successors=True):
+        super().__init__(message)
+        self.skip_successors = skip_successors

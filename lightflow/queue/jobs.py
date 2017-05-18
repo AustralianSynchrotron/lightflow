@@ -1,5 +1,6 @@
 import celery
 from datetime import datetime
+from functools import partial
 
 from lightflow.logger import get_logger
 from lightflow.models.task_signal import TaskSignal
@@ -42,7 +43,7 @@ def execute_workflow(self, workflow, workflow_id=None):
     self.send_event(JobEventName.Started,
                     job_type=JobType.Workflow,
                     name=workflow.name,
-                    start_time=datetime.utcnow(),
+                    time=datetime.utcnow(),
                     workflow_id=workflow_id)
 
     # create server for inter-task messaging
@@ -63,7 +64,7 @@ def execute_workflow(self, workflow, workflow_id=None):
     self.send_event(JobEventName.Succeeded,
                     job_type=JobType.Workflow,
                     name=workflow.name,
-                    end_time=datetime.utcnow(),
+                    time=datetime.utcnow(),
                     workflow_id=workflow_id)
 
     logger.info('Finished workflow <{}>'.format(workflow.name))
@@ -90,7 +91,7 @@ def execute_dag(self, dag, workflow_id, data=None):
     self.send_event(JobEventName.Started,
                     job_type=JobType.Dag,
                     name=dag.name,
-                    start_time=datetime.utcnow(),
+                    time=datetime.utcnow(),
                     workflow_id=workflow_id)
 
     # store job specific meta information wth the job
@@ -110,7 +111,7 @@ def execute_dag(self, dag, workflow_id, data=None):
     self.send_event(JobEventName.Succeeded,
                     job_type=JobType.Dag,
                     name=dag.name,
-                    end_time=datetime.utcnow(),
+                    time=datetime.utcnow(),
                     workflow_id=workflow_id)
 
     logger.info('Finished DAG <{}>'.format(dag.name))
@@ -129,24 +130,21 @@ def execute_task(self, task, workflow_id, data=None):
                               that has been passed down from upstream tasks.
     """
 
-    def handle_start():
-        logger.info('Running task <{}>'.format(task.name))
+    def handle_callback(message, event_type, exc=None):
+        msg = '{}: {}'.format(message, str(exc)) if exc is not None else message
 
-        # send custom celery event that the task has been started
-        self.send_event(JobEventName.Started,
+        if event_type == JobEventName.Stopped:
+            logger.warning(msg)
+        elif event_type == JobEventName.Aborted:
+            logger.error(msg)
+        else:
+            logger.info(msg)
+
+        # send custom celery event
+        self.send_event(event_type,
                         job_type=JobType.Task,
                         name=task.name,
-                        start_time=datetime.utcnow(),
-                        workflow_id=workflow_id)
-
-    def handle_end():
-        logger.info('Finished task <{}>'.format(task.name))
-
-        # send custom celery event that the task has succeeded
-        self.send_event(JobEventName.Succeeded,
-                        job_type=JobType.Task,
-                        name=task.name,
-                        end_time=datetime.utcnow(),
+                        time=datetime.utcnow(),
                         workflow_id=workflow_id)
 
     # store job specific meta information wth the job
@@ -163,5 +161,16 @@ def execute_task(self, task, workflow_id, data=None):
             request_key=workflow_id),
             task.dag_name),
         context=TaskContext(task.name, task.dag_name, task.workflow_name, workflow_id),
-        start_callback=handle_start,
-        end_callback=handle_end)
+        start_callback=partial(handle_callback,
+                               message='Start task <{}>'.format(task.name),
+                               event_type=JobEventName.Started),
+        success_callback=partial(handle_callback,
+                                 message='Complete task <{}>'.format(task.name),
+                                 event_type=JobEventName.Succeeded),
+        stop_callback=partial(handle_callback,
+                              message='Stop task <{}>'.format(task.name),
+                              event_type=JobEventName.Stopped),
+        abort_callback=partial(handle_callback,
+                               message='Abort workflow <{}> by task <{}>'.format(
+                                   task.workflow_name, task.name),
+                               event_type=JobEventName.Aborted))

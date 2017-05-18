@@ -8,7 +8,7 @@ from tempfile import TemporaryFile
 
 from lightflow.queue import JobType
 from lightflow.logger import get_logger
-from lightflow.models import BaseTask, TaskParameters, Action
+from lightflow.models import BaseTask, TaskParameters, Action, StopTask, AbortWorkflow
 
 
 logger = get_logger(__name__)
@@ -52,10 +52,15 @@ class BashTaskOutputReader(Thread):
         self._store = store
         self._signal = signal
         self._context = context
+        self._exc_obj = None
 
     @property
     def data(self):
         return self._data
+
+    @property
+    def exc_obj(self):
+        return self._exc_obj
 
     def run(self):
         """ Drain the process output streams. """
@@ -68,18 +73,23 @@ class BashTaskOutputReader(Thread):
                               output_file=self._stderr_file)
 
         # capture the process output as long as the process is active
-        while self._process.poll():
-            result_stdout = read_stdout()
-            result_stderr = read_stderr()
-            if not result_stdout and not result_stderr:
-                sleep(self._refresh_time)
+        try:
+            while self._process.poll():
+                result_stdout = read_stdout()
+                result_stderr = read_stderr()
 
-        # read remaining lines
-        while read_stdout():
-            pass
+                if not result_stdout and not result_stderr:
+                    sleep(self._refresh_time)
 
-        while read_stderr():
-            pass
+            # read remaining lines
+            while read_stdout():
+                pass
+
+            while read_stderr():
+                pass
+
+        except (StopTask, AbortWorkflow) as exc:
+            self._exc_obj = exc
 
     def _read_output(self, stream, callback, output_file):
         """ Read the output of the process, executed the callback and save the output.
@@ -114,7 +124,7 @@ class BashTask(BaseTask):
     """ The Bash task executes a user-defined bash command or bash file. """
     def __init__(self, name, command, cwd=None, env=None, user=None, group=None,
                  stdin=None, refresh_time=0.1, capture_stdout=False, capture_stderr=False,
-                 callback_start=None, callback_end=None,
+                 callback_start=None, callback_process=None, callback_end=None,
                  callback_stdout=None, callback_stderr=None,
                  *, queue=JobType.Task, force_run=False, propagate_skip=True):
         """ Initialize the Bash task.
@@ -125,26 +135,34 @@ class BashTask(BaseTask):
 
         Args:
             name (str): The name of the task.
-            command (str): The command or bash file that should be executed.
-            cwd (str, None): The working directory for the command.
-            env (dict, None): A dictionary of environment variables.
-            user (int, None): The user ID of the user with which the command should be
-                              executed.
-            group (int, None): The group ID of the group with which the command should be
-                               executed.
-            stdin (str, None): An input string that should be passed on to the process.
-            refresh_time (float): The time in seconds the internal output handling waits
+            command (function, str): The command or bash file that should be executed.
+            cwd (function, str, None): The working directory for the command.
+            env (function, dict, None): A dictionary of environment variables.
+            user (function, int, None): The user ID of the user with which the command
+                                        should be executed.
+            group (function, int, None): The group ID of the group with which the command
+                                         should be executed.
+            stdin (function, str, None): An input string that should be passed on to the
+                                         process.
+            refresh_time (function, float): The time in seconds the internal output
+                                            handling waits
                                   before checking for new output from the process.
-            capture_stdout (bool): Set to true to capture all standard output in a
-                                   temporary file.
-            capture_stderr (bool): Set to true to capture all standard errors in a
-                                   temporary file.
-            callback_start: A callable that is called after the process started.
+            capture_stdout (function, bool): Set to true to capture all standard output
+                                             in a temporary file.
+            capture_stderr (function, bool): Set to true to capture all standard errors
+                                             in a temporary file.
+            callback_start: A callable that is called before the process is started.
                             The definition is:
                               def (pid, data, store, signal, context)
                             where the pid is the process PID, data the task data,
                             store the workflow data store, signal the task signal and
                             context the task context.
+            callback_process: A callable that is called after the process started.
+                              The definition is:
+                                def (pid, data, store, signal, context)
+                              where the pid is the process PID, data the task data,
+                              store the workflow data store, signal the task signal and
+                              context the task context.
             callback_end: A callable that is called after the process completed.
                           The definition is:
                             def (returncode, stdout_file, stderr_file, data, store,
@@ -153,7 +171,7 @@ class BashTask(BaseTask):
                           stdout_file/stderr_file a file object with the standard/error
                           output if the flag capture_stdout/capture_stderr was set to
                           True, otherwise None. The remaining parameters are identical
-                          to callback_start.
+                          to callback_process and callback_start.
             callback_stdout: A callable that is called for every line of output the
                              process sends to stdout. The definition is:
                                def (line, data, store, signal, context)
@@ -187,6 +205,7 @@ class BashTask(BaseTask):
         )
 
         self._callback_start = callback_start
+        self._callback_process = callback_process
         self._callback_end = callback_end
         self._callback_stdout = callback_stdout
         self._callback_stderr = callback_stderr
@@ -226,6 +245,10 @@ class BashTask(BaseTask):
         else:
             pre_exec = None
 
+        # send a notification that the process will be started
+        if self._callback_start is not None:
+            self._callback_start(data, store, signal, context)
+
         # call the command
         proc = Popen(params.command, cwd=params.cwd, shell=True, env=params.env,
                      preexec_fn=pre_exec, stdout=stdout, stderr=stderr,
@@ -236,8 +259,12 @@ class BashTask(BaseTask):
             proc.stdin.write(params.stdin.encode(sys.getfilesystemencoding()))
 
         # send a notification that the process has been started
-        if self._callback_start is not None:
-            self._callback_start(proc.pid, data, store, signal, context)
+        try:
+            if self._callback_process is not None:
+                self._callback_process(proc.pid, data, store, signal, context)
+        except (StopTask, AbortWorkflow):
+            proc.terminate()
+            raise
 
         # send the output handling to a thread
         if capture_stdout or capture_stderr:
@@ -251,7 +278,8 @@ class BashTask(BaseTask):
             output_reader = None
 
         # wait for the process to complete and watch for a stop signal
-        while proc.poll() is None:
+        while proc.poll() is None or\
+                (output_reader is not None and output_reader.is_alive()):
             sleep(params.refresh_time)
             if signal.is_stopped:
                 proc.terminate()
@@ -259,6 +287,12 @@ class BashTask(BaseTask):
         if output_reader is not None:
             output_reader.join()
             data = output_reader.data
+
+            # if a stop or abort exception was raised, stop the bash process and re-raise
+            if output_reader.exc_obj is not None:
+                if proc.poll():
+                    proc.terminate()
+                raise output_reader.exc_obj
 
         # send a notification that the process has completed
         if self._callback_end is not None:

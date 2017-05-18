@@ -4,7 +4,7 @@ from functools import update_wrapper
 
 from lightflow.config import Config
 from lightflow.version import __version__
-from lightflow.queue.const import JobType
+from lightflow.queue.const import JobType, JobEventName
 from lightflow.models.exceptions import (ConfigLoadError,
                                          WorkflowArgumentError,
                                          WorkflowImportError)
@@ -250,16 +250,25 @@ def monitor(obj):
     """ Show the worker and workflow event stream. """
     show_colors = obj['show_color']
 
+    event_display = {
+        JobEventName.Started: {'color': 'blue', 'label': 'started'},
+        JobEventName.Succeeded: {'color': 'green', 'label': 'succeeded'},
+        JobEventName.Stopped: {'color': 'yellow', 'label': 'stopped'},
+        JobEventName.Aborted: {'color': 'red', 'label': 'aborted'}
+    }
+
     click.echo('\n')
     click.echo('{:>10} {:>12} {:20} [{}]'.format('Status',
                                                  'Type',
                                                  'Name', 'Workflow ID'))
     click.echo('-' * 63)
     for event in workflow_events(obj['config']):
-        click.echo('{:>10} {:>{}} {:20} [{}]'.format(
-            event.label.upper(),
+        evt_disp = event_display[event.event]
+        click.echo('{:>{}} {:>{}} {:20} [{}]'.format(
+            _style(show_colors, evt_disp['label'], fg=evt_disp['color']),
+            20 if show_colors else 10,
             _style(show_colors, event.type, bold=True, fg=JOB_COLOR[event.type]),
-            25 if show_colors else 12,
+            24 if show_colors else 12,
             event.name,
             event.workflow_id))
 
