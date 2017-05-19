@@ -160,10 +160,14 @@ class Config:
             filename (str): The path and name to the configuration file.
         """
         if os.path.exists(filename):
-            with open(filename, 'r') as config_file:
-                self._update_dict(self._config, yaml.safe_load(config_file.read()))
+            try:
+                with open(filename, 'r') as config_file:
+                    self._update_dict(self._config, yaml.safe_load(config_file.read()))
+            except IsADirectoryError:
+                raise ConfigLoadError(
+                    'The specified configuration file is a directory not a file')
         else:
-            raise ConfigLoadError('The config file {} does not exist.'.format(filename))
+            raise ConfigLoadError('The config file {} does not exist'.format(filename))
 
     def _update_dict(self, to_dict, from_dict):
         """ Recursively merges the fields for two dictionaries.
@@ -187,7 +191,7 @@ class Config:
                     sys.path.append(path)
             else:
                 raise ConfigLoadError(
-                    'Workflow directory {} does not exist.'.format(path))
+                    'Workflow directory {} does not exist'.format(path))
 
     @staticmethod
     def default():

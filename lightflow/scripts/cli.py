@@ -50,8 +50,8 @@ def cli(ctx, config, no_color):
 
     try:
         ctx.obj['config'] = Config.from_file(config)
-    except ConfigLoadError:
-        pass
+    except ConfigLoadError as err:
+        click.echo(_style(not no_color, str(err), fg='red', bold=True))
 
 
 @cli.group()
