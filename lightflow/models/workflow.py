@@ -191,7 +191,8 @@ class Workflow:
             # remove any dags and their result data that finished running
             for dag in reversed(self._dags_running):
                 if dag.ready():
-                    dag.forget()
+                    if self._celery_app.conf.result_expires == 0:
+                        dag.forget()
                     self._dags_running.remove(dag)
 
         # remove the signal entry

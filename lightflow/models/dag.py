@@ -154,7 +154,8 @@ class Dag:
             # delete task results that are not required anymore
             for task in cleanup:
                 if all([s.has_result for s in self._graph.successors(task)]):
-                    task.celery_result.forget()
+                    if celery_app.conf.result_expires == 0:
+                        task.celery_result.forget()
                     cleanup.remove(task)
 
             # iterate over the scheduled tasks
