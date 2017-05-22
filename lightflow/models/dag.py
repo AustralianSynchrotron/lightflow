@@ -43,7 +43,6 @@ class Dag:
         self._slots = defaultdict(dict)
         self._copy_counter = 0
 
-        self._config = None
         self._workflow_name = None
 
     @property
@@ -55,20 +54,6 @@ class Dag:
     def autostart(self):
         """ Return whether the dag is automatically run upon the start of the workflow."""
         return self._autostart
-
-    @property
-    def config(self):
-        """ Returns the dag configuration. """
-        return self._config
-
-    @config.setter
-    def config(self, value):
-        """ Set the dag configuration.
-
-        Args:
-            value (Config): A reference to a Config object.
-        """
-        self._config = value
 
     @property
     def workflow_name(self):
@@ -125,10 +110,12 @@ class Dag:
             else:
                 self._graph.add_node(parent)
 
-    def run(self, workflow_id, signal, *, data=None):
+    def run(self, config, workflow_id, signal, *, data=None):
         """ Run the dag by calling the tasks in the correct order.
 
         Args:
+            config (Config): Reference to the configuration object from which the
+                             settings for the dag are retrieved.
             workflow_id (str): The unique ID of the workflow that runs this dag.
             signal (DagSignal): The signal object for dags. It wraps the construction
                                 and sending of signals into easy to use methods.
@@ -141,11 +128,11 @@ class Dag:
         if not nx.is_directed_acyclic_graph(self._graph):
             raise DirectedAcyclicGraphInvalid()
 
-        if self._config is None:
+        if config is None:
             raise ConfigNotDefinedError()
 
         # create the celery app for submitting tasks
-        celery_app = create_app(self._config)
+        celery_app = create_app(config)
 
         # add all tasks without predecessors to the initial task list and
         # set the dag_name for all tasks (which binds the task to this dag).
@@ -161,8 +148,8 @@ class Dag:
         # process tasks as long as there are tasks in the task list
         stopped = False
         while tasks or cleanup:
-            if self._config.dag_polling_time > 0.0:
-                sleep(self._config.dag_polling_time)
+            if config.dag_polling_time > 0.0:
+                sleep(config.dag_polling_time)
 
             # delete task results that are not required anymore
             for task in cleanup:
@@ -176,8 +163,6 @@ class Dag:
                     stopped = signal.is_stopped
 
                 if not task.has_result:
-                    task.config = self._config
-
                     # a task is in the task list but has never been queued or ran.
                     pre_tasks = self._graph.predecessors(task)
                     if len(pre_tasks) == 0:

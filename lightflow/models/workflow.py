@@ -32,16 +32,13 @@ class Workflow:
 
     Please note: this class has to be serialisable (e.g. by pickle)
     """
-    def __init__(self, config, *, clear_data_store=True):
+    def __init__(self, clear_data_store=True):
         """ Initialise the workflow.
 
         Args:
-            config (Config): Reference to the configuration object from which the
-                             settings for the workflow are retrieved.
             clear_data_store (bool): Remove any documents created during the workflow
                                      run in the data store after the run.
         """
-        self._config = config
         self._clear_data_store = clear_data_store
 
         self._dags_blueprint = {}
@@ -59,13 +56,11 @@ class Workflow:
         self._docstring = None
 
     @classmethod
-    def from_name(cls, name, config, *, clear_data_store=True, arguments=None):
+    def from_name(cls, name, *, clear_data_store=True, arguments=None):
         """ Create a workflow object from a workflow script.
 
         Args:
             name (str): The name of the workflow script.
-            config (Config): Reference to the configuration object from which the
-                             settings for the workflow are retrieved.
             clear_data_store (bool): Remove any documents created during the workflow
                                      run in the data store after the run.
             arguments (dict): Dictionary of additional arguments that are ingested
@@ -74,7 +69,7 @@ class Workflow:
         Returns:
             Workflow: A fully initialised workflow object
         """
-        new_workflow = cls(config, clear_data_store=clear_data_store)
+        new_workflow = cls(clear_data_store=clear_data_store)
         new_workflow.load(name, arguments=arguments)
         return new_workflow
 
@@ -87,11 +82,6 @@ class Workflow:
     def docstring(self):
         """ Returns the docstring of the workflow or None if empty. """
         return self._docstring
-
-    @property
-    def config(self):
-        """ Returns the workflow configuration. """
-        return self._config
 
     @property
     def arguments(self):
@@ -154,12 +144,14 @@ class Workflow:
             logger.error('Cannot import workflow {}'.format(name))
             raise WorkflowImportError('Cannot import workflow {}'.format(name))
 
-    def run(self, data_store, signal_server, workflow_id):
+    def run(self, config, data_store, signal_server, workflow_id):
         """ Run all autostart dags in the workflow.
 
         Only the dags that are flagged as autostart are started.
 
         Args:
+            config (Config): Reference to the configuration object from which the
+                             settings for the workflow are retrieved.
             data_store (DataStore): A DataStore object that is fully initialised and
                         connected to the persistent data storage.
             signal_server (Server): A signal Server object that receives requests
@@ -167,7 +159,7 @@ class Workflow:
             workflow_id (str): A unique workflow id that represents this workflow run
         """
         self._workflow_id = workflow_id
-        self._celery_app = create_app(self._config)
+        self._celery_app = create_app(config)
 
         # pre-fill the data store with supplied arguments
         args = self._arguments.consolidate(self._provided_arguments)
@@ -181,8 +173,8 @@ class Workflow:
 
         # as long as there are dags in the list keep running
         while self._dags_running:
-            if self._config.workflow_polling_time > 0.0:
-                sleep(self._config.workflow_polling_time)
+            if config.workflow_polling_time > 0.0:
+                sleep(config.workflow_polling_time)
 
             # handle new requests from dags, tasks and the library (e.g. cli, web)
             for i in range(MAX_SIGNAL_REQUESTS):
@@ -231,7 +223,6 @@ class Workflow:
             raise DagNameUnknown()
 
         new_dag = copy.deepcopy(self._dags_blueprint[name])
-        new_dag.config = self._config
         new_dag.workflow_name = self.name
         self._dags_running.append(
             self._celery_app.send_task(JobExecPath.Dag,

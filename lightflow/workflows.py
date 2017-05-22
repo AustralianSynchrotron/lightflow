@@ -31,7 +31,7 @@ def start_workflow(name, config, *, clear_data_store=True, store_args=None):
                                that were not supplied to the workflow.
         WorkflowImportError: If the import of the workflow fails.
     """
-    wf = Workflow.from_name(name, config,
+    wf = Workflow.from_name(name,
                             clear_data_store=clear_data_store,
                             arguments=store_args)
 
@@ -101,7 +101,7 @@ def list_workflows(config):
 
         for filename in filenames:
             module_name = os.path.splitext(os.path.basename(filename))[0]
-            workflow = Workflow(config)
+            workflow = Workflow()
             try:
                 workflow.load(module_name, strict_dag=True)
                 workflows.append(workflow)

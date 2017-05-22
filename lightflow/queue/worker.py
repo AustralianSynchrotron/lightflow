@@ -24,7 +24,7 @@ class WorkerLifecycle(StartStopStep):
             workflow_id = job.result['workflow_id']
             if workflow_id not in stopped_workflows:
                 client = Client(
-                    SignalConnection(**consumer.app.user_options['workflow_signal_conf'],
+                    SignalConnection(**consumer.app.user_options['config'].signal,
                                      auto_connect=True),
                     request_key=workflow_id)
                 client.send(Request(action='stop_workflow'))

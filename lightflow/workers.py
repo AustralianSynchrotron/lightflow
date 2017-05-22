@@ -29,7 +29,7 @@ def start_worker(queues, config, *, name=None, celery_args=None):
     argv.extend(celery_args or [])
 
     celery_app.steps['consumer'].add(WorkerLifecycle)
-    celery_app.user_options['workflow_signal_conf'] = config.signal
+    celery_app.user_options['config'] = config
     celery_app.worker_main(argv)
 
 

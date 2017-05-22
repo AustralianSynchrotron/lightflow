@@ -27,7 +27,8 @@ def execute_workflow(self, workflow, workflow_id=None):
                               this ID, if not a new ID will be auto generated.
     """
     logger.info('Running workflow <{}>'.format(workflow.name))
-    data_store = DataStore(**workflow.config.data_store, auto_connect=True)
+    data_store = DataStore(**self.app.user_options['config'].data_store,
+                           auto_connect=True)
 
     # create a unique workflow id for this run
     if data_store.exists(workflow_id):
@@ -47,7 +48,8 @@ def execute_workflow(self, workflow, workflow_id=None):
                     workflow_id=workflow_id)
 
     # create server for inter-task messaging
-    signal_server = Server(SignalConnection(**workflow.config.signal, auto_connect=True),
+    signal_server = Server(SignalConnection(**self.app.user_options['config'].signal,
+                                            auto_connect=True),
                            request_key=workflow_id)
 
     # store job specific meta information wth the job
@@ -56,7 +58,8 @@ def execute_workflow(self, workflow, workflow_id=None):
                             'workflow_id': workflow_id})
 
     # run the DAGs in the workflow
-    workflow.run(data_store=data_store,
+    workflow.run(config=self.app.user_options['config'],
+                 data_store=data_store,
                  signal_server=signal_server,
                  workflow_id=workflow_id)
 
@@ -100,9 +103,11 @@ def execute_dag(self, dag, workflow_id, data=None):
                             'workflow_id': workflow_id})
 
     # run the tasks in the DAG
-    dag.run(workflow_id=workflow_id,
+    dag.run(config=self.app.user_options['config'],
+            workflow_id=workflow_id,
             signal=DagSignal(Client(
-                SignalConnection(**dag.config.signal, auto_connect=True),
+                SignalConnection(**self.app.user_options['config'].signal,
+                                 auto_connect=True),
                 request_key=workflow_id),
                 dag.name),
             data=data)
@@ -155,9 +160,10 @@ def execute_task(self, task, workflow_id, data=None):
     # run the task and capture the result
     return task._run(
         data=data,
-        store=DataStore(**task.config.data_store, auto_connect=True).get(workflow_id),
+        store=DataStore(**self.app.user_options['config'].data_store,
+                        auto_connect=True).get(workflow_id),
         signal=TaskSignal(Client(
-            SignalConnection(**task.config.signal, auto_connect=True),
+            SignalConnection(**self.app.user_options['config'].signal, auto_connect=True),
             request_key=workflow_id),
             task.dag_name),
         context=TaskContext(task.name, task.dag_name, task.workflow_name, workflow_id),

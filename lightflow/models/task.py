@@ -27,7 +27,6 @@ class BaseTask:
 
         self._skip = False
 
-        self._config = None
         self._celery_result = None
         self._workflow_name = None
         self._dag_name = None
@@ -86,20 +85,6 @@ class BaseTask:
             return self.celery_result.state
         else:
             return "NOT_QUEUED"
-
-    @property
-    def config(self):
-        """ Returns the task configuration. """
-        return self._config
-
-    @config.setter
-    def config(self, value):
-        """ Sets the task configuration.
-
-        Args:
-            value (Config): A reference to a Config object.
-        """
-        self._config = value
 
     @property
     def celery_result(self):
