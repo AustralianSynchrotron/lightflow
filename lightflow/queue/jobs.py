@@ -157,6 +157,9 @@ def execute_task(self, task, workflow_id, data=None):
                             'type': JobType.Task,
                             'workflow_id': workflow_id})
 
+    # send start celery event
+    handle_callback('Start task <{}>'.format(task.name), JobEventName.Started)
+
     # run the task and capture the result
     return task._run(
         data=data,
@@ -167,9 +170,6 @@ def execute_task(self, task, workflow_id, data=None):
             request_key=workflow_id),
             task.dag_name),
         context=TaskContext(task.name, task.dag_name, task.workflow_name, workflow_id),
-        start_callback=partial(handle_callback,
-                               message='Start task <{}>'.format(task.name),
-                               event_type=JobEventName.Started),
         success_callback=partial(handle_callback,
                                  message='Complete task <{}>'.format(task.name),
                                  event_type=JobEventName.Succeeded),

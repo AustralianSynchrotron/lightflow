@@ -1,14 +1,14 @@
 from time import sleep
 from copy import deepcopy
-from collections import defaultdict
 import networkx as nx
+from collections import defaultdict
 
-from .task import BaseTask
+from .task import BaseTask, BaseTaskStatus
 from .task_data import MultiTaskData
 from .exceptions import DirectedAcyclicGraphInvalid, ConfigNotDefinedError
 from lightflow.logger import get_logger
 from lightflow.queue.app import create_app
-from lightflow.queue.const import JobExecPath, JobType
+from lightflow.queue.const import JobExecPath
 
 
 logger = get_logger(__name__)
@@ -125,6 +125,7 @@ class Dag:
             DirectedAcyclicGraphInvalid: If the graph is not a dag (e.g. contains loops).
             ConfigNotDefinedError: If the configuration for the dag is empty.
         """
+        # pre-checks
         if not nx.is_directed_acyclic_graph(self._graph):
             raise DirectedAcyclicGraphInvalid()
 
@@ -134,104 +135,132 @@ class Dag:
         # create the celery app for submitting tasks
         celery_app = create_app(config)
 
-        # add all tasks without predecessors to the initial task list and
-        # set the dag_name for all tasks (which binds the task to this dag).
+        # the task queue for managing the current state of the tasks
         tasks = []
-        cleanup = []
+        stopped = False
+
+        # add all tasks without predecessors to the task list and
+        # set the dag_name for all tasks (which binds the task to this dag).
         linearised_graph = nx.topological_sort(self._graph)
         for node in linearised_graph:
             node.workflow_name = self.workflow_name
             node.dag_name = self.name
             if len(self._graph.predecessors(node)) == 0:
+                node.set_state(BaseTaskStatus.Waiting)
                 tasks.append(node)
 
-        # process tasks as long as there are tasks in the task list
-        stopped = False
-        while tasks or cleanup:
+        # process the task queue as long as there are tasks in it
+        while tasks:
+            if not stopped:
+                stopped = signal.is_stopped
+
+            # delay the execution by the polling time
             if config.dag_polling_time > 0.0:
                 sleep(config.dag_polling_time)
 
-            # delete task results that are not required anymore
-            for task in cleanup:
-                if all([s.has_result for s in self._graph.successors(task)]):
-                    if celery_app.conf.result_expires == 0:
-                        task.celery_result.forget()
-                    cleanup.remove(task)
+            for i in range(len(tasks) - 1, -1, -1):
+                task = tasks[i]
 
-            # iterate over the scheduled tasks
-            for task in reversed(tasks):
-                if not stopped:
-                    stopped = signal.is_stopped
-
-                if not task.has_result:
-                    # a task is in the task list but has never been queued or ran.
-                    pre_tasks = self._graph.predecessors(task)
-                    if len(pre_tasks) == 0:
-                        # start a task without predecessors with the supplied initial data
-                        if not stopped:
-                            task.celery_result = celery_app.send_task(
-                                JobExecPath.Task,
-                                args=(task, workflow_id, data),
-                                queue=task.queue,
-                                routing_key=JobType.Task
-                                )
+                # for each waiting task, wait for all predecessor tasks to be
+                # completed. Then check whether the task should be skipped by
+                # interrogating the predecessor tasks.
+                if task.is_waiting:
+                    if not stopped:
+                        self._handle_waiting_task(task, data, celery_app, workflow_id)
                     else:
-                        # compose the input data from the predecessor tasks output data
-                        input_data = MultiTaskData()
-                        for pre_task in pre_tasks:
-                            if task in self._slots:
-                                aliases = [self._slots[task][pre_task]]
-                            else:
-                                aliases = None
+                        task.set_state(BaseTaskStatus.Stopped)
 
-                            input_data.add_dataset(pre_task.name,
-                                                   pre_task.celery_result.result.data,
-                                                   aliases=aliases)
-
-                        # start task with the aggregated data from its predecessors
-                        if not stopped:
-                            task.celery_result = celery_app.send_task(
-                                JobExecPath.Task,
-                                args=(task, workflow_id, input_data),
-                                queue=task.queue,
-                                routing_key=JobType.Task
-                                )
-                else:
-                    # the task finished processing. Check whether its successor tasks can
-                    # be added to the task list
-                    if task.is_finished:
-                        all_successors_queued = True
+                # for each completed task, add all successor tasks to the task list
+                # and flag them as waiting if they are not in the task list yet.
+                elif task.is_running:
+                    if task.celery_completed:
+                        task.set_state(BaseTaskStatus.Completed)
                         for next_task in self._graph.successors(task):
+                            if next_task not in tasks:
+                                next_task.set_state(BaseTaskStatus.Waiting)
+                                tasks.append(next_task)
 
-                            # check whether the task imposes a limit on its successors
-                            if task.celery_result.result.limit is not None:
-                                limit_names = [
-                                    name.name if isinstance(name, BaseTask) else name
-                                    for name in task.celery_result.result.limit
-                                ]
-                                if next_task.name not in limit_names:
-                                    next_task.skip()
+                # cleanup task results that are not required anymore
+                elif task.is_completed:
+                    if all([s.is_completed or s.is_stopped or s.is_aborted
+                            for s in self._graph.successors(task)]):
+                        if celery_app.conf.result_expires == 0:
+                            task.clear_celery_result()
+                        tasks.remove(task)
 
-                            # consider queuing the successor task if it is not in the list
-                            if next_task not in tasks and not next_task.has_result:
-                                if all([pt.is_finished or pt.is_skipped
-                                        for pt in self._graph.predecessors(next_task)]):
+                # cleanup and remove stopped and aborted tasks
+                elif task.is_stopped or task.is_aborted:
+                    if celery_app.conf.result_expires == 0:
+                        task.clear_celery_result()
+                    tasks.remove(task)
 
-                                    # check whether the skip flag should be propagated
-                                    if all([pt.is_skipped and pt.propagate_skip for pt in
-                                            self._graph.predecessors(next_task)]):
-                                        next_task.skip()
+    def _handle_waiting_task(self, task, data, celery_app, workflow_id):
+        """ Handle a waiting task.
 
-                                    if not stopped:
-                                        tasks.append(next_task)
-                                else:
-                                    all_successors_queued = False
+        Wait for all predecessor tasks to be completed. Then check whether the task
+        should be skipped by interrogating the predecessor tasks.
+        
+        Args:
+            task (BaseTask): Reference to the task object that has a waiting state.
+            data (MultiTaskData): Reference to the DAG's MultiTaskData object.
+            celery_app (Celery): Reference to an celery application object. Used for
+                                 queueing new tasks.
+            workflow_id (str): The unique ID of the workflow that runs this dag.
 
-                        # if all the successor tasks are queued, the task has done
-                        # its duty and can be removed from the task list
-                        if all_successors_queued:
-                            cleanup.append(task)
-                            tasks.remove(task)
+        """
+        pre_tasks = self._graph.predecessors(task)
+        if all([p.is_completed or p.is_skipped for p in pre_tasks]):
+
+            # check whether the task should be skipped
+            run_task = task.has_to_run or len(pre_tasks) == 0
+            for pre in pre_tasks:
+                if run_task:
+                    break
+
+                # predecessor task is skipped and flag should not be propagated
+                if pre.is_skipped and not pre.propagate_skip:
+                    run_task = True
+
+                # limits of a non-skipped predecessor task
+                if not pre.is_skipped:
+                    if pre.celery_result.result.limit is not None:
+                        if task.name in [
+                            n.name if isinstance(n, BaseTask) else n
+                                for n in pre.celery_result.result.limit]:
+                            run_task = True
+                    else:
+                        run_task = True
+
+            task.is_skipped = not run_task
+
+            # send the task to celery or, if skipped, mark it as completed
+            if task.is_skipped:
+                task.set_state(BaseTaskStatus.Completed)
+            else:
+                # compose the input data from the predecessor tasks output data
+                # skipped predecessor tasks do not contribute to the input data
+                if len(pre_tasks) == 0:
+                    input_data = data
+                else:
+                    input_data = MultiTaskData()
+                    for pre_task in [p for p in pre_tasks if
+                                     not p.is_skipped]:
+                        if task in self._slots:
+                            aliases = [self._slots[task][pre_task]]
+                        else:
+                            aliases = None
+
+                        input_data.add_dataset(pre_task.name,
+                                               pre_task.celery_result.result.data,
+                                               aliases=aliases)
+
+                task.set_state(BaseTaskStatus.Running)
+                task.celery_result = celery_app.send_task(
+                    JobExecPath.Task,
+                    args=(task, workflow_id, input_data),
+                    queue=task.queue,
+                    routing_key=task.queue
+                )
 
     def __deepcopy__(self, memo):
         """ Create a copy of the dag object.

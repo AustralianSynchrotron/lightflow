@@ -4,6 +4,15 @@ from .exceptions import TaskReturnActionInvalid, AbortWorkflow, StopTask
 from lightflow.queue import JobType
 
 
+class BaseTaskStatus:
+    Init = 1
+    Waiting = 2
+    Running = 3
+    Completed = 4
+    Stopped = 5
+    Aborted = 6
+
+
 class BaseTask:
     """ The base class for all tasks.
 
@@ -26,10 +35,11 @@ class BaseTask:
         self.propagate_skip = propagate_skip
 
         self._skip = False
+        self._state = BaseTaskStatus.Init
 
         self._celery_result = None
-        self._workflow_name = None
-        self._dag_name = None
+        self.workflow_name = None
+        self.dag_name = None
 
     @property
     def name(self):
@@ -42,49 +52,83 @@ class BaseTask:
         return self._queue
 
     @property
-    def has_result(self):
-        """ Returns whether the task has a result.
-
-        This indicates that the task is either queued, running or finished.
-        """
-        return self.celery_result is not None
+    def is_waiting(self):
+        return self._state == BaseTaskStatus.Waiting
 
     @property
-    def is_pending(self):
+    def is_running(self):
+        return self._state == BaseTaskStatus.Running
+
+    @property
+    def is_completed(self):
+        return self._state == BaseTaskStatus.Completed
+
+    @property
+    def is_stopped(self):
+        return self._state == BaseTaskStatus.Stopped
+
+    @property
+    def is_aborted(self):
+        return self._state == BaseTaskStatus.Aborted
+
+    @property
+    def is_skipped(self):
+        """ Returns whether the task has been skipped. """
+        return self._skip
+
+    @is_skipped.setter
+    def is_skipped(self, value):
+        """ Set whether the task has been skipped.
+
+        Args:
+            value (bool): Set to True if the tasked was skipped.
+        """
+        self._skip = value
+
+    @property
+    def has_to_run(self):
+        """ Returns whether the task has to run, even if the DAG would skip it """
+        return self._force_run
+
+    @property
+    def celery_pending(self):
         """ Returns whether the task is queued. """
-        if self.has_result:
+        if self.has_celery_result:
             return self.celery_result.state == "PENDING"
         else:
             return False
 
     @property
-    def is_finished(self):
-        """ Returns whether the execution of the task has finished. """
-        if self.has_result:
+    def celery_completed(self):
+        """ Returns whether the execution of the task has completed. """
+        if self.has_celery_result:
             return self.celery_result.ready()
         else:
             return False
 
     @property
-    def is_failed(self):
+    def celery_failed(self):
         """ Returns whether the execution of the task failed. """
-        if self.has_result:
+        if self.has_celery_result:
             return self.celery_result.failed()
         else:
             return False
 
     @property
-    def is_skipped(self):
-        """ Returns whether the task has been flagged to be skipped. """
-        return self._skip
-
-    @property
-    def state(self):
+    def celery_state(self):
         """ Returns the current state of the task as a string. """
-        if self.has_result:
+        if self.has_celery_result:
             return self.celery_result.state
         else:
             return "NOT_QUEUED"
+
+    @property
+    def has_celery_result(self):
+        """ Returns whether the task has a result from celery.
+
+        This indicates that the task is either queued, running or finished.
+        """
+        return self.celery_result is not None
 
     @property
     def celery_result(self):
@@ -100,42 +144,15 @@ class BaseTask:
         """
         self._celery_result = result
 
-    @property
-    def workflow_name(self):
-        """ Returns the name of the workflow this task belongs to. """
-        return self._workflow_name
+    def clear_celery_result(self):
+        if self.has_celery_result:
+            self._celery_result.forget()
 
-    @workflow_name.setter
-    def workflow_name(self, name):
-        """ Set the name of the workflow this task belongs to.
-
-        Args:
-            name (str): The name of the workflow.
-        """
-        self._workflow_name = name
-
-    @property
-    def dag_name(self):
-        """ Returns the name of the dag this task belongs to. """
-        return self._dag_name
-
-    @dag_name.setter
-    def dag_name(self, name):
-        """ Set the name of the dag this task belongs to.
-
-        Args:
-            name (str): The name of the dag.
-        """
-        self._dag_name = name
-
-    def skip(self):
-        """ Flag the task to be skipped. """
-        if not self._force_run:
-            self._skip = True
+    def set_state(self, state):
+        self._state = state
 
     def _run(self, data, store, signal, context, *,
-             start_callback=None, success_callback=None,
-             stop_callback=None, abort_callback=None):
+             success_callback=None, stop_callback=None, abort_callback=None):
         """ The internal run method that decorates the public run method.
 
         This method makes sure data is being passed to and from the task.
@@ -149,7 +166,6 @@ class BaseTask:
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
             context (TaskContext): The context in which the tasks runs.
-            start_callback: This function is called before the task is being run.
             success_callback: This function is called when the task completed successfully
             stop_callback: This function is called when a StopTask exception was raised.
             abort_callback: This function is called when an AbortWorkflow exception
@@ -167,32 +183,30 @@ class BaseTask:
         if data is None:
             data = MultiTaskData(self._name)
 
-        if not self.is_skipped or self._force_run:
-            if start_callback is not None:
-                start_callback()
+        try:
+            result = self.run(data, store, signal, context)
 
-            try:
-                result = self.run(data, store, signal, context)
-                if success_callback is not None:
-                    success_callback()
+            if success_callback is not None:
+                success_callback()
 
-            except StopTask as err:
-                # the task should be stopped and optionally all successor tasks skipped
-                if stop_callback is not None:
-                    stop_callback(exc=err)
+        # the task should be stopped and optionally all successor tasks skipped
+        except StopTask as err:
+            self.set_state(BaseTaskStatus.Stopped)
 
-                result = Action(data, limit=[]) if err.skip_successors else None
+            if stop_callback is not None:
+                stop_callback(exc=err)
 
-            except AbortWorkflow as err:
-                # the workflow should be stopped immediately
-                if abort_callback is not None:
-                    abort_callback(exc=err)
+            result = Action(data, limit=[]) if err.skip_successors else None
 
-                result = None
-                signal.stop_workflow()
+        # the workflow should be stopped immediately
+        except AbortWorkflow as err:
+            self.set_state(BaseTaskStatus.Aborted)
 
-        else:
+            if abort_callback is not None:
+                abort_callback(exc=err)
+
             result = None
+            signal.stop_workflow()
 
         if result is None:
             return Action(data)
