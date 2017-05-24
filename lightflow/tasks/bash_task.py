@@ -228,7 +228,7 @@ class BashTask(BaseTask):
                     to the next task and optionally a list of successor tasks that
                     should be executed.
         """
-        params = self.params.eval(data, store)
+        params = self.params.eval(data, store, exclude=['command'])
 
         capture_stdout = self._callback_stdout is not None or params.capture_stdout
         capture_stderr = self._callback_stderr is not None or params.capture_stderr
@@ -250,7 +250,8 @@ class BashTask(BaseTask):
             self._callback_start(data, store, signal, context)
 
         # call the command
-        proc = Popen(params.command, cwd=params.cwd, shell=True, env=params.env,
+        proc = Popen(self.params.eval_single('command', data, store),
+                     cwd=params.cwd, shell=True, env=params.env,
                      preexec_fn=pre_exec, stdout=stdout, stderr=stderr,
                      stdin=PIPE if params.stdin is not None else None)
 
