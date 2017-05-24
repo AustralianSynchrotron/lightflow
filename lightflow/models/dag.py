@@ -135,9 +135,6 @@ class Dag:
 
         # process the task queue as long as there are tasks in it
         while tasks:
-            for task in tasks:
-                print(task.name, task.state)
-
             if not stopped:
                 stopped = signal.is_stopped
 
