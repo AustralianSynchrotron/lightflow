@@ -40,6 +40,10 @@ class DirectedAcyclicGraphInvalid(RuntimeError):
     pass
 
 
+class DirectedAcyclicGraphUndefined(RuntimeError):
+    pass
+
+
 class DataStoreNotConnected(RuntimeError):
     pass
 

@@ -1,11 +1,11 @@
 from time import sleep
-from copy import deepcopy
 import networkx as nx
-from collections import defaultdict
+from copy import deepcopy
 
-from .task import BaseTask, BaseTaskStatus
+from .task import BaseTask, TaskState
 from .task_data import MultiTaskData
-from .exceptions import DirectedAcyclicGraphInvalid, ConfigNotDefinedError
+from .exceptions import (DirectedAcyclicGraphInvalid, DirectedAcyclicGraphUndefined,
+                         ConfigNotDefinedError)
 from lightflow.logger import get_logger
 from lightflow.queue.app import create_app
 from lightflow.queue.const import JobExecPath
@@ -28,8 +28,8 @@ class Dag:
 
     Please note: this class has to be serialisable (e.g. by pickle)
     """
-    def __init__(self, name, *, autostart=True):
-        """ Initialise the dag.
+    def __init__(self, name, *, autostart=True, schema=None):
+        """ Initialize the dag.
 
         Args:
             name (str): The name of the dag.
@@ -38,11 +38,9 @@ class Dag:
         """
         self._name = name
         self._autostart = autostart
+        self._schema = schema
 
-        self._graph = nx.DiGraph()
-        self._slots = defaultdict(dict)
         self._copy_counter = 0
-
         self._workflow_name = None
 
     @property
@@ -57,7 +55,7 @@ class Dag:
 
     @property
     def workflow_name(self):
-        """ Returns the name of the workflow this dag belongs to. """
+        """ Return the name of the workflow this dag belongs to. """
         return self._workflow_name
 
     @workflow_name.setter
@@ -69,8 +67,8 @@ class Dag:
         """
         self._workflow_name = name
 
-    def define(self, schema):
-        """ Constructs the task graph (dag) from a given schema.
+    def define(self, schema, *, validate=True):
+        """ Construct the task graph (dag) from a given schema.
 
         Parses the graph schema definition and creates the task graph. Tasks are the
         vertices of the graph and the connections defined in the schema become the edges.
@@ -92,23 +90,10 @@ class Dag:
         Args:
             schema (dict): A dictionary with the schema definition.
         """
-        self._graph.clear()
-        for parent, children in schema.items():
-            if children is not None:
-                children = children if (isinstance(children, list) or
-                                        isinstance(children, dict)) else [children]
+        self._schema = schema
 
-            if children is not None and len(children) > 0:
-                for child in children:
-                    self._graph.add_edge(parent, child)
-                    try:
-                        slot = children[child]
-                        if slot != '' and slot is not None:
-                            self._slots[child][parent] = slot
-                    except TypeError:
-                        pass
-            else:
-                self._graph.add_node(parent)
+        if validate:
+            self.validate(self.make_graph(self._schema))
 
     def run(self, config, workflow_id, signal, *, data=None):
         """ Run the dag by calling the tasks in the correct order.
@@ -125,9 +110,10 @@ class Dag:
             DirectedAcyclicGraphInvalid: If the graph is not a dag (e.g. contains loops).
             ConfigNotDefinedError: If the configuration for the dag is empty.
         """
+        graph = self.make_graph(self._schema)
+
         # pre-checks
-        if not nx.is_directed_acyclic_graph(self._graph):
-            raise DirectedAcyclicGraphInvalid()
+        self.validate(graph)
 
         if config is None:
             raise ConfigNotDefinedError()
@@ -139,18 +125,19 @@ class Dag:
         tasks = []
         stopped = False
 
-        # add all tasks without predecessors to the task list and
-        # set the dag_name for all tasks (which binds the task to this dag).
-        linearised_graph = nx.topological_sort(self._graph)
-        for node in linearised_graph:
-            node.workflow_name = self.workflow_name
-            node.dag_name = self.name
-            if len(self._graph.predecessors(node)) == 0:
-                node.set_state(BaseTaskStatus.Waiting)
-                tasks.append(node)
+        # add all tasks without predecessors to the task list
+        for task in nx.topological_sort(graph):
+            task.workflow_name = self.workflow_name
+            task.dag_name = self.name
+            if len(graph.predecessors(task)) == 0:
+                task.set_state(TaskState.Waiting)
+                tasks.append(task)
 
         # process the task queue as long as there are tasks in it
         while tasks:
+            for task in tasks:
+                print(task.name, task.state)
+
             if not stopped:
                 stopped = signal.is_stopped
 
@@ -165,25 +152,77 @@ class Dag:
                 # completed. Then check whether the task should be skipped by
                 # interrogating the predecessor tasks.
                 if task.is_waiting:
-                    if not stopped:
-                        self._handle_waiting_task(task, data, celery_app, workflow_id)
+                    if stopped:
+                        task.set_state(TaskState.Stopped)
                     else:
-                        task.set_state(BaseTaskStatus.Stopped)
+                        pre_tasks = graph.predecessors(task)
+                        if all([p.is_completed for p in pre_tasks]):
+
+                            # check whether the task should be skipped
+                            run_task = task.has_to_run or len(pre_tasks) == 0
+                            for pre in pre_tasks:
+                                if run_task:
+                                    break
+
+                                # predecessor task is skipped and flag should
+                                # not be propagated
+                                if pre.is_skipped and not pre.propagate_skip:
+                                    run_task = True
+
+                                # limits of a non-skipped predecessor task
+                                if not pre.is_skipped:
+                                    if pre.celery_result.result.limit is not None:
+                                        if task.name in [
+                                            n.name if isinstance(n, BaseTask) else n
+                                                for n in pre.celery_result.result.limit]:
+                                            run_task = True
+                                    else:
+                                        run_task = True
+
+                            task.is_skipped = not run_task
+
+                            # send the task to celery or, if skipped, mark it as completed
+                            if task.is_skipped:
+                                task.set_state(TaskState.Completed)
+                            else:
+                                # compose the input data from the predecessor tasks
+                                # output data skipped predecessor tasks do not contribute
+                                # to the input data
+                                if len(pre_tasks) == 0:
+                                    input_data = data
+                                else:
+                                    input_data = MultiTaskData()
+                                    for pre_task in [p for p in pre_tasks if
+                                                     not p.is_skipped]:
+
+                                        slot = graph[pre_task][task]['slot']
+                                        input_data.add_dataset(
+                                            pre_task.name,
+                                            pre_task.celery_result.result.data,
+                                            aliases=[slot] if slot is not None else None)
+
+                                task.set_state(TaskState.Running)
+                                task.celery_result = celery_app.send_task(
+                                    JobExecPath.Task,
+                                    args=(task, workflow_id, input_data),
+                                    queue=task.queue,
+                                    routing_key=task.queue
+                                )
 
                 # for each completed task, add all successor tasks to the task list
                 # and flag them as waiting if they are not in the task list yet.
                 elif task.is_running:
                     if task.celery_completed:
-                        task.set_state(BaseTaskStatus.Completed)
-                        for next_task in self._graph.successors(task):
+                        task.set_state(TaskState.Completed)
+                        for next_task in graph.successors(task):
                             if next_task not in tasks:
-                                next_task.set_state(BaseTaskStatus.Waiting)
+                                next_task.set_state(TaskState.Waiting)
                                 tasks.append(next_task)
 
                 # cleanup task results that are not required anymore
                 elif task.is_completed:
                     if all([s.is_completed or s.is_stopped or s.is_aborted
-                            for s in self._graph.successors(task)]):
+                            for s in graph.successors(task)]):
                         if celery_app.conf.result_expires == 0:
                             task.clear_celery_result()
                         tasks.remove(task)
@@ -194,73 +233,48 @@ class Dag:
                         task.clear_celery_result()
                     tasks.remove(task)
 
-    def _handle_waiting_task(self, task, data, celery_app, workflow_id):
-        """ Handle a waiting task.
+    @staticmethod
+    def validate(graph):
+        if not nx.is_directed_acyclic_graph(graph):
+            raise DirectedAcyclicGraphInvalid()
 
-        Wait for all predecessor tasks to be completed. Then check whether the task
-        should be skipped by interrogating the predecessor tasks.
-        
-        Args:
-            task (BaseTask): Reference to the task object that has a waiting state.
-            data (MultiTaskData): Reference to the DAG's MultiTaskData object.
-            celery_app (Celery): Reference to an celery application object. Used for
-                                 queueing new tasks.
-            workflow_id (str): The unique ID of the workflow that runs this dag.
+    @staticmethod
+    def make_graph(schema):
+        """ Create a graph object from the schema """
+        if schema is None:
+            raise DirectedAcyclicGraphUndefined()
 
-        """
-        pre_tasks = self._graph.predecessors(task)
-        if all([p.is_completed or p.is_skipped for p in pre_tasks]):
-
-            # check whether the task should be skipped
-            run_task = task.has_to_run or len(pre_tasks) == 0
-            for pre in pre_tasks:
-                if run_task:
-                    break
-
-                # predecessor task is skipped and flag should not be propagated
-                if pre.is_skipped and not pre.propagate_skip:
-                    run_task = True
-
-                # limits of a non-skipped predecessor task
-                if not pre.is_skipped:
-                    if pre.celery_result.result.limit is not None:
-                        if task.name in [
-                            n.name if isinstance(n, BaseTask) else n
-                                for n in pre.celery_result.result.limit]:
-                            run_task = True
+        # sanitize the input schema such that it follows the structure:
+        #    {parent: {child_1: slot_1, child_2: slot_2, ...}, ...}
+        sanitized_schema = {}
+        for parent, children in schema.items():
+            child_dict = {}
+            if children is not None:
+                if isinstance(children, list):
+                    if len(children) > 0:
+                        child_dict = {child: None for child in children}
                     else:
-                        run_task = True
-
-            task.is_skipped = not run_task
-
-            # send the task to celery or, if skipped, mark it as completed
-            if task.is_skipped:
-                task.set_state(BaseTaskStatus.Completed)
-            else:
-                # compose the input data from the predecessor tasks output data
-                # skipped predecessor tasks do not contribute to the input data
-                if len(pre_tasks) == 0:
-                    input_data = data
+                        child_dict = {None: None}
+                elif isinstance(children, dict):
+                    for child, slot in children.items():
+                        child_dict[child] = slot if slot != '' else None
                 else:
-                    input_data = MultiTaskData()
-                    for pre_task in [p for p in pre_tasks if
-                                     not p.is_skipped]:
-                        if task in self._slots:
-                            aliases = [self._slots[task][pre_task]]
-                        else:
-                            aliases = None
+                    child_dict = {children: None}
+            else:
+                child_dict = {None: None}
 
-                        input_data.add_dataset(pre_task.name,
-                                               pre_task.celery_result.result.data,
-                                               aliases=aliases)
+            sanitized_schema[parent] = child_dict
 
-                task.set_state(BaseTaskStatus.Running)
-                task.celery_result = celery_app.send_task(
-                    JobExecPath.Task,
-                    args=(task, workflow_id, input_data),
-                    queue=task.queue,
-                    routing_key=task.queue
-                )
+        # build the graph from the sanitized schema
+        graph = nx.DiGraph()
+        for parent, children in sanitized_schema.items():
+            for child, slot in children.items():
+                if child is not None:
+                    graph.add_edge(parent, child, slot=slot)
+                else:
+                    graph.add_node(parent)
+
+        return graph
 
     def __deepcopy__(self, memo):
         """ Create a copy of the dag object.
@@ -278,7 +292,5 @@ class Dag:
         self._copy_counter += 1
         new_dag = Dag('{}:{}'.format(self._name, self._copy_counter),
                       autostart=self._autostart)
-
-        new_dag._graph = deepcopy(self._graph, memo)
-        new_dag._slots = deepcopy(self._slots, memo)
+        new_dag._schema = deepcopy(self._schema, memo)
         return new_dag

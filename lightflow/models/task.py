@@ -4,7 +4,7 @@ from .exceptions import TaskReturnActionInvalid, AbortWorkflow, StopTask
 from lightflow.queue import JobType
 
 
-class BaseTaskStatus:
+class TaskState:
     Init = 1
     Waiting = 2
     Running = 3
@@ -32,12 +32,12 @@ class BaseTask:
         self._name = name
         self._queue = queue
         self._force_run = force_run
-        self.propagate_skip = propagate_skip
+        self._propagate_skip = propagate_skip
 
         self._skip = False
-        self._state = BaseTaskStatus.Init
-
+        self._state = TaskState.Init
         self._celery_result = None
+
         self.workflow_name = None
         self.dag_name = None
 
@@ -52,24 +52,34 @@ class BaseTask:
         return self._queue
 
     @property
+    def has_to_run(self):
+        """ Returns whether the task has to run, even if the DAG would skip it """
+        return self._force_run
+
+    @property
+    def propagate_skip(self):
+        """ Returns whether the skip flag should be propagated to the successor tasks """
+        return self._propagate_skip
+
+    @property
     def is_waiting(self):
-        return self._state == BaseTaskStatus.Waiting
+        return self._state == TaskState.Waiting
 
     @property
     def is_running(self):
-        return self._state == BaseTaskStatus.Running
+        return self._state == TaskState.Running
 
     @property
     def is_completed(self):
-        return self._state == BaseTaskStatus.Completed
+        return self._state == TaskState.Completed
 
     @property
     def is_stopped(self):
-        return self._state == BaseTaskStatus.Stopped
+        return self._state == TaskState.Stopped
 
     @property
     def is_aborted(self):
-        return self._state == BaseTaskStatus.Aborted
+        return self._state == TaskState.Aborted
 
     @property
     def is_skipped(self):
@@ -86,9 +96,8 @@ class BaseTask:
         self._skip = value
 
     @property
-    def has_to_run(self):
-        """ Returns whether the task has to run, even if the DAG would skip it """
-        return self._force_run
+    def state(self):
+        return self._state
 
     @property
     def celery_pending(self):
@@ -191,8 +200,6 @@ class BaseTask:
 
         # the task should be stopped and optionally all successor tasks skipped
         except StopTask as err:
-            self.set_state(BaseTaskStatus.Stopped)
-
             if stop_callback is not None:
                 stop_callback(exc=err)
 
@@ -200,8 +207,6 @@ class BaseTask:
 
         # the workflow should be stopped immediately
         except AbortWorkflow as err:
-            self.set_state(BaseTaskStatus.Aborted)
-
             if abort_callback is not None:
                 abort_callback(exc=err)
 
