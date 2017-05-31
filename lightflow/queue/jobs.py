@@ -6,7 +6,7 @@ from lightflow.logger import get_logger
 from lightflow.models.task_signal import TaskSignal
 from lightflow.models.task_context import TaskContext
 from lightflow.models.dag_signal import DagSignal
-from lightflow.models.datastore import DataStore
+from lightflow.models.datastore import DataStore, DataStoreDocumentSection
 from lightflow.models.signal import Server, Client, SignalConnection
 from .const import JobType, JobEventName
 
@@ -143,21 +143,28 @@ def execute_task(self, task, workflow_id, data=None):
     """
     start_time = datetime.now()
 
+    store_doc = DataStore(**self.app.user_options['config'].data_store,
+                          auto_connect=True).get(workflow_id)
+
     def handle_callback(message, event_type, exc=None):
         msg = '{}: {}'.format(message, str(exc)) if exc is not None else message
 
+        # set the logging level
         if event_type == JobEventName.Stopped:
-            duration = (datetime.now() - start_time).total_seconds()
             logger.warning(msg)
         elif event_type == JobEventName.Aborted:
-            duration = (datetime.now() - start_time).total_seconds()
             logger.error(msg)
-        elif event_type == JobEventName.Succeeded:
-            duration = (datetime.now() - start_time).total_seconds()
+        else:
             logger.info(msg)
+
+        # store a log into the persistent data store
+        if event_type != JobEventName.Started:
+            duration = (datetime.now() - start_time).total_seconds()
+            store_doc.set(key='log.{}.{}.duration'.format(task.dag_name, task.name),
+                          value=duration,
+                          section=DataStoreDocumentSection.Meta)
         else:
             duration = None
-            logger.info(msg)
 
         # send custom celery event
         self.send_event(event_type,
@@ -178,8 +185,7 @@ def execute_task(self, task, workflow_id, data=None):
     # run the task and capture the result
     return task._run(
         data=data,
-        store=DataStore(**self.app.user_options['config'].data_store,
-                        auto_connect=True).get(workflow_id),
+        store=store_doc,
         signal=TaskSignal(Client(
             SignalConnection(**self.app.user_options['config'].signal, auto_connect=True),
             request_key=workflow_id),
