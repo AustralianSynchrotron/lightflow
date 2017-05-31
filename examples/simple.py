@@ -12,7 +12,8 @@ from lightflow.tasks import PythonTask
 # the callback function for the task that stores the value 5
 def put_data(data, store, signal, context):
     print('Task {task_name} being run in DAG {dag_name} '
-          'for workflow {workflow_name} ({workflow_id})'.format(**context.to_dict()))
+          'for workflow {workflow_name} ({workflow_id}) '
+          'on {worker_hostname}'.format(**context.to_dict()))
 
     data['value'] = 5
 

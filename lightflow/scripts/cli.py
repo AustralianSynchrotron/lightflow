@@ -258,19 +258,20 @@ def monitor(obj):
     }
 
     click.echo('\n')
-    click.echo('{:>10} {:>12} {:20} [{}]'.format('Status',
-                                                 'Type',
-                                                 'Name', 'Workflow ID'))
-    click.echo('-' * 63)
+    click.echo('{:>10} {:>12} {:25} {:28} {}'.format('Status',
+                                                     'Type',
+                                                     'Name', 'Workflow ID', 'Worker'))
+    click.echo('-' * 91)
     for event in workflow_events(obj['config']):
         evt_disp = event_display[event.event]
-        click.echo('{:>{}} {:>{}} {:20} [{}]'.format(
+        click.echo('{:>{}} {:>{}} {:25} {:28} {}'.format(
             _style(show_colors, evt_disp['label'], fg=evt_disp['color']),
             20 if show_colors else 10,
             _style(show_colors, event.type, bold=True, fg=JOB_COLOR[event.type]),
             24 if show_colors else 12,
             event.name,
-            event.workflow_id))
+            event.workflow_id,
+            event.hostname))
 
 
 def _style(enabled, text, **kwargs):

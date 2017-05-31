@@ -134,10 +134,10 @@ def execute_task(self, task, workflow_id, data=None):
         data (MultiTaskData): An optional MultiTaskData object that contains the data
                               that has been passed down from upstream tasks.
     """
-
     def handle_callback(message, event_type, exc=None):
         msg = '{}: {}'.format(message, str(exc)) if exc is not None else message
 
+        # set logging level
         if event_type == JobEventName.Stopped:
             logger.warning(msg)
         elif event_type == JobEventName.Aborted:
@@ -169,7 +169,8 @@ def execute_task(self, task, workflow_id, data=None):
             SignalConnection(**self.app.user_options['config'].signal, auto_connect=True),
             request_key=workflow_id),
             task.dag_name),
-        context=TaskContext(task.name, task.dag_name, task.workflow_name, workflow_id),
+        context=TaskContext(task.name, task.dag_name, task.workflow_name,
+                            workflow_id, self.request.hostname),
         success_callback=partial(handle_callback,
                                  message='Complete task <{}>'.format(task.name),
                                  event_type=JobEventName.Succeeded),
