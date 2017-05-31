@@ -99,7 +99,7 @@ class DataStore:
 
         Args:
             payload (dict): Dictionary of initial data that should be stored
-                            in the new document.
+                            in the new document in the meta section.
 
         Raises:
             DataStoreNotConnected: If the data store is not connected to the server.
@@ -242,7 +242,7 @@ class DataStoreDocument:
         return result.modified_count == 1
 
     def push(self, key, value):
-        """ Appends a value to the
+        """ Appends a value to a list in the data section of the document. 
 
         Args:
             key (str): The key pointing to the value that should be stored/updated.
