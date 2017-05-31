@@ -12,8 +12,12 @@ from .exceptions import DataStoreNotConnected, \
 logger = get_logger(__name__)
 
 WORKFLOW_DATA_COLLECTION_NAME = 'workflow-data'
-WORKFLOW_DATA_DOCUMENT_META = 'meta'
-WORKFLOW_DATA_DOCUMENT_DATA = 'data'
+
+
+class DataStoreDocumentSection:
+    """ The different sections the data store document contains """
+    Meta = 'meta'
+    Data = 'data'
 
 
 class DataStore:
@@ -28,7 +32,7 @@ class DataStore:
     document is created and its id is used for identifying the workflow run.
     """
     def __init__(self, host, port, database, *, auto_connect=False):
-        """ Initialise the DataStore.
+        """ Initialize the DataStore.
 
         Args:
             host (str): The host on which the MongoDB server runs.
@@ -111,9 +115,9 @@ class DataStore:
             db = self._client[self.database]
             col = db[WORKFLOW_DATA_COLLECTION_NAME]
             return str(col.insert_one({
-                WORKFLOW_DATA_DOCUMENT_META:
+                DataStoreDocumentSection.Meta:
                     payload if isinstance(payload, dict) else {},
-                WORKFLOW_DATA_DOCUMENT_DATA: {}
+                DataStoreDocumentSection.Data: {}
             }).inserted_id)
 
         except ConnectionFailure:
@@ -173,7 +177,7 @@ class DataStoreDocument:
     """
 
     def __init__(self, collection, grid_fs, workflow_id):
-        """ Initialise the data store document.
+        """ Initialize the data store document.
 
         Args:
             collection: A MongoDB collection object pointing to the data store collection.
@@ -185,32 +189,34 @@ class DataStoreDocument:
         self._gridfs = grid_fs
         self._workflow_id = workflow_id
 
-    def get(self, key, default=None):
-        """ Return the field specified by its key from the document data section.
+    def get(self, key, default=None, *, section=DataStoreDocumentSection.Data):
+        """ Return the field specified by its key from the specified section.
 
-        This method access the data section of the workflow document and returns the
-        value for the specified key.
+        This method access the specified section of the workflow document and returns the
+        value for the given key.
 
         Args:
             key (str): The key pointing to the value that should be retrieved. It supports
                        MongoDB's dot notation for nested fields.
             default: The default value that is returned if the key does not exist.
+            section (DataStoreDocumentSection): The section from which the data should
+                                                be retrieved.
 
         Returns:
             object: The value from the field that the specified key is pointing to. If the
                     key does not exist, the default value is returned. If no default value
                     is provided and the key does not exist None is returned.
         """
-        key_notation = '.'.join([WORKFLOW_DATA_DOCUMENT_DATA, key])
+        key_notation = '.'.join([section, key])
         try:
             return self._decode_value(self._data_from_dotnotation(key_notation, default))
         except KeyError:
             return None
 
-    def set(self, key, value):
-        """ Store a value under the specified key in the data section of the document.
+    def set(self, key, value, *, section=DataStoreDocumentSection.Data):
+        """ Store a value under the specified key in the given section of the document.
 
-        This method stores a value into the data section of the workflow data store
+        This method stores a value into the specified section of the workflow data store
         document. Any existing value is overridden. Before storing a value, any linked
         GridFS document under the specified key is deleted.
 
@@ -218,11 +224,13 @@ class DataStoreDocument:
             key (str): The key pointing to the value that should be stored/updated.
                        It supports MongoDB's dot notation for nested fields.
             value: The value that should be stored/updated.
+            section (DataStoreDocumentSection): The section from which the data should
+                                                be retrieved.
 
         Returns:
             bool: True if the value could be set/updated, otherwise False.
         """
-        key_notation = '.'.join([WORKFLOW_DATA_DOCUMENT_DATA, key])
+        key_notation = '.'.join([section, key])
 
         try:
             self._delete_gridfs_data(self._data_from_dotnotation(key_notation,
@@ -241,18 +249,20 @@ class DataStoreDocument:
         )
         return result.modified_count == 1
 
-    def push(self, key, value):
-        """ Appends a value to a list in the data section of the document. 
+    def push(self, key, value, *, section=DataStoreDocumentSection.Data):
+        """ Appends a value to a list in the specified section of the document. 
 
         Args:
             key (str): The key pointing to the value that should be stored/updated.
                        It supports MongoDB's dot notation for nested fields.
             value: The value that should be appended to a list in the data store.
+            section (DataStoreDocumentSection): The section from which the data should
+                                                be retrieved.
 
         Returns:
             bool: True if the value could be appended, otherwise False.
         """
-        key_notation = '.'.join([WORKFLOW_DATA_DOCUMENT_DATA, key])
+        key_notation = '.'.join([section, key])
         result = self._collection.update_one(
             {"_id": ObjectId(self._workflow_id)},
             {
@@ -264,18 +274,21 @@ class DataStoreDocument:
         )
         return result.modified_count == 1
 
-    def extend(self, key, values):
+    def extend(self, key, values, *, section=DataStoreDocumentSection.Data):
         """ Extends a list in the data store with the elements of values.
 
         Args:
             key (str): The key pointing to the value that should be stored/updated.
                        It supports MongoDB's dot notation for nested fields.
-            values:
+            values (list): A list of the values that should be used to extend the list
+                           in the document.
+            section (DataStoreDocumentSection): The section from which the data should
+                                                be retrieved.
 
         Returns:
             bool: True if the list in the database could be extended, otherwise False.
         """
-        key_notation = '.'.join([WORKFLOW_DATA_DOCUMENT_DATA, key])
+        key_notation = '.'.join([section, key])
         if not isinstance(values, list):
             return False
 
