@@ -244,9 +244,10 @@ def worker_status(obj, filter_queues, details):
 
 
 @cli.command('monitor')
+@click.option('--details', '-d', is_flag=True, help='Show detailed information.')
 @click.pass_obj
 @config_required
-def monitor(obj):
+def monitor(obj, details):
     """ Show the worker and workflow event stream. """
     show_colors = obj['show_color']
 
@@ -258,20 +259,27 @@ def monitor(obj):
     }
 
     click.echo('\n')
-    click.echo('{:>10} {:>12} {:25} {:28} {}'.format('Status',
-                                                     'Type',
-                                                     'Name', 'Workflow ID', 'Worker'))
-    click.echo('-' * 91)
+    click.echo('{:>10} {:>12} {:25} {:16} {:28} {}'.format(
+        'Status',
+        'Type',
+        'Name',
+        'Duration (sec)',
+        'Workflow ID' if details else '',
+        'Worker' if details else ''))
+
+    click.echo('-' * (110 if details else 65))
+
     for event in workflow_events(obj['config']):
         evt_disp = event_display[event.event]
-        click.echo('{:>{}} {:>{}} {:25} {:28} {}'.format(
+        click.echo('{:>{}} {:>{}} {:25} {:16} {:28} {}'.format(
             _style(show_colors, evt_disp['label'], fg=evt_disp['color']),
             20 if show_colors else 10,
             _style(show_colors, event.type, bold=True, fg=JOB_COLOR[event.type]),
             24 if show_colors else 12,
             event.name,
-            event.workflow_id,
-            event.hostname))
+            '{0:.3f}'.format(event.duration) if event.duration is not None else '',
+            event.workflow_id if details else '',
+            event.hostname if details else ''))
 
 
 def _style(enabled, text, **kwargs):

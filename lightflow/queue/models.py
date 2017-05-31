@@ -236,7 +236,7 @@ class JobStats:
 class JobEvent:
     """ The base class for job events from celery. """
     def __init__(self, uuid, job_type, event_type, hostname, pid,
-                 name, workflow_id, event_time):
+                 name, workflow_id, event_time, duration):
         """ Initialize the job event object.
         
         Args:
@@ -248,6 +248,7 @@ class JobEvent:
             name (str): The name of the workflow, dag or task that caused this event.
             workflow_id (str): The id of the workflow that hosts this job.
             event_time (datetime): The time when the event was triggered.
+            duration (float, None): The duration it took to execute the job.
         """
         self.uuid = uuid
         self.type = job_type
@@ -257,6 +258,7 @@ class JobEvent:
         self.name = name
         self.workflow_id = workflow_id
         self.event_time = event_time
+        self.duration = duration
 
     @classmethod
     def from_event(cls, event):
@@ -276,37 +278,38 @@ class JobEvent:
             pid=event['pid'],
             name=event['name'],
             workflow_id=event['workflow_id'],
-            event_time=event['time']
+            event_time=event['time'],
+            duration=event['duration']
         )
 
 
 class JobStartedEvent(JobEvent):
     """ This event is triggered when a new job starts running. """
     def __init__(self, uuid, job_type, event_type, hostname, pid,
-                 name, workflow_id, event_time):
+                 name, workflow_id, event_time, duration):
         super().__init__(uuid, job_type, event_type, hostname, pid,
-                         name, workflow_id, event_time)
+                         name, workflow_id, event_time, duration)
 
 
 class JobSucceededEvent(JobEvent):
     """ This event is triggered when a job completed successfully. """
     def __init__(self, uuid, job_type, event_type, hostname, pid,
-                 name, workflow_id, event_time):
+                 name, workflow_id, event_time, duration):
         super().__init__(uuid, job_type, event_type, hostname, pid,
-                         name, workflow_id, event_time)
+                         name, workflow_id, event_time, duration)
 
 
 class JobStoppedEvent(JobEvent):
     """ This event is triggered when a job was stopped. """
     def __init__(self, uuid, job_type, event_type, hostname, pid,
-                 name, workflow_id, event_time):
+                 name, workflow_id, event_time, duration):
         super().__init__(uuid, job_type, event_type, hostname, pid,
-                         name, workflow_id, event_time)
+                         name, workflow_id, event_time, duration)
 
 
 class JobAbortedEvent(JobEvent):
     """ This event is triggered when a job was aborted. """
     def __init__(self, uuid, job_type, event_type, hostname, pid,
-                 name, workflow_id, event_time):
+                 name, workflow_id, event_time, duration):
         super().__init__(uuid, job_type, event_type, hostname, pid,
-                         name, workflow_id, event_time)
+                         name, workflow_id, event_time, duration)

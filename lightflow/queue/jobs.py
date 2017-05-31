@@ -26,6 +26,8 @@ def execute_workflow(self, workflow, workflow_id=None):
         workflow_id (string): If a workflow ID is provided the workflow run will use
                               this ID, if not a new ID will be auto generated.
     """
+    start_time = datetime.now()
+
     logger.info('Running workflow <{}>'.format(workflow.name))
     data_store = DataStore(**self.app.user_options['config'].data_store,
                            auto_connect=True)
@@ -45,7 +47,8 @@ def execute_workflow(self, workflow, workflow_id=None):
                     job_type=JobType.Workflow,
                     name=workflow.name,
                     time=datetime.utcnow(),
-                    workflow_id=workflow_id)
+                    workflow_id=workflow_id,
+                    duration=None)
 
     # create server for inter-task messaging
     signal_server = Server(SignalConnection(**self.app.user_options['config'].signal,
@@ -68,7 +71,8 @@ def execute_workflow(self, workflow, workflow_id=None):
                     job_type=JobType.Workflow,
                     name=workflow.name,
                     time=datetime.utcnow(),
-                    workflow_id=workflow_id)
+                    workflow_id=workflow_id,
+                    duration=(datetime.now() - start_time).total_seconds())
 
     logger.info('Finished workflow <{}>'.format(workflow.name))
 
@@ -88,6 +92,7 @@ def execute_dag(self, dag, workflow_id, data=None):
                               the first tasks in the dag. This allows the transfer of
                               data from dag to dag.
     """
+    start_time = datetime.now()
     logger.info('Running DAG <{}>'.format(dag.name))
 
     # send custom celery event that the dag has been started
@@ -95,7 +100,8 @@ def execute_dag(self, dag, workflow_id, data=None):
                     job_type=JobType.Dag,
                     name=dag.name,
                     time=datetime.utcnow(),
-                    workflow_id=workflow_id)
+                    workflow_id=workflow_id,
+                    duration=None)
 
     # store job specific meta information wth the job
     self.update_state(meta={'name': dag.name,
@@ -117,7 +123,8 @@ def execute_dag(self, dag, workflow_id, data=None):
                     job_type=JobType.Dag,
                     name=dag.name,
                     time=datetime.utcnow(),
-                    workflow_id=workflow_id)
+                    workflow_id=workflow_id,
+                    duration=(datetime.now() - start_time).total_seconds())
 
     logger.info('Finished DAG <{}>'.format(dag.name))
 
@@ -134,15 +141,22 @@ def execute_task(self, task, workflow_id, data=None):
         data (MultiTaskData): An optional MultiTaskData object that contains the data
                               that has been passed down from upstream tasks.
     """
+    start_time = datetime.now()
+
     def handle_callback(message, event_type, exc=None):
         msg = '{}: {}'.format(message, str(exc)) if exc is not None else message
 
-        # set logging level
         if event_type == JobEventName.Stopped:
+            duration = (datetime.now() - start_time).total_seconds()
             logger.warning(msg)
         elif event_type == JobEventName.Aborted:
+            duration = (datetime.now() - start_time).total_seconds()
             logger.error(msg)
+        elif event_type == JobEventName.Succeeded:
+            duration = (datetime.now() - start_time).total_seconds()
+            logger.info(msg)
         else:
+            duration = None
             logger.info(msg)
 
         # send custom celery event
@@ -150,7 +164,8 @@ def execute_task(self, task, workflow_id, data=None):
                         job_type=JobType.Task,
                         name=task.name,
                         time=datetime.utcnow(),
-                        workflow_id=workflow_id)
+                        workflow_id=workflow_id,
+                        duration=duration)
 
     # store job specific meta information wth the job
     self.update_state(meta={'name': task.name,
