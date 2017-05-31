@@ -5,6 +5,7 @@ from lightflow.queue import JobType
 
 
 class TaskState:
+    """ Constants for flagging the current state of the task. """
     Init = 1
     Waiting = 2
     Running = 3
@@ -19,9 +20,9 @@ class BaseTask:
     Tasks should inherit from this class and implement the run() method.
     """
     def __init__(self, name, *, queue=JobType.Task, force_run=False, propagate_skip=True):
-        """ Initialise the base task.
+        """ Initialize the base task.
 
-        The dag_name attribute is filled by the dag define method.
+        The dag_name and workflow_name attributes are filled at runtime.
 
         Args:
             name (str): The name of the task.
@@ -53,37 +54,42 @@ class BaseTask:
 
     @property
     def has_to_run(self):
-        """ Returns whether the task has to run, even if the DAG would skip it """
+        """ Returns whether the task has to run, even if the DAG would skip it. """
         return self._force_run
 
     @property
     def propagate_skip(self):
-        """ Returns whether the skip flag should be propagated to the successor tasks """
+        """ Returns whether the skip flag should be propagated to the successor tasks. """
         return self._propagate_skip
 
     @property
     def is_waiting(self):
+        """ Internal state: returns whether the task is waiting in the DAG to be run. """
         return self._state == TaskState.Waiting
 
     @property
     def is_running(self):
+        """ Internal state: returns whether the task is currently running. """
         return self._state == TaskState.Running
 
     @property
     def is_completed(self):
+        """ Internal state: returns whether the task has completed successfully. """
         return self._state == TaskState.Completed
 
     @property
     def is_stopped(self):
+        """ Internal state: returns whether the task was stopped. """
         return self._state == TaskState.Stopped
 
     @property
     def is_aborted(self):
+        """ Internal state: returns whether the task was aborted. """
         return self._state == TaskState.Aborted
 
     @property
     def is_skipped(self):
-        """ Returns whether the task has been skipped. """
+        """ Internal state: returns whether the task was skipped. """
         return self._skip
 
     @is_skipped.setter
@@ -97,11 +103,21 @@ class BaseTask:
 
     @property
     def state(self):
+        """ Returns the internal state of the task. """
         return self._state
+
+    @state.setter
+    def state(self, state):
+        """ Sets the internal state of the task.
+        
+        Args:
+            state (TaskState): The new state of the task
+        """
+        self._state = state
 
     @property
     def celery_pending(self):
-        """ Returns whether the task is queued. """
+        """ Celery state: returns whether the task is queued. """
         if self.has_celery_result:
             return self.celery_result.state == "PENDING"
         else:
@@ -109,7 +125,7 @@ class BaseTask:
 
     @property
     def celery_completed(self):
-        """ Returns whether the execution of the task has completed. """
+        """ Celery state: returns whether the execution of the task has completed. """
         if self.has_celery_result:
             return self.celery_result.ready()
         else:
@@ -117,7 +133,7 @@ class BaseTask:
 
     @property
     def celery_failed(self):
-        """ Returns whether the execution of the task failed. """
+        """ Celery state: returns whether the execution of the task failed. """
         if self.has_celery_result:
             return self.celery_result.failed()
         else:
@@ -125,7 +141,7 @@ class BaseTask:
 
     @property
     def celery_state(self):
-        """ Returns the current state of the task as a string. """
+        """ Returns the current celery state of the task as a string. """
         if self.has_celery_result:
             return self.celery_result.state
         else:
@@ -154,11 +170,9 @@ class BaseTask:
         self._celery_result = result
 
     def clear_celery_result(self):
+        """ Removes the task's celery result from the result backend. """
         if self.has_celery_result:
             self._celery_result.forget()
-
-    def set_state(self, state):
-        self._state = state
 
     def _run(self, data, store, signal, context, *,
              success_callback=None, stop_callback=None, abort_callback=None):

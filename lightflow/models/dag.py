@@ -35,6 +35,7 @@ class Dag:
             name (str): The name of the dag.
             autostart (bool): Set to True in order to start the processing of the tasks
                               upon the start of the workflow.
+            schema (dict): A dictionary with the definition of the task graph.
         """
         self._name = name
         self._autostart = autostart
@@ -68,11 +69,10 @@ class Dag:
         self._workflow_name = name
 
     def define(self, schema, *, validate=True):
-        """ Construct the task graph (dag) from a given schema.
-
-        Parses the graph schema definition and creates the task graph. Tasks are the
-        vertices of the graph and the connections defined in the schema become the edges.
-
+        """ Store the task graph definition (schema).
+        
+        The schema has to adhere to the following rules:
+        
         A key in the schema dict represents a parent task and the value one or more
         children:
             {parent: [child]} or {parent: [child1, child2]}
@@ -84,14 +84,12 @@ class Dag:
         An empty slot name or None skips the creation of a labelled slot:
             {parent: {child1: '', child2: None}}
 
-        The underlying graph library creates nodes automatically, when an edge between
-        non-existing nodes is created.
-
         Args:
             schema (dict): A dictionary with the schema definition.
+            validate (bool): Set to True to validate the graph by checking whether it is
+                             a directed acyclic graph.
         """
         self._schema = schema
-
         if validate:
             self.validate(self.make_graph(self._schema))
 
@@ -130,7 +128,7 @@ class Dag:
             task.workflow_name = self.workflow_name
             task.dag_name = self.name
             if len(graph.predecessors(task)) == 0:
-                task.set_state(TaskState.Waiting)
+                task.state = TaskState.Waiting
                 tasks.append(task)
 
         # process the task queue as long as there are tasks in it
@@ -150,7 +148,7 @@ class Dag:
                 # interrogating the predecessor tasks.
                 if task.is_waiting:
                     if stopped:
-                        task.set_state(TaskState.Stopped)
+                        task.state = TaskState.Stopped
                     else:
                         pre_tasks = graph.predecessors(task)
                         if all([p.is_completed for p in pre_tasks]):
@@ -180,7 +178,7 @@ class Dag:
 
                             # send the task to celery or, if skipped, mark it as completed
                             if task.is_skipped:
-                                task.set_state(TaskState.Completed)
+                                task.state = TaskState.Completed
                             else:
                                 # compose the input data from the predecessor tasks
                                 # output data skipped predecessor tasks do not contribute
@@ -198,7 +196,7 @@ class Dag:
                                             pre_task.celery_result.result.data,
                                             aliases=[slot] if slot is not None else None)
 
-                                task.set_state(TaskState.Running)
+                                task.state = TaskState.Running
                                 task.celery_result = celery_app.send_task(
                                     JobExecPath.Task,
                                     args=(task, workflow_id, input_data),
@@ -210,10 +208,10 @@ class Dag:
                 # and flag them as waiting if they are not in the task list yet.
                 elif task.is_running:
                     if task.celery_completed:
-                        task.set_state(TaskState.Completed)
+                        task.state = TaskState.Completed
                         for next_task in graph.successors(task):
                             if next_task not in tasks:
-                                next_task.set_state(TaskState.Waiting)
+                                next_task.state = TaskState.Waiting
                                 tasks.append(next_task)
 
                 # cleanup task results that are not required anymore
@@ -232,12 +230,47 @@ class Dag:
 
     @staticmethod
     def validate(graph):
+        """ Validate the graph by checking whether it is a directed acyclic graph.
+        
+        Args:
+            graph (DiGraph): Reference to a DiGraph object from NetworkX. 
+
+        Raises:
+            DirectedAcyclicGraphInvalid: If the graph is not a valid dag.
+        """
         if not nx.is_directed_acyclic_graph(graph):
             raise DirectedAcyclicGraphInvalid()
 
     @staticmethod
     def make_graph(schema):
-        """ Create a graph object from the schema """
+        """ Construct the task graph (dag) from a given schema. 
+
+        Parses the graph schema definition and creates the task graph. Tasks are the
+        vertices of the graph and the connections defined in the schema become the edges.
+
+        A key in the schema dict represents a parent task and the value one or more
+        children:
+            {parent: [child]} or {parent: [child1, child2]}
+
+        The data output of one task can be routed to a labelled input slot of successor
+        tasks using a dictionary instead of a list for the children:
+            {parent: {child1: 'positive', child2: 'negative'}}
+
+        An empty slot name or None skips the creation of a labelled slot:
+            {parent: {child1: '', child2: None}}
+
+        The underlying graph library creates nodes automatically, when an edge between
+        non-existing nodes is created.
+        
+        Args:
+            schema (dict): A dictionary with the schema definition.
+        
+        Returns:
+            DiGraph: A reference to the fully constructed graph object.
+        
+        Raises:
+            DirectedAcyclicGraphUndefined: If the schema is not defined.
+        """
         if schema is None:
             raise DirectedAcyclicGraphUndefined()
 
