@@ -134,6 +134,9 @@ class MultiTaskData:
     def __delitem__(self, key):
         del self.selected_dataset[key]
 
+    def __call__(self, alias):
+        return self.dataset_from_alias(alias)
+
     def dataset_from_index(self, index):
         return next(islice(self._datasets.values(), index, index+1))
 
