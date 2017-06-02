@@ -21,7 +21,7 @@ def print_times(data, store, signal, context):
     dag_log = store.get(key='log.{}'.format(context.dag_name),
                         section=DataStoreDocumentSection.Meta)
     for task, fields in dag_log.items():
-        print(task, 'took', fields['duration'], 'seconds')
+        print(task, 'on', fields['worker'], 'took', fields['duration'], 'seconds')
 
 
 # create the main DAG

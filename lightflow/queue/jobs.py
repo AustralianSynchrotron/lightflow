@@ -160,8 +160,13 @@ def execute_task(self, task, workflow_id, data=None):
         # store a log into the persistent data store
         if event_type != JobEventName.Started:
             duration = (datetime.now() - start_time).total_seconds()
+
             store_doc.set(key='log.{}.{}.duration'.format(task.dag_name, task.name),
                           value=duration,
+                          section=DataStoreDocumentSection.Meta)
+
+            store_doc.set(key='log.{}.{}.worker'.format(task.dag_name, task.name),
+                          value=self.request.hostname,
                           section=DataStoreDocumentSection.Meta)
         else:
             duration = None
