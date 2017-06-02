@@ -131,6 +131,16 @@ class Dag:
                 task.state = TaskState.Waiting
                 tasks.append(task)
 
+        def set_task_completed(completed_task):
+            """ For each completed task, add all successor tasks to the task list.
+            If they are not in the task list yet, flag them as 'waiting'.
+            """
+            completed_task.state = TaskState.Completed
+            for successor in graph.successors(completed_task):
+                if successor not in tasks:
+                    successor.state = TaskState.Waiting
+                    tasks.append(successor)
+
         # process the task queue as long as there are tasks in it
         while tasks:
             if not stopped:
@@ -178,7 +188,7 @@ class Dag:
 
                             # send the task to celery or, if skipped, mark it as completed
                             if task.is_skipped:
-                                task.state = TaskState.Completed
+                                set_task_completed(task)
                             else:
                                 # compose the input data from the predecessor tasks
                                 # output data skipped predecessor tasks do not contribute
@@ -204,15 +214,10 @@ class Dag:
                                     routing_key=task.queue
                                 )
 
-                # for each completed task, add all successor tasks to the task list
-                # and flag them as waiting if they are not in the task list yet.
+                # flag task as completed
                 elif task.is_running:
                     if task.celery_completed:
-                        task.state = TaskState.Completed
-                        for next_task in graph.successors(task):
-                            if next_task not in tasks:
-                                next_task.state = TaskState.Waiting
-                                tasks.append(next_task)
+                        set_task_completed(task)
 
                 # cleanup task results that are not required anymore
                 elif task.is_completed:
