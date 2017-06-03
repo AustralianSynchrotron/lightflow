@@ -204,7 +204,8 @@ class BaseTask:
                     should be executed.
         """
         if data is None:
-            data = MultiTaskData(self._name)
+            data = MultiTaskData()
+            data.add_dataset(self._name)
 
         try:
             result = self.run(data, store, signal, context)
@@ -227,12 +228,18 @@ class BaseTask:
             result = None
             signal.stop_workflow()
 
+        # handle the returned data (either implicitly or as an returned Action object) by
+        # flattening all, possibly modified, input datasets in the MultiTask data down to
+        # a single output dataset.
         if result is None:
+            data.flatten(in_place=True)
+            data.add_task_history(self.name)
             return Action(data)
         else:
             if not isinstance(result, Action):
                 raise TaskReturnActionInvalid()
 
+            result.data.flatten(in_place=True)
             result.data.add_task_history(self.name)
             return result
 

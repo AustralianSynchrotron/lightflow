@@ -44,6 +44,14 @@ class DirectedAcyclicGraphUndefined(RuntimeError):
     pass
 
 
+class DataInvalidIndex(RuntimeError):
+    pass
+
+
+class DataInvalidAlias(RuntimeError):
+    pass
+
+
 class DataStoreNotConnected(RuntimeError):
     pass
 

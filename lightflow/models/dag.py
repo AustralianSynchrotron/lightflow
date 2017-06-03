@@ -191,19 +191,17 @@ class Dag:
                                 set_task_completed(task)
                             else:
                                 # compose the input data from the predecessor tasks
-                                # output data skipped predecessor tasks do not contribute
-                                # to the input data
+                                # output. Data from skipped predecessor tasks do not
+                                # contribute to the input data
                                 if len(pre_tasks) == 0:
                                     input_data = data
                                 else:
                                     input_data = MultiTaskData()
-                                    for pre_task in [p for p in pre_tasks if
-                                                     not p.is_skipped]:
-
-                                        slot = graph[pre_task][task]['slot']
+                                    for pt in [p for p in pre_tasks if not p.is_skipped]:
+                                        slot = graph[pt][task]['slot']
                                         input_data.add_dataset(
-                                            pre_task.name,
-                                            pre_task.celery_result.result.data,
+                                            pt.name,
+                                            pt.celery_result.result.data.default_dataset,
                                             aliases=[slot] if slot is not None else None)
 
                                 task.state = TaskState.Running
