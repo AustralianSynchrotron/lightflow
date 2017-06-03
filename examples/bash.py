@@ -10,7 +10,8 @@ from lightflow.models import Dag
 from lightflow.tasks import BashTask
 
 
-# this callback is executed after the process was started. Set the line counter to zero.
+# this callback is executed after the process was started and before the stdout and stderr
+# readers are started. Set the line counter to zero.
 def proc_start(data, store, signal, context):
     data['num_lines'] = 0
 
@@ -43,7 +44,7 @@ proc_task = BashTask(name='proc_task',
                      capture_stderr=True,
                      callback_stdout=proc_stdout,
                      callback_stderr=proc_stdout,
-                     callback_start=proc_start,
+                     callback_process=proc_start,
                      callback_end=proc_end)
 
 # this DAG has only a single task

@@ -12,6 +12,7 @@ class TaskState:
     Completed = 4
     Stopped = 5
     Aborted = 6
+    Exception = 7
 
 
 class BaseTask:
@@ -19,7 +20,9 @@ class BaseTask:
 
     Tasks should inherit from this class and implement the run() method.
     """
-    def __init__(self, name, *, queue=JobType.Task, force_run=False, propagate_skip=True):
+    def __init__(self, name, *, queue=JobType.Task,
+                 callback_init=None, callback_finally=None,
+                 force_run=False, propagate_skip=True):
         """ Initialize the base task.
 
         The dag_name and workflow_name attributes are filled at runtime.
@@ -27,11 +30,32 @@ class BaseTask:
         Args:
             name (str): The name of the task.
             queue (str): Name of the queue the task should be scheduled to.
+            callback_init (callable): A callable that is called shortly before the task
+                                      is run. The definition is:
+                                        def (data, store, signal, context)
+                                      where data the task data, store the workflow
+                                      data store, signal the task signal and
+                                      context the task context.
+            callback_finally (callable): A callable that is always called at the end of
+                                         a task, regardless whether it completed
+                                         successfully, was stopped or was aborted.
+                                         The definition is:
+                                           def (status, data, store, signal, context)
+                                         where status specifies whether the task was
+                                           completed: TaskState.Completed
+                                           stopped: TaskState.Stopped
+                                           aborted: TaskState.Aborted
+                                           raised exception: TaskState.Exception
+                                         data the task data, store the workflow
+                                         data store, signal the task signal and
+                                         context the task context.
             force_run (bool): Run the task even if it is flagged to be skipped.
             propagate_skip (bool): Propagate the skip flag to the next task.
         """
         self._name = name
         self._queue = queue
+        self._callback_init = callback_init
+        self._callback_finally = callback_finally
         self._force_run = force_run
         self._propagate_skip = propagate_skip
 
@@ -208,13 +232,22 @@ class BaseTask:
             data.add_dataset(self._name)
 
         try:
+            if self._callback_init is not None:
+                self._callback_init(data, store, signal, context)
+
             result = self.run(data, store, signal, context)
+
+            if self._callback_finally is not None:
+                self._callback_finally(TaskState.Completed, data, store, signal, context)
 
             if success_callback is not None:
                 success_callback()
 
         # the task should be stopped and optionally all successor tasks skipped
         except StopTask as err:
+            if self._callback_finally is not None:
+                self._callback_finally(TaskState.Stopped, data, store, signal, context)
+
             if stop_callback is not None:
                 stop_callback(exc=err)
 
@@ -222,11 +255,20 @@ class BaseTask:
 
         # the workflow should be stopped immediately
         except AbortWorkflow as err:
+            if self._callback_finally is not None:
+                self._callback_finally(TaskState.Aborted, data, store, signal, context)
+
             if abort_callback is not None:
                 abort_callback(exc=err)
 
             result = None
             signal.stop_workflow()
+
+        # catch any other exception, call the finally callback, then re-raise
+        except:
+            if self._callback_finally is not None:
+                self._callback_finally(TaskState.Exception, data, store, signal, context)
+            raise
 
         # handle the returned data (either implicitly or as an returned Action object) by
         # flattening all, possibly modified, input datasets in the MultiTask data down to
