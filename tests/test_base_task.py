@@ -1,13 +1,10 @@
-from unittest.mock import MagicMock, create_autospec, call
+from unittest.mock import Mock, create_autospec, call
 
 import pytest  # noqa
 
 from lightflow.models.task import BaseTask, TaskState, TaskStatus
 from lightflow.queue import JobType
 from lightflow.models.task_data import MultiTaskData
-from lightflow.models.datastore import DataStoreDocument
-from lightflow.models.task_signal import TaskSignal
-from lightflow.models.task_context import TaskContext
 from lightflow.models.exceptions import AbortWorkflow, StopTask, TaskReturnActionInvalid
 from lightflow.models.action import Action
 
@@ -15,26 +12,6 @@ from lightflow.models.action import Action
 @pytest.fixture
 def task():
     yield BaseTask('task-name')
-
-
-@pytest.fixture
-def data_mock():
-    yield create_autospec(MultiTaskData, instance=True)
-
-
-@pytest.fixture
-def store_mock():
-    yield create_autospec(DataStoreDocument, instance=True)
-
-
-@pytest.fixture
-def signal_mock():
-    yield create_autospec(TaskSignal, instance=True)
-
-
-@pytest.fixture
-def context_mock():
-    yield create_autospec(TaskContext, instance=True)
 
 
 class CeleryResultMock:
@@ -111,11 +88,11 @@ def test_base_task_clear_result(task):
 
 
 def test_run_calls_callbacks(data_mock, store_mock, signal_mock, context_mock):
-    init_cb = MagicMock()
-    finally_cb = MagicMock()
-    success_cb = MagicMock()
-    stop_cb = MagicMock()
-    abort_cb = MagicMock()
+    init_cb = Mock()
+    finally_cb = Mock()
+    success_cb = Mock()
+    stop_cb = Mock()
+    abort_cb = Mock()
     task = BaseTask('task-name', callback_init=init_cb, callback_finally=finally_cb)
     task._run(data_mock, store_mock, signal_mock, context_mock,
               success_callback=success_cb, stop_callback=stop_cb, abort_callback=abort_cb)
@@ -132,10 +109,10 @@ def test_run_calls_callback_finally_on_error(data_mock, store_mock, signal_mock,
         def run(self, *args, **kwargs):
             raise Exception()
 
-    finally_cb = MagicMock()
-    success_cb = MagicMock()
-    stop_cb = MagicMock()
-    abort_cb = MagicMock()
+    finally_cb = Mock()
+    success_cb = Mock()
+    stop_cb = Mock()
+    abort_cb = Mock()
     task = FailingTask('task-name', callback_finally=finally_cb)
     with pytest.raises(Exception):
         task._run(data_mock, store_mock, signal_mock, context_mock,
@@ -153,10 +130,10 @@ def test_run_calls_callback_finally_on_stop_task(data_mock, store_mock, signal_m
         def run(self, *args, **kwargs):
             raise StopTask()
 
-    finally_cb = MagicMock()
-    success_cb = MagicMock()
-    stop_cb = MagicMock()
-    abort_cb = MagicMock()
+    finally_cb = Mock()
+    success_cb = Mock()
+    stop_cb = Mock()
+    abort_cb = Mock()
     task = StoppingTask('task-name', callback_finally=finally_cb)
     task._run(data_mock, store_mock, signal_mock, context_mock,
               success_callback=success_cb, stop_callback=stop_cb, abort_callback=abort_cb)
@@ -172,10 +149,10 @@ def test_run_calls_callback_finally_on_abort_workflow(data_mock, store_mock, sig
         def run(self, *args, **kwargs):
             raise AbortWorkflow()
 
-    finally_cb = MagicMock()
-    success_cb = MagicMock()
-    stop_cb = MagicMock()
-    abort_cb = MagicMock()
+    finally_cb = Mock()
+    success_cb = Mock()
+    stop_cb = Mock()
+    abort_cb = Mock()
     task = AbortingTask('task-name', callback_finally=finally_cb)
     task._run(data_mock, store_mock, signal_mock, context_mock,
               success_callback=success_cb, stop_callback=stop_cb, abort_callback=abort_cb)

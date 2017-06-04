@@ -19,7 +19,7 @@ class BashTaskOutputReader(Thread):
     def __init__(self, process, stdout_file, stderr_file,
                  callback_stdout, callback_stderr, refresh_time,
                  data, store, signal, context):
-        """ Initializes the reader for the process output. 
+        """ Initializes the reader for the process output.
 
         Args:
             process: Reference to a Popen object representing the running process.
@@ -38,7 +38,7 @@ class BashTaskOutputReader(Thread):
                                        workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                                  and sending of signals into easy to use methods.
-            context (TaskContext): The context in which the tasks runs. 
+            context (TaskContext): The context in which the tasks runs.
         """
         super().__init__()
 
@@ -93,12 +93,12 @@ class BashTaskOutputReader(Thread):
 
     def _read_output(self, stream, callback, output_file):
         """ Read the output of the process, executed the callback and save the output.
-        
+
         Args:
             stream: A file object pointing to the output stream that should be read.
             callback(callable, None): A callback function that is called for each new
                                       line of output.
-            output_file: A file object to which the full output is written. 
+            output_file: A file object to which the full output is written.
 
         Returns:
             bool: True if a line was read from the output, otherwise False.
