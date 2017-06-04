@@ -140,7 +140,7 @@ class BaseTask:
     @state.setter
     def state(self, state):
         """ Sets the internal state of the task.
-        
+
         Args:
             state (TaskState): The new state of the task
         """
