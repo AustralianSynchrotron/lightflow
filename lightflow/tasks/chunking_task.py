@@ -47,10 +47,10 @@ class ChunkingTask(BaseTask):
                                          The definition is:
                                            def (status, data, store, signal, context)
                                          where status specifies whether the task was
-                                           completed: TaskState.Completed
-                                           stopped: TaskState.Stopped
-                                           aborted: TaskState.Aborted
-                                           raised exception: TaskState.Exception
+                                           success: TaskStatus.Success
+                                           stopped: TaskStatus.Stopped
+                                           aborted: TaskStatus.Aborted
+                                           raised exception: TaskStatus.Error
                                          data the task data, store the workflow
                                          data store, signal the task signal and
                                          context the task context.

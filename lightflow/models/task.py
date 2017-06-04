@@ -12,7 +12,14 @@ class TaskState:
     Completed = 4
     Stopped = 5
     Aborted = 6
-    Exception = 7
+
+
+class TaskStatus:
+    """ Constants for flagging the status of the task after it completed running. """
+    Success = 1
+    Stopped = 2
+    Aborted = 3
+    Error = 4
 
 
 class BaseTask:
@@ -42,10 +49,10 @@ class BaseTask:
                                          The definition is:
                                            def (status, data, store, signal, context)
                                          where status specifies whether the task was
-                                           completed: TaskState.Completed
-                                           stopped: TaskState.Stopped
-                                           aborted: TaskState.Aborted
-                                           raised exception: TaskState.Exception
+                                           success: TaskStatus.Success
+                                           stopped: TaskStatus.Stopped
+                                           aborted: TaskStatus.Aborted
+                                           raised exception: TaskStatus.Error
                                          data the task data, store the workflow
                                          data store, signal the task signal and
                                          context the task context.
@@ -238,7 +245,7 @@ class BaseTask:
             result = self.run(data, store, signal, context)
 
             if self._callback_finally is not None:
-                self._callback_finally(TaskState.Completed, data, store, signal, context)
+                self._callback_finally(TaskStatus.Success, data, store, signal, context)
 
             if success_callback is not None:
                 success_callback()
@@ -246,7 +253,7 @@ class BaseTask:
         # the task should be stopped and optionally all successor tasks skipped
         except StopTask as err:
             if self._callback_finally is not None:
-                self._callback_finally(TaskState.Stopped, data, store, signal, context)
+                self._callback_finally(TaskStatus.Stopped, data, store, signal, context)
 
             if stop_callback is not None:
                 stop_callback(exc=err)
@@ -256,7 +263,7 @@ class BaseTask:
         # the workflow should be stopped immediately
         except AbortWorkflow as err:
             if self._callback_finally is not None:
-                self._callback_finally(TaskState.Aborted, data, store, signal, context)
+                self._callback_finally(TaskStatus.Aborted, data, store, signal, context)
 
             if abort_callback is not None:
                 abort_callback(exc=err)
@@ -267,7 +274,7 @@ class BaseTask:
         # catch any other exception, call the finally callback, then re-raise
         except:
             if self._callback_finally is not None:
-                self._callback_finally(TaskState.Exception, data, store, signal, context)
+                self._callback_finally(TaskStatus.Error, data, store, signal, context)
             raise
 
         # handle the returned data (either implicitly or as an returned Action object) by

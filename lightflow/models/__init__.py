@@ -2,7 +2,7 @@ from .workflow import Workflow
 from .arguments import Arguments, Option
 from .dag import Dag
 from .dag_signal import DagSignal
-from .task import BaseTask
+from .task import BaseTask, TaskStatus
 from .task_parameters import TaskParameters
 from .task_signal import TaskSignal
 from .action import Action
