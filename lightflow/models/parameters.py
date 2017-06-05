@@ -93,7 +93,7 @@ class Option:
             return value
 
 
-class Arguments(list):
+class Parameters(list):
     """ A list of options that the workflow requires in order to run. """
 
     def check_missing(self, args):

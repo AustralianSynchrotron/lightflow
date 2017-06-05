@@ -103,7 +103,7 @@ def list_workflows(config):
             module_name = os.path.splitext(os.path.basename(filename))[0]
             workflow = Workflow()
             try:
-                workflow.load(module_name, strict_dag=True)
+                workflow.load(module_name, validate_arguments=False, strict_dag=True)
                 workflows.append(workflow)
             except WorkflowImportError:
                 continue

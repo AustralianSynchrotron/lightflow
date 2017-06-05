@@ -31,25 +31,29 @@ def test_load_workflow_with_dag():
     wf.load('dag_present_workflow', strict_dag=True)
     assert wf.name == 'dag_present_workflow'
     assert wf.docstring == 'The docstring'
-    assert len(wf.arguments) == 0
+    assert len(wf.parameters) == 0
 
 
 def test_load_workflow_with_no_arguments():
     with pytest.raises(WorkflowArgumentError):
-        Workflow().load('arguments_workflow')
+        Workflow().load('parameters_workflow')
 
 
 def test_load_workflow_with_missing_arguments():
     with pytest.raises(WorkflowArgumentError):
-        Workflow().load('arguments_workflow', arguments={})
+        Workflow().load('parameters_workflow', arguments={})
 
 
 def test_load_workflow_with_all_arguments():
     wf = Workflow()
-    wf.load('arguments_workflow', arguments={'required_arg': 'ok'})
-    assert wf.arguments[0].name == 'required_arg'
+    wf.load('parameters_workflow', arguments={'required_arg': 'ok'})
+    assert wf.parameters[0].name == 'required_arg'
+
+
+def test_load_workflow_when_validate_arguments_is_false():
+    Workflow().load('parameters_workflow', validate_arguments=False)
 
 
 def test_workflow_from_name_constructor():
-    wf = Workflow.from_name('arguments_workflow', arguments={'required_arg': 'ok'})
-    assert wf.arguments[0].name == 'required_arg'
+    wf = Workflow.from_name('parameters_workflow', arguments={'required_arg': 'ok'})
+    assert wf.parameters[0].name == 'required_arg'

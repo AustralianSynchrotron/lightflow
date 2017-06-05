@@ -1,5 +1,5 @@
 from .workflow import Workflow
-from .arguments import Arguments, Option
+from .parameters import Parameters, Option
 from .dag import Dag
 from .dag_signal import DagSignal
 from .task import BaseTask, TaskStatus
@@ -14,7 +14,7 @@ from .exceptions import AbortWorkflow, StopTask
 
 __all__ = [
     'Workflow',
-    'Arguments', 'Option',
+    'Parameters', 'Option',
     'Dag',
     'DagSignal',
     'BaseTask', 'TaskStatus',
