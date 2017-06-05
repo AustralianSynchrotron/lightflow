@@ -1,4 +1,4 @@
-""" Demonstration of user provided workflow arguments  
+""" Demonstration of user provided workflow arguments
 
 Arguments allow a workflow to ingest data upon its execution and thus allow
 the customization of the workflow by users without changes to the workflow code.

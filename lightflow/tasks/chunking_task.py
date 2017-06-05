@@ -1,6 +1,5 @@
 import re
 from lightflow.models import BaseTask
-from lightflow.models import Action
 from lightflow.queue import JobType
 from lightflow.models.utils import find_indices
 

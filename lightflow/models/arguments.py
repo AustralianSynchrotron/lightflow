@@ -44,16 +44,16 @@ class Option:
     @property
     def type(self):
         """ Return the type of the option.
-        
+
         Returns:
-            type: the type of the option. 
+            type: the type of the option.
         """
         return self._type
 
     @property
     def help(self):
         """ Return the help text of the option.
-        
+
         Returns:
             str: the help text of the option.
         """
@@ -95,9 +95,6 @@ class Option:
 
 class Arguments(list):
     """ A list of options that the workflow requires in order to run. """
-    def __init__(self, *args):
-        """ Initialises the Arguments list"""
-        super().__init__(*args)
 
     def check_missing(self, args):
         """ Returns the names of all options that are required but were not specified.

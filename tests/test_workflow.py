@@ -34,7 +34,6 @@ def test_load_workflow_with_dag():
     assert len(wf.arguments) == 0
 
 
-@pytest.mark.xfail
 def test_load_workflow_with_no_arguments():
     with pytest.raises(WorkflowArgumentError):
         Workflow().load('arguments_workflow')

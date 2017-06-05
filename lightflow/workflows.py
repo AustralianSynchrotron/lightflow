@@ -84,13 +84,13 @@ def stop_workflow(config, *, names=None):
 
 def list_workflows(config):
     """ List all available workflows.
-    
+
     Returns a list of all workflows that are available from the paths specified
     in the config. A workflow is defined as a Python file with at least one DAG.
-    
+
     Args:
         config (Config): Reference to the configuration object from which the
-                         settings are retrieved. 
+                         settings are retrieved.
 
     Returns:
         list: A list of WorkflowStats.
@@ -166,16 +166,16 @@ def list_jobs(config, *, status=JobStatus.Active,
 
 def events(config):
     """ Return a generator that yields workflow events.
-    
+
     For every workflow event that is sent from celery this generator yields an event
     object.
-    
+
     Args:
         config (Config): Reference to the configuration object from which the
-                         settings are retrieved. 
+                         settings are retrieved.
 
     Returns:
-        generator: A generator that returns workflow events. 
+        generator: A generator that returns workflow events.
 
     """
     celery_app = create_app(config)

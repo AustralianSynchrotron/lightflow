@@ -250,7 +250,7 @@ class DataStoreDocument:
         return result.modified_count == 1
 
     def push(self, key, value, *, section=DataStoreDocumentSection.Data):
-        """ Appends a value to a list in the specified section of the document. 
+        """ Appends a value to a list in the specified section of the document.
 
         Args:
             key (str): The key pointing to the value that should be stored/updated.

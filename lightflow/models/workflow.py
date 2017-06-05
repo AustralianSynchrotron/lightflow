@@ -108,6 +108,8 @@ class Workflow:
                                    were not supplied to the workflow.
             WorkflowImportError: If the import of the workflow fails.
         """
+        arguments = {} if arguments is None else arguments
+
         try:
             workflow_module = importlib.import_module(name)
 
@@ -130,15 +132,14 @@ class Workflow:
                     'Workflow does not include a dag {}'.format(name))
 
             # check whether all arguments have been specified
-            if arguments is not None:
-                missing_arguments = self._arguments.check_missing(arguments)
-                if len(missing_arguments) > 0:
-                    raise WorkflowArgumentError(
-                        'The following arguments are required ' +
-                        'by the workflow, but are missing: {}'.format(
-                            ', '.join(missing_arguments)))
+            missing_arguments = self._arguments.check_missing(arguments)
+            if len(missing_arguments) > 0:
+                raise WorkflowArgumentError(
+                    'The following arguments are required ' +
+                    'by the workflow, but are missing: {}'.format(
+                        ', '.join(missing_arguments)))
 
-                self._provided_arguments = arguments
+            self._provided_arguments = arguments
 
         except (TypeError, ImportError):
             logger.error('Cannot import workflow {}'.format(name))

@@ -7,7 +7,7 @@ class BrokerStats:
     """ Represents the broker information returned from the celery stats. """
     def __init__(self, hostname, port, transport, virtual_host):
         """ Initialize the broker stats object.
-        
+
         Args:
             hostname (str): The broker hostname.
             port (int): The broker port.
@@ -22,7 +22,7 @@ class BrokerStats:
     @classmethod
     def from_celery(cls, broker_dict):
         """ Create a BrokerStats object from the dictionary returned by celery.
-        
+
         Args:
             broker_dict (dict): The dictionary as returned by celery.
 
@@ -54,7 +54,7 @@ class QueueStats:
     """ Represents the queue information returned from the celery stats. """
     def __init__(self, name, routing_key):
         """ Initialize the queue stats object.
-        
+
         Args:
             name (str): The name of the queue.
             routing_key (str): The routing key of the queue.
@@ -65,9 +65,9 @@ class QueueStats:
     @classmethod
     def from_celery(cls, queue_dict):
         """ Create a QueueStats object from the dictionary returned by celery.
-        
+
         Args:
-            queue_dict (dict): The dictionary as returned by celery. 
+            queue_dict (dict): The dictionary as returned by celery.
 
         Returns:
             QueueStats: A fully initialized QueueStats object.
@@ -94,13 +94,13 @@ class WorkerStats:
     def __init__(self, name, broker, pid, process_pids,
                  concurrency, job_count, queues):
         """ Initialize the worker stats object.
-        
+
         Args:
             name (str): The name of the worker.
             broker (BrokerStats): A reference to a BrokerStats Object the worker is using.
             pid (int): The PID of the worker.
             process_pids (int): The PIDs of the concurrent task processes.
-            concurrency (int): The number of concurrent processes. 
+            concurrency (int): The number of concurrent processes.
             job_count (int): The number of jobs this worker has processed so far.
             queues (list): A list of QueueStats objects that represent the queues this
                            worker is listening on.
@@ -116,10 +116,10 @@ class WorkerStats:
     @classmethod
     def from_celery(cls, name, worker_dict, queues):
         """ Create a WorkerStats object from the dictionary returned by celery.
-        
+
         Args:
             name (str): The name of the worker.
-            worker_dict (dict): The dictionary as returned by celery. 
+            worker_dict (dict): The dictionary as returned by celery.
             queues (list): A list of QueueStats objects that represent the queues this
                            worker is listening on.
 
@@ -158,7 +158,7 @@ class JobStats:
     def __init__(self, name, job_id, job_type, workflow_id, acknowledged, func_name,
                  hostname, worker_name, worker_pid, routing_key):
         """ Initialize the job stats object.
-        
+
         Args:
             name (str): The name of the job.
             job_id (str): The internal ID of the job.
@@ -185,11 +185,11 @@ class JobStats:
     @classmethod
     def from_celery(cls, worker_name, job_dict, celery_app):
         """ Create a JobStats object from the dictionary returned by celery.
-        
+
         Args:
             worker_name (str): The name of the worker this jobs runs on.
             job_dict (dict): The dictionary as returned by celery.
-            celery_app: Reference to a celery application object. 
+            celery_app: Reference to a celery application object.
 
         Returns:
             JobStats: A fully initialized JobStats object.
@@ -215,7 +215,7 @@ class JobStats:
 
     def to_dict(self):
         """ Return a dictionary of the job stats.
-        
+
         Returns:
             dict: Dictionary of the stats.
         """
@@ -238,10 +238,10 @@ class JobEvent:
     def __init__(self, uuid, job_type, event_type, hostname, pid,
                  name, workflow_id, event_time, duration):
         """ Initialize the job event object.
-        
+
         Args:
-            uuid (str): The internal event id. 
-            job_type (str): The type of job that caused this event (workflow, dag, task). 
+            uuid (str): The internal event id.
+            job_type (str): The type of job that caused this event (workflow, dag, task).
             event_type (str): The internal event type name.
             hostname (str): The name of the host on which the job is running.
             pid (int): The pid of the process that runs the job.
@@ -265,7 +265,7 @@ class JobEvent:
         """ Create a JobEvent object from the event dictionary returned by celery.
 
         Args:
-            event (dict): The dictionary as returned by celery. 
+            event (dict): The dictionary as returned by celery.
 
         Returns:
             JobEvent: A fully initialized JobEvent object.

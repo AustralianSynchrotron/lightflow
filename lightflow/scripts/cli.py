@@ -124,7 +124,7 @@ def workflow_start(obj, keep_data, name, workflow_args):
 @config_required
 def workflow_stop(obj, names):
     """ Stop one or more running workflows.
-    
+
     \b
     NAMES: The names, ids or job ids of the workflows that should be stopped.
            Leave empty to stop all running workflows.
@@ -298,6 +298,7 @@ def _style(enabled, text, **kwargs):
         return click.style(text, **kwargs)
     else:
         return text
+
 
 if __name__ == '__main__':
     cli(obj={})
