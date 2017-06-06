@@ -7,9 +7,9 @@ successor task, and thus which lane, will be processed. In the example below lan
 lane 2 will run in parallel, while lane 3 is skipped.
 
 
-The graph is as following: 
+The graph is as following:
 
-                        /-> lane1_print_task \  
+                        /-> lane1_print_task \
 put_task -> branch_task --> lane2_print_task  --> join_task
                         \-> lane3_print_task /
 

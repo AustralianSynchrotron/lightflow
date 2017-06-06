@@ -1,14 +1,17 @@
-import pytest
-from lightflow import Config
-from lightflow import workflows
+from pathlib import Path
 
-config = Config()
-config.load_from_file()
+from lightflow.workflows import list_workflows
+from lightflow.config import Config
 
 
-class TestWorkflows:
+def test_list_workflows_when_no_workflow_dirs_in_config():
+    config = Config()
+    config.load_from_dict({'workflows': []})
+    assert list_workflows(config) == []
 
-    def test_workflow_list(self):
-        wfs = workflows.list_workflows(config)
-        assert {wf.name for wf in wfs} == {'arguments', 'branching', 'chunking_dag',
-                                           'data_store', 'simple', 'slots', 'sub_dag'}
+
+def test_list_workflows_handles_missing_parameters():
+    config = Config()
+    workflows_path = str(Path(__file__).parent / 'fixtures/workflows')
+    config.load_from_dict({'workflows': [workflows_path]})
+    assert 'parameters_workflow' in {wf.name for wf in list_workflows(config)}

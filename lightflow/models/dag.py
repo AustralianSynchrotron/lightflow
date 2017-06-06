@@ -70,9 +70,9 @@ class Dag:
 
     def define(self, schema, *, validate=True):
         """ Store the task graph definition (schema).
-        
+
         The schema has to adhere to the following rules:
-        
+
         A key in the schema dict represents a parent task and the value one or more
         children:
             {parent: [child]} or {parent: [child1, child2]}
@@ -234,9 +234,9 @@ class Dag:
     @staticmethod
     def validate(graph):
         """ Validate the graph by checking whether it is a directed acyclic graph.
-        
+
         Args:
-            graph (DiGraph): Reference to a DiGraph object from NetworkX. 
+            graph (DiGraph): Reference to a DiGraph object from NetworkX.
 
         Raises:
             DirectedAcyclicGraphInvalid: If the graph is not a valid dag.
@@ -246,7 +246,7 @@ class Dag:
 
     @staticmethod
     def make_graph(schema):
-        """ Construct the task graph (dag) from a given schema. 
+        """ Construct the task graph (dag) from a given schema.
 
         Parses the graph schema definition and creates the task graph. Tasks are the
         vertices of the graph and the connections defined in the schema become the edges.
@@ -264,13 +264,13 @@ class Dag:
 
         The underlying graph library creates nodes automatically, when an edge between
         non-existing nodes is created.
-        
+
         Args:
             schema (dict): A dictionary with the schema definition.
-        
+
         Returns:
             DiGraph: A reference to the fully constructed graph object.
-        
+
         Raises:
             DirectedAcyclicGraphUndefined: If the schema is not defined.
         """

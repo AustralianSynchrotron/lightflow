@@ -196,7 +196,7 @@ class Config:
     @staticmethod
     def default():
         """ Returns the default configuration. """
-        return """
+        return '''
     workflows: []
 
     libraries: []
@@ -253,4 +253,4 @@ class Config:
           handlers:
             - console
           level: INFO
-    """
+    '''

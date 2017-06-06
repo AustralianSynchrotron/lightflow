@@ -8,7 +8,7 @@ leads to an immediate stop of the bash process and skips the successor 'print_ta
 The second path, running in parallel, executes 'stop_noskip_task', which raises a
 Stop exception but with the 'skip_successors' flag set to False, meaning that the task
 is stopped immediately but 'print_task_2' will be executed. The third path is similar
-to the second path but will skip 'print_task_3'. 
+to the second path but will skip 'print_task_3'.
 """
 
 from lightflow.models import Dag, StopTask

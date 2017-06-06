@@ -8,7 +8,7 @@ from .dag import Dag
 from .exceptions import (WorkflowImportError, WorkflowArgumentError,
                          RequestActionUnknown, RequestFailed, DagNameUnknown)
 from .signal import Response
-from .arguments import Arguments
+from .parameters import Parameters
 from lightflow.logger import get_logger
 from lightflow.queue.app import create_app
 from lightflow.queue.const import JobExecPath, JobType
@@ -45,7 +45,7 @@ class Workflow:
         self._dags_running = []
         self._workflow_id = None
         self._name = None
-        self._arguments = Arguments()
+        self._parameters = Parameters()
         self._provided_arguments = {}
 
         self._celery_app = None
@@ -84,11 +84,11 @@ class Workflow:
         return self._docstring
 
     @property
-    def arguments(self):
-        """ Returns the workflow list of arguments. """
-        return self._arguments
+    def parameters(self):
+        """ Returns the workflow list of parameters. """
+        return self._parameters
 
-    def load(self, name, *, arguments=None, strict_dag=False):
+    def load(self, name, *, arguments=None, validate_arguments=True, strict_dag=False):
         """ Import the workflow script and load all known objects.
 
         The workflow script is treated like a module and imported
@@ -100,6 +100,8 @@ class Workflow:
             name (str): The name of the workflow script.
             arguments (dict): Dictionary of additional arguments that are ingested
                               into the data store prior to the execution of the workflow.
+            validate_arguments (bool): Whether to check that all required arguments have
+                                       been supplied.
             strict_dag (bool): If true then the loaded workflow module must contain an
                                instance of Dag.
 
@@ -108,6 +110,8 @@ class Workflow:
                                    were not supplied to the workflow.
             WorkflowImportError: If the import of the workflow fails.
         """
+        arguments = {} if arguments is None else arguments
+
         try:
             workflow_module = importlib.import_module(name)
 
@@ -118,8 +122,8 @@ class Workflow:
                 if isinstance(obj, Dag):
                     self._dags_blueprint[obj.name] = obj
                     dag_present = True
-                elif isinstance(obj, Arguments):
-                    self._arguments.extend(obj)
+                elif isinstance(obj, Parameters):
+                    self._parameters.extend(obj)
 
             self._name = name
             self._docstring = inspect.getdoc(workflow_module)
@@ -129,16 +133,15 @@ class Workflow:
                 raise WorkflowImportError(
                     'Workflow does not include a dag {}'.format(name))
 
-            # check whether all arguments have been specified
-            if arguments is not None:
-                missing_arguments = self._arguments.check_missing(arguments)
-                if len(missing_arguments) > 0:
+            if validate_arguments:
+                missing_parameters = self._parameters.check_missing(arguments)
+                if len(missing_parameters) > 0:
                     raise WorkflowArgumentError(
-                        'The following arguments are required ' +
+                        'The following parameters are required ' +
                         'by the workflow, but are missing: {}'.format(
-                            ', '.join(missing_arguments)))
+                            ', '.join(missing_parameters)))
 
-                self._provided_arguments = arguments
+            self._provided_arguments = arguments
 
         except (TypeError, ImportError):
             logger.error('Cannot import workflow {}'.format(name))
@@ -162,7 +165,7 @@ class Workflow:
         self._celery_app = create_app(config)
 
         # pre-fill the data store with supplied arguments
-        args = self._arguments.consolidate(self._provided_arguments)
+        args = self._parameters.consolidate(self._provided_arguments)
         for key, value in args.items():
             data_store.get(self._workflow_id).set(key, value)
 

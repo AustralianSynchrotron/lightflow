@@ -5,23 +5,23 @@ from .exceptions import DataInvalidIndex, DataInvalidAlias
 
 class TaskData:
     """ This class represents a single dataset that is passed between tasks.
-    
+
     It behaves like a dictionary but also contains a history of all tasks that have
     contributed to this dataset.
     """
     def __init__(self, data=None, *, task_history=None):
         """  Initialize the task data object.
-        
+
         Args:
             data (dict): A dictionary with the initial data that should be stored.
-            task_history (list): A list of task names that have contributed to this data. 
+            task_history (list): A list of task names that have contributed to this data.
         """
         self._data = data if data is not None else {}
         self._task_history = task_history if task_history is not None else []
 
     def add_task_history(self, task_name):
         """ Add a task name to the list of tasks that have contributed to this dataset.
-        
+
         Args:
             task_name (str): The name of the task that contributed.
         """
@@ -39,10 +39,10 @@ class TaskData:
 
     def get(self, key, default=None):
         """ Access a single value in the dataset by its key
-        
+
         Args:
             key (str): The key under which the value is stored.
-            default: Return this value if the key cannot be found. 
+            default: Return this value if the key cannot be found.
 
         Returns:
             object: The value that is stored under the specified key.
@@ -51,19 +51,19 @@ class TaskData:
 
     def set(self, key, value):
         """ Change the value of a field in the dataset.
-        
+
         Args:
             key (str): The key pointing to the value that should be changed.
-            value: The new value that should be set. 
+            value: The new value that should be set.
         """
         self._data[key] = value
 
     def merge(self, dataset):
         """ Merge the specified dataset on top of the existing data.
-        
+
         This replaces all values in the existing dataset with the values from the
         given dataset.
-        
+
         Args:
             dataset (TaskData): A reference to the TaskData object that should be merged
                                 on top of the existing object.
@@ -110,7 +110,7 @@ class TaskData:
 
 class MultiTaskData:
     """ Manages multiple TaskData datasets and their aliases.
-    
+
     This class implements the data object that is being passed between tasks. It consists
     of one or more TaskData datasets in order to accommodate multiple inputs to a single
     task. Each dataset can be accessed by its index or by one or more aliases. There is
@@ -120,10 +120,10 @@ class MultiTaskData:
 
     def __init__(self, *, dataset=None, aliases=None):
         """ Initialize the MultiTaskData object.
-        
+
         Args:
             dataset (TaskData): An initial TaskData dataset.
-            aliases (list): A list of aliases for the initial dataset. 
+            aliases (list): A list of aliases for the initial dataset.
         """
         self._datasets = [] if dataset is None else [dataset]
         self._aliases = {} if aliases is None else {a: 0 for a in aliases}
@@ -137,7 +137,7 @@ class MultiTaskData:
     @property
     def default_dataset(self):
         """ Return the default dataset.
-        
+
         Returns:
             TaskData: A reference to the default dataset.
         """
@@ -145,7 +145,7 @@ class MultiTaskData:
 
     def add_dataset(self, task_name, dataset=None, *, aliases=None):
         """ Add a new dataset to the MultiTaskData.
-        
+
         Args:
             task_name (str): The name of the task from which the dataset was received.
             dataset (TaskData): The dataset that should be added.
@@ -164,7 +164,7 @@ class MultiTaskData:
 
     def add_alias(self, alias, index):
         """ Add an alias pointing to the specified index.
-        
+
         Args:
             alias (str): The alias that should point to the given index.
             index (int): The index of the dataset for which an alias should be added.
@@ -178,11 +178,11 @@ class MultiTaskData:
 
     def flatten(self, in_place=True):
         """ Merge all datasets into a single dataset.
-        
+
         The default dataset is the last dataset to be merged, as it is considered to be
         the primary source of information and should overwrite all existing fields with
         the same key.
-        
+
         Args:
             in_place (bool): Set to True to replace the existing datasets with the
                              merged one. If set to False, will return a new MultiTaskData
@@ -229,10 +229,10 @@ class MultiTaskData:
 
     def set_default_by_index(self, index):
         """ Set the default dataset by its index.
-        
+
         After changing the default dataset, all calls without explicitly specifying the
         dataset by index or alias will be redirected to this dataset.
-        
+
         Args:
             index (int): The index of the dataset that should be made the default.
 
@@ -246,7 +246,7 @@ class MultiTaskData:
 
     def get_by_alias(self, alias):
         """ Return a dataset by its alias.
-        
+
         Args:
             alias (str): The alias of the dataset that should be returned.
 
@@ -260,9 +260,9 @@ class MultiTaskData:
 
     def get_by_index(self, index):
         """ Return a dataset by its index.
-        
+
         Args:
-            index (int): The index of the dataset that should be returned. 
+            index (int): The index of the dataset that should be returned.
 
         Raises:
             DataInvalidIndex: If the index does not represent a valid dataset.
@@ -274,7 +274,7 @@ class MultiTaskData:
 
     def add_task_history(self, task_name):
         """ Add a task name to the list of tasks that have contributed to all datasets.
-        
+
         Args:
             task_name (str): The name of the task that contributed.
         """

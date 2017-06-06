@@ -91,7 +91,7 @@ class TaskParameters(dict):
 
     def eval_single(self, key, data, data_store):
         """ Evaluate the value of a single parameter taking into account callables .
-        
+
         Native types are not touched and simply returned, while callable methods are
         executed and their return value is returned.
 
@@ -102,7 +102,7 @@ class TaskParameters(dict):
             data_store (DataStore): The persistent data store object that allows the task
                                     to store data for access across the current workflow
                                     run.
-        
+
         """
         if key in self:
             value = self[key]

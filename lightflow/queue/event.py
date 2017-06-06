@@ -9,13 +9,13 @@ from lightflow.models.exceptions import (EventTypeUnknown, JobEventTypeUnsupport
 
 def event_stream(app, *, filter_by_prefix=None):
     """ Generator function that returns celery events.
-    
+
     This function turns the callback based celery event handling into a generator.
-    
+
     Args:
-        app: Reference to a celery application object. 
+        app: Reference to a celery application object.
         filter_by_prefix (str): If not None, only allow events that have a type that
-                                 starts with this prefix to yield an generator event. 
+                                 starts with this prefix to yield an generator event.
 
     Returns:
         generator: A generator that returns celery events.
@@ -45,14 +45,14 @@ def event_stream(app, *, filter_by_prefix=None):
 
 
 def create_event_model(event):
-    """ Factory function that turns a celery event into an event object. 
-    
+    """ Factory function that turns a celery event into an event object.
+
     Args:
         event (dict): A dictionary that represents a celery event.
 
     Returns:
         object: An event object representing the received event.
-    
+
     Raises:
         JobEventTypeUnsupported: If an unsupported celery job event was received.
         WorkerEventTypeUnsupported: If an unsupported celery worker event was received.
