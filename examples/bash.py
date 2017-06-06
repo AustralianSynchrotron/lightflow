@@ -12,7 +12,7 @@ from lightflow.tasks import BashTask
 
 # this callback is executed after the process was started and before the stdout and stderr
 # readers are started. Set the line counter to zero.
-def proc_start(data, store, signal, context):
+def proc_start(pid, data, store, signal, context):
     data['num_lines'] = 0
 
 
