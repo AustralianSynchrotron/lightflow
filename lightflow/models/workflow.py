@@ -88,6 +88,11 @@ class Workflow:
         """ Returns the workflow list of parameters. """
         return self._parameters
 
+    @property
+    def is_stopped(self):
+        """ Returns whether the workflow was stopped. """
+        return self._stop_workflow
+
     def load(self, name, *, arguments=None, validate_arguments=True, strict_dag=False):
         """ Import the workflow script and load all known objects.
 
@@ -197,6 +202,8 @@ class Workflow:
                     if self._celery_app.conf.result_expires == 0:
                         dag.forget()
                     self._dags_running.remove(dag)
+                elif dag.failed():
+                    self._stop_workflow = True
 
         # remove the signal entry
         signal_server.clear()

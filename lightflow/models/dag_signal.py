@@ -13,6 +13,19 @@ class DagSignal:
         self._client = client
         self._dag_name = dag_name
 
+    def stop_workflow(self):
+        """ Send a stop signal to the workflow.
+
+        Upon receiving the stop signal, the workflow will not queue any new dags.
+        Furthermore it will make the stop signal available to the dags, which will
+        then stop queueing new tasks. As soon as all active tasks have finished
+        processing, the workflow will terminate.
+
+        Returns:
+            bool: True if the signal was sent successfully.
+        """
+        return self._client.send(Request(action='stop_workflow')).success
+
     @property
     def is_stopped(self):
         """ Check whether the dag received a stop signal from the workflow.

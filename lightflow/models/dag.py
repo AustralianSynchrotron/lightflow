@@ -216,6 +216,9 @@ class Dag:
                 elif task.is_running:
                     if task.celery_completed:
                         set_task_completed(task)
+                    elif task.celery_failed:
+                        task.state = TaskState.Aborted
+                        signal.stop_workflow()
 
                 # cleanup task results that are not required anymore
                 elif task.is_completed:

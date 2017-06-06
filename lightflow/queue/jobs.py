@@ -67,7 +67,10 @@ def execute_workflow(self, workflow, workflow_id=None):
                  workflow_id=workflow_id)
 
     # send custom celery event that the workflow has succeeded
-    self.send_event(JobEventName.Succeeded,
+    event_name = JobEventName.Succeeded if not workflow.is_stopped \
+        else JobEventName.Aborted
+
+    self.send_event(event_name,
                     job_type=JobType.Workflow,
                     name=workflow.name,
                     time=datetime.utcnow(),
@@ -109,17 +112,17 @@ def execute_dag(self, dag, workflow_id, data=None):
                             'workflow_id': workflow_id})
 
     # run the tasks in the DAG
+    signal = DagSignal(Client(SignalConnection(**self.app.user_options['config'].signal,
+                                               auto_connect=True),
+                              request_key=workflow_id), dag.name)
     dag.run(config=self.app.user_options['config'],
             workflow_id=workflow_id,
-            signal=DagSignal(Client(
-                SignalConnection(**self.app.user_options['config'].signal,
-                                 auto_connect=True),
-                request_key=workflow_id),
-                dag.name),
+            signal=signal,
             data=data)
 
     # send custom celery event that the dag has succeeded
-    self.send_event(JobEventName.Succeeded,
+    event_name = JobEventName.Succeeded if not signal.is_stopped else JobEventName.Aborted
+    self.send_event(event_name,
                     job_type=JobType.Dag,
                     name=dag.name,
                     time=datetime.utcnow(),
