@@ -23,7 +23,7 @@ class TaskSignal:
             data (MultiTaskData): The data that should be passed on to the new dag.
 
         Returns:
-            bool: True if the requested dag was started successfully.
+            str: The name of the successfully started dag.
         """
         return self._client.send(
             Request(
@@ -31,7 +31,7 @@ class TaskSignal:
                 payload={'name': dag.name if isinstance(dag, Dag) else dag,
                          'data': data if isinstance(data, MultiTaskData) else None}
             )
-        ).success
+        ).payload['dag_name']
 
     def stop_dag(self):
         """ Send a stop signal to the dag that hosts this task.

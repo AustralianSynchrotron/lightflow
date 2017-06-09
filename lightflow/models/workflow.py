@@ -225,10 +225,10 @@ class Workflow:
             DagNameUnknown: If the specified dag name does not exist
 
         Returns:
-            bool: True if the dag was queued, otherwise False.
+            str: The name of the queued dag.
         """
         if self._stop_workflow:
-            return False
+            return None
 
         if name not in self._dags_blueprint:
             raise DagNameUnknown()
@@ -243,7 +243,7 @@ class Workflow:
                                        )
         )
 
-        return True
+        return new_dag.name
 
     def _handle_request(self, request):
         """ Handle an incoming request by forwarding it to the appropriate method.
@@ -288,11 +288,12 @@ class Workflow:
 
         Returns:
             Response: A response object containing the following fields:
-                          - success: True if a new dag was queued successfully.
+                          - dag_name: The name of the started dag.
         """
-        result = self._queue_dag(name=request.payload['name'],
-                                 data=request.payload['data'])
-        return Response(success=result, uid=request.uid)
+        dag_name = self._queue_dag(name=request.payload['name'],
+                                   data=request.payload['data'])
+        return Response(success=dag_name is not None, uid=request.uid,
+                        payload={'dag_name': dag_name})
 
     def _handle_stop_workflow(self, request):
         """ The handler for the stop_workflow request.

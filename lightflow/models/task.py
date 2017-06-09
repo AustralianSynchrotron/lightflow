@@ -275,6 +275,8 @@ class BaseTask:
         except:
             if self._callback_finally is not None:
                 self._callback_finally(TaskStatus.Error, data, store, signal, context)
+
+            signal.stop_workflow()
             raise
 
         # handle the returned data (either implicitly or as an returned Action object) by
