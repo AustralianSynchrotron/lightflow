@@ -33,8 +33,32 @@ class TaskSignal:
             )
         ).payload['dag_name']
 
-    def stop_dag(self):
-        """ Send a stop signal to the dag that hosts this task.
+    def join_dags(self, names=None):
+        """ Wait for the specified dags to terminate.
+
+        This function blocks until the specified dags terminate. If no dags are specified
+        wait for all dags of the workflow, except the dag of the task calling this signal,
+        to terminate.
+
+        Args:
+            names (list): The names of the dags that have to terminate.
+
+        Returns:
+            bool: True if all the signal was sent successfully.
+        """
+        return self._client.send(
+            Request(
+                action='join_dags',
+                payload={'names': names}
+            )
+        ).success
+
+    def stop_dag(self, name=None):
+        """ Send a stop signal to the specified dag or the dag that hosts this task.
+
+        Args:
+            name str: The name of the dag that should be stopped. If no name is given the
+                      dag that hosts this task is stopped.
 
         Upon receiving the stop signal, the dag will not queue any new tasks and wait
         for running tasks to terminate.
@@ -45,7 +69,7 @@ class TaskSignal:
         return self._client.send(
             Request(
                 action='stop_dag',
-                payload={'dag_name': self._dag_name}
+                payload={'name': name if name is not None else self._dag_name}
             )
         ).success
 

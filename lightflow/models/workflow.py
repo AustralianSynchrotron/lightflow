@@ -192,7 +192,10 @@ class Workflow:
 
                 try:
                     response = self._handle_request(request)
-                    signal_server.send(response)
+                    if response is not None:
+                        signal_server.send(response)
+                    else:
+                        signal_server.restore(request)
                 except (RequestActionUnknown, RequestFailed):
                     signal_server.send(Response(success=False, uid=request.uid))
 
@@ -265,6 +268,7 @@ class Workflow:
         action_map = {
             'start_dag': self._handle_start_dag,
             'stop_workflow': self._handle_stop_workflow,
+            'join_dags': self._handle_join_dags,
             'stop_dag': self._handle_stop_dag,
             'is_dag_stopped': self._handle_is_dag_stopped
         }
@@ -318,6 +322,36 @@ class Workflow:
                 self._stop_dags.append(dag.info['name'])
         return Response(success=True, uid=request.uid)
 
+    def _handle_join_dags(self, request):
+        """ The handler for the join_dags request.
+
+        If dag names are given in the payload only return a valid Response if none of
+        the dags specified by the names are running anymore. If no dag names are given,
+        wait for all dags except one, which by design is the one that issued the request,
+        to be finished.
+
+        Args:
+            request (Request): Reference to a request object containing the
+                               incoming request.
+
+        Returns:
+            Response: A response object containing the following fields:
+                          - success: True if all dags the request was waiting for have
+                                     completed.
+        """
+        if request.payload['names'] is None:
+            send_response = len(self._dags_running) <= 1
+        else:
+            running_dag_names = [dag.info['name'] for dag in self._dags_running
+                                 if dag.info is not None]
+            send_response = all([name not in running_dag_names
+                                 for name in request.payload['names']])
+
+        if send_response:
+            return Response(success=True, uid=request.uid)
+        else:
+            return None
+
     def _handle_stop_dag(self, request):
         """ The handler for the stop_dag request.
 
@@ -328,16 +362,16 @@ class Workflow:
             request (Request): Reference to a request object containing the
                                incoming request. The payload has to contain the
                                following fields:
-                                'dag_name': the name of the dag that should be stopped
+                                'name': the name of the dag that should be stopped
 
         Returns:
             Response: A response object containing the following fields:
                           - success: True if the dag was added successfully to the list
                                      of dags that should be stopped.
         """
-        if (request.payload['dag_name'] is not None) and \
-           (request.payload['dag_name'] not in self._stop_dags):
-            self._stop_dags.append(request.payload['dag_name'])
+        if (request.payload['name'] is not None) and \
+           (request.payload['name'] not in self._stop_dags):
+            self._stop_dags.append(request.payload['name'])
         return Response(success=True, uid=request.uid)
 
     def _handle_is_dag_stopped(self, request):

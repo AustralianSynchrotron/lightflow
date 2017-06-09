@@ -3,8 +3,8 @@
 In order to change the workflow at runtime, a task can request the execution of another
 dag via the start_dag function of the signal system.
 
-This example requires the numpy module to be installed and available to workers as well
-as the workflow.
+This example requires the numpy module to be installed and available to the workers
+as well as to the workflow.
 
 """
 
@@ -24,12 +24,17 @@ def print_name(data, store, signal, context):
 # this callback function starts five dags. For each dag the function waits a second,
 # then creates a numpy array and stores it into the data that is then passed to the
 # sub dag. The dag that should be started can either be given by its name or the dag
-# object itself.
+# object itself. The names of the created dags are recorded and the task waits for
+# all created dags to be completed.
 def start_sub_dag(data, store, signal, context):
+    dag_names = []
     for i in range(5):
         sleep(1)
         data['image'] = np.ones((100, 100))
-        signal.start_dag(sub_dag, data=data)
+        started_dag = signal.start_dag(sub_dag, data=data)
+        dag_names.append(started_dag)
+
+    signal.join_dags(dag_names)
 
 
 # this callback function prints the dimensions of the received numpy array

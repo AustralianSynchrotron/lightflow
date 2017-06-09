@@ -134,6 +134,15 @@ class Server:
         self._connection.connection.set('{}:{}'.format(SIGNAL_REDIS_PREFIX, response.uid),
                                         pickle.dumps(response))
 
+    def restore(self, request):
+        """ Push the request back onto the queue.
+
+        Args:
+            request (Request): Reference to a request object that should be pushed back
+                               onto the request queue.
+        """
+        self._connection.connection.rpush(self._request_key, pickle.dumps(request))
+
     def clear(self):
         """ Deletes the list of requests from the redis database. """
         self._connection.connection.delete(self._request_key)
