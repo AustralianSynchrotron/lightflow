@@ -3,9 +3,10 @@ from pymongo.errors import ConnectionFailure
 from bson.binary import Binary
 from bson.objectid import ObjectId
 import pickle
-import gridfs
+from gridfs import GridFS
 
 from lightflow.logger import get_logger
+from .mongo_proxy import MongoClientProxy, GridFSProxy
 from .exceptions import DataStoreNotConnected, \
     DataStoreGridfsIdInvalid, DataStoreDecodeUnknownType
 
@@ -30,6 +31,9 @@ class DataStore:
 
     The DataStore is implemented using a MongoDB backend. For each workflow run a
     document is created and its id is used for identifying the workflow run.
+
+    A proxy for the MongoClient is used to catch the AutoReconnect exception and handle
+    it gracefully. Please note:
     """
     def __init__(self, host, port, database, *, auto_connect=False):
         """ Initialize the DataStore.
@@ -70,8 +74,12 @@ class DataStore:
             return False
 
     def connect(self):
-        """ Establishes a connection to the MongoDB server. """
-        self._client = MongoClient(host=self.host, port=self.port)
+        """ Establishes a connection to the MongoDB server.
+
+        Use the MongoProxy library in order to automatically handle AutoReconnect
+        exceptions in a gracefull and reliable way.
+        """
+        self._client = MongoClientProxy(MongoClient(host=self.host, port=self.port))
 
     def disconnect(self):
         """ Disconnect from the MongoDB server. """
@@ -136,7 +144,7 @@ class DataStore:
         """
         try:
             db = self._client[self.database]
-            fs = gridfs.GridFS(db)
+            fs = GridFSProxy(GridFS(db.unproxied_object))
 
             for grid_doc in fs.find({"workflow_id": workflow_id},
                                     no_cursor_timeout=True):
@@ -162,7 +170,7 @@ class DataStore:
         """
         try:
             db = self._client[self.database]
-            fs = gridfs.GridFS(db)
+            fs = GridFSProxy(GridFS(db.unproxied_object))
             return DataStoreDocument(db[WORKFLOW_DATA_COLLECTION_NAME], fs, workflow_id)
 
         except ConnectionFailure:
