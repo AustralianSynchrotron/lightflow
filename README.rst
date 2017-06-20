@@ -3,6 +3,7 @@ Lightflow
 
 A lightweight, high performance pipeline system for synchrotrons.
 
+[![Build Status](https://travis-ci.org/AustralianSynchrotron/Lightflow.svg?branch=master)](https://travis-ci.org/AustralianSynchrotron/Lightflow)
 
 Running
 -------
@@ -32,3 +33,4 @@ To run just the unit tests::
 To generate test coverage::
 
    tox -e coverage
+
