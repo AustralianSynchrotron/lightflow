@@ -8,7 +8,7 @@ from lightflow.models.exceptions import StopTask, AbortWorkflow
 
 
 def test_bash_task_executes_command(tmpdir, data_mock, store_mock, signal_mock, context_mock):
-    tmp_file_path = Path(tmpdir.mkdir('bash-task').join('target.txt'))
+    tmp_file_path = Path(str(tmpdir.mkdir('bash-task').join('target.txt')))
     callback = Mock()
     command = 'echo ok > {target_path}'.format(target_path=tmp_file_path)
     task = BashTask('task-name', command, callback_process=callback)
@@ -35,7 +35,7 @@ def test_bash_task_calls_stderr_callback(data_mock, store_mock, signal_mock, con
                     callback_stderr=stderr_callback)
     task.run(data_mock, store_mock, signal_mock, context_mock)
     stderr_callback_args = stderr_callback.call_args[0]
-    assert 'command not found' in stderr_callback_args[0]
+    assert 'not found' in stderr_callback_args[0]
     assert stderr_callback_args[1:] == (data_mock, store_mock, signal_mock, context_mock)
     assert stdout_callback.called is False
 
@@ -58,7 +58,7 @@ def test_bash_task_captures_io_to_file(data_mock, store_mock, signal_mock, conte
     task.run(data_mock, store_mock, signal_mock, context_mock)
     assert supplied_return_code > 0
     assert stdout_file_contents == b'ok\n'
-    assert b'command not found' in stderr_file_contents
+    assert b'not found' in stderr_file_contents
 
 
 @pytest.mark.parametrize('ExceptionType', [StopTask, AbortWorkflow])
