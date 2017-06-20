@@ -17,6 +17,18 @@ def test_bash_task_executes_command(tmpdir, data_mock, store_mock, signal_mock, 
     assert tmp_file_path.open().read().strip() == 'ok'
 
 
+def test_bash_task_handles_sleep(data_mock, store_mock, signal_mock, context_mock):
+    supplied_return_code = None
+
+    def end_callback(return_code, *args):
+        nonlocal supplied_return_code
+        supplied_return_code = return_code
+
+    task = BashTask('task-name',  'sleep 0.5', callback_end=end_callback)
+    task.run(data_mock, store_mock, signal_mock, context_mock)
+    assert supplied_return_code == 0
+
+
 def test_bash_task_calls_stdout_callback(data_mock, store_mock, signal_mock, context_mock):
     stdout_callback, stderr_callback = Mock(), Mock()
     task = BashTask('task-name',  'echo line1; echo line2', callback_stdout=stdout_callback,

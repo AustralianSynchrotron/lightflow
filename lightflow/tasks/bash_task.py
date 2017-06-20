@@ -74,7 +74,7 @@ class BashTaskOutputReader(Thread):
 
         # capture the process output as long as the process is active
         try:
-            while self._process.poll():
+            while self._process.poll() is None:
                 result_stdout = read_stdout()
                 result_stderr = read_stderr()
 
@@ -301,7 +301,7 @@ class BashTask(BaseTask):
 
             # if a stop or abort exception was raised, stop the bash process and re-raise
             if output_reader.exc_obj is not None:
-                if proc.poll():
+                if proc.poll() is None:
                     proc.terminate()
                 raise output_reader.exc_obj
 

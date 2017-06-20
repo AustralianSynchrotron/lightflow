@@ -20,7 +20,9 @@ def store_mock():
 
 @pytest.fixture
 def signal_mock():
-    yield create_autospec(TaskSignal, instance=True)
+    m = create_autospec(TaskSignal, instance=True)
+    m.configure_mock(is_stopped=False)
+    yield m
 
 
 @pytest.fixture
