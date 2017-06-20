@@ -3,7 +3,9 @@ Lightflow
 
 A lightweight, high performance pipeline system for synchrotrons.
 
-[![Build Status](https://travis-ci.org/AustralianSynchrotron/Lightflow.svg?branch=master)](https://travis-ci.org/AustralianSynchrotron/Lightflow)
+.. image:: https://travis-ci.org/AustralianSynchrotron/Lightflow.svg?branch=master
+    :target: https://travis-ci.org/AustralianSynchrotron/Lightflow
+
 
 Running
 -------
