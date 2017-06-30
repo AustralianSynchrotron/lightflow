@@ -10,6 +10,7 @@ class JobStatus:
     Active = 0
     Registered = 1
     Reserved = 2
+    Scheduled = 3
 
 
 class JobType:

@@ -89,6 +89,11 @@ class Workflow:
         return self._parameters
 
     @property
+    def provided_arguments(self):
+        """ Returns the arguments provided to the workflow. """
+        return self._provided_arguments
+
+    @property
     def is_stopped(self):
         """ Returns whether the workflow was stopped. """
         return self._stop_workflow

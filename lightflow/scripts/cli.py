@@ -4,7 +4,7 @@ from functools import update_wrapper
 
 from lightflow.config import Config
 from lightflow.version import __version__
-from lightflow.queue.const import JobType, JobEventName
+from lightflow.queue.const import JobType, JobEventName, JobStatus
 from lightflow.models.exceptions import (ConfigLoadError,
                                          WorkflowArgumentError,
                                          WorkflowImportError)
@@ -137,6 +137,70 @@ def workflow_stop(obj, names):
 
     if click.confirm(msg, default=True, abort=True):
         stop_workflow(obj['config'], names=names if len(names) > 0 else None)
+
+
+@workflow.command('status')
+@click.option('--details', '-d', is_flag=True, help='Show detailed information.')
+@click.pass_obj
+@config_required
+def workflow_status(obj, details):
+    """ Show the status of the workflows. """
+    show_colors = obj['show_color']
+    temp_form = '{:>{}}  {:20} {:25} {:38} {}' if details else '{:>{}}  {:20} {} {} {}'
+
+    click.echo('\n')
+    click.echo(temp_form.format(
+        'Status',
+        12,
+        'Name',
+        'ID' if details else '',
+        'Job' if details else '',
+        'Arguments'
+    ))
+    click.echo('-' * (113 if details else 50))
+
+    def print_jobs(jobs, *, label='', color='green'):
+        for job in jobs:
+            click.echo(temp_form.format(
+                _style(show_colors, label, fg=color, bold=True),
+                25 if show_colors else 12,
+                job.name,
+                job.workflow_id if details else '',
+                job.id if details else '',
+                ','.join(['{}={}'.format(k, v) for k, v in job.arguments.items()]))
+            )
+
+    # get list of workers that consume workflows to speed up lookup
+    workers = [w.name for w in list_workers(config=obj['config'],
+                                            filter_by_queues=[JobType.Workflow])]
+
+    # running jobs
+    print_jobs(list_jobs(config=obj['config'],
+                         status=JobStatus.Active,
+                         filter_by_type=JobType.Workflow,
+                         filter_by_worker=workers),
+               label='Running', color='green')
+
+    # scheduled jobs
+    print_jobs(list_jobs(config=obj['config'],
+                         status=JobStatus.Scheduled,
+                         filter_by_type=JobType.Workflow,
+                         filter_by_worker=workers),
+               label='Scheduled', color='blue')
+
+    # registered jobs
+    print_jobs(list_jobs(config=obj['config'],
+                         status=JobStatus.Registered,
+                         filter_by_type=JobType.Workflow,
+                         filter_by_worker=workers),
+               label='Registered', color='yellow')
+
+    # reserved jobs
+    print_jobs(list_jobs(config=obj['config'],
+                         status=JobStatus.Reserved,
+                         filter_by_type=JobType.Workflow,
+                         filter_by_worker=workers),
+               label='Reserved', color='yellow')
 
 
 @cli.group()

@@ -133,7 +133,9 @@ def list_jobs(config, *, status=JobStatus.Active,
 
     # option to filter by the worker (improves performance)
     if filter_by_worker is not None:
-        inspect = celery_app.control.inspect(destination=[filter_by_worker])
+        inspect = celery_app.control.inspect(
+            destination=filter_by_worker if isinstance(filter_by_worker, list)
+            else [filter_by_worker])
     else:
         inspect = celery_app.control.inspect()
 
@@ -144,6 +146,8 @@ def list_jobs(config, *, status=JobStatus.Active,
         job_map = inspect.registered()
     elif status == JobStatus.Reserved:
         job_map = inspect.reserved()
+    elif status == JobStatus.Scheduled:
+        job_map = inspect.scheduled()
     else:
         job_map = None
 

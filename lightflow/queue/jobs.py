@@ -58,7 +58,8 @@ def execute_workflow(self, workflow, workflow_id=None):
     # store job specific meta information wth the job
     self.update_state(meta={'name': workflow.name,
                             'type': JobType.Workflow,
-                            'workflow_id': workflow_id})
+                            'workflow_id': workflow_id,
+                            'arguments': workflow.provided_arguments})
 
     # run the DAGs in the workflow
     workflow.run(config=self.app.user_options['config'],

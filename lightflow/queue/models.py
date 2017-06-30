@@ -155,8 +155,8 @@ class WorkerStats:
 
 class JobStats:
     """ Represents the job (=celery task) information returned from the celery stats. """
-    def __init__(self, name, job_id, job_type, workflow_id, acknowledged, func_name,
-                 hostname, worker_name, worker_pid, routing_key):
+    def __init__(self, name, job_id, job_type, workflow_id, arguments, acknowledged,
+                 func_name, hostname, worker_name, worker_pid, routing_key):
         """ Initialize the job stats object.
 
         Args:
@@ -164,6 +164,7 @@ class JobStats:
             job_id (str): The internal ID of the job.
             job_type (str): The type of the job (workflow, dag, task).
             workflow_id (str): The id of the workflow that started this job.
+            arguments (dict): The provided arguments to a workflow.
             acknowledged (bool): True of the job was acknowledged by the message system.
             func_name (str): The name of the function that represents this job.
             hostname (str): The name of the host this job runs on.
@@ -175,6 +176,7 @@ class JobStats:
         self.id = job_id
         self.type = job_type
         self.workflow_id = workflow_id
+        self.arguments = arguments
         self.acknowledged = acknowledged
         self.func_name = func_name
         self.hostname = hostname
@@ -198,13 +200,14 @@ class JobStats:
             raise JobStatInvalid('The job description is missing important fields.')
 
         async_result = AsyncResult(id=job_dict['id'], app=celery_app)
-        a_info = async_result.info
+        a_info = async_result.info if isinstance(async_result.info, dict) else None
 
         return JobStats(
             name=a_info.get('name', '') if a_info is not None else '',
             job_id=job_dict['id'],
             job_type=a_info.get('type', '') if a_info is not None else '',
             workflow_id=a_info.get('workflow_id', '') if a_info is not None else '',
+            arguments=a_info.get('arguments', {}) if a_info is not None else {},
             acknowledged=job_dict['acknowledged'],
             func_name=job_dict['type'],
             hostname=job_dict['hostname'],
@@ -224,6 +227,7 @@ class JobStats:
             'id': self.id,
             'type': self.type,
             'workflow_id': self.workflow_id,
+            'arguments': self.arguments,
             'acknowledged': self.acknowledged,
             'func_name': self.func_name,
             'hostname': self.hostname,
