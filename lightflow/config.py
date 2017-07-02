@@ -162,7 +162,9 @@ class Config:
         if os.path.exists(filename):
             try:
                 with open(filename, 'r') as config_file:
-                    self._update_dict(self._config, yaml.safe_load(config_file.read()))
+                    yaml_dict = yaml.safe_load(config_file.read())
+                    if yaml_dict is not None:
+                        self._update_dict(self._config, yaml_dict)
             except IsADirectoryError:
                 raise ConfigLoadError(
                     'The specified configuration file is a directory not a file')
