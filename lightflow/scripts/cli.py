@@ -1,8 +1,11 @@
 import click
 import json
+import shutil
+from pathlib import Path
 from functools import update_wrapper
 
-from lightflow.config import Config
+import lightflow
+from lightflow.config import Config, LIGHTFLOW_CONFIG_NAME
 from lightflow.version import __version__
 from lightflow.queue.const import JobType, JobEventName, JobStatus
 from lightflow.models.exceptions import (ConfigLoadError,
@@ -33,6 +36,14 @@ def config_required(f):
     return update_wrapper(new_func, f)
 
 
+def ingest_config_obj(ctx):
+    """ Ingest the configuration object into the click context. """
+    try:
+        ctx.obj['config'] = Config.from_file(ctx.obj['config_path'])
+    except ConfigLoadError as err:
+        click.echo(_style(ctx.obj['show_color'], str(err), fg='red', bold=True))
+
+
 @click.group(context_settings=dict(help_option_names=['-h', '--help']))
 @click.version_option(version=__version__, prog_name='Lightflow')
 @click.option('--config', '-c', help='Path to configuration file.')
@@ -45,13 +56,9 @@ def cli(ctx, config, no_color):
     Lightflow is being developed at the Australian Synchrotron.
     """
     ctx.obj = {
-        'show_color': not no_color if no_color is not None else True
+        'show_color': not no_color if no_color is not None else True,
+        'config_path': config
     }
-
-    try:
-        ctx.obj['config'] = Config.from_file(config)
-    except ConfigLoadError as err:
-        click.echo(_style(not no_color, str(err), fg='red', bold=True))
 
 
 @cli.group()
@@ -61,9 +68,19 @@ def config():
 
 
 @config.command('default')
-def config_default():
-    """ Print a default configuration. """
-    click.echo(Config.default())
+@click.argument('dest', type=click.Path(exists=True))
+def config_default(dest):
+    """ Create a default configuration file.
+
+    \b
+    DEST: Path or file name for the configuration file.
+    """
+    conf_path = Path(dest).resolve()
+    if conf_path.is_dir():
+        conf_path = conf_path / LIGHTFLOW_CONFIG_NAME
+
+    conf_path.write_text(Config.default())
+    click.echo('Configuration written to {}'.format(conf_path))
 
 
 @config.command('list')
@@ -74,10 +91,41 @@ def config_list(obj):
     click.echo(json.dumps(obj['config'].to_dict(), indent=4))
 
 
+@config.command('examples')
+@click.option('--user-dir', '-u', is_flag=True,
+              help='Do not create subdirectory /example.')
+@click.argument('dest', type=click.Path(exists=True))
+def config_examples(dest, user_dir):
+    """ Copy the example workflows to a directory.
+
+    \b
+    DEST: Path to which the examples should be copied.
+    """
+    examples_path = Path(lightflow.__file__).parents[1] / 'examples'
+    if examples_path.exists():
+        dest_path = Path(dest).resolve()
+        if not user_dir:
+            dest_path = dest_path / 'examples'
+
+        if dest_path.exists():
+            if not click.confirm('Directory already exists. Overwrite existing files?',
+                                 default=True, abort=True):
+                return
+        else:
+            dest_path.mkdir()
+
+        for example_file in examples_path.glob('*.py'):
+            shutil.copy(str(example_file), str(dest_path / example_file.name))
+        click.echo('Copied examples to {}'.format(str(dest_path)))
+    else:
+        click.echo('The examples source path does not exist')
+
+
 @cli.group()
-def workflow():
+@click.pass_context
+def workflow(ctx):
     """ Start, stop and list workflows. """
-    pass
+    ingest_config_obj(ctx)
 
 
 @workflow.command('list')
@@ -204,9 +252,10 @@ def workflow_status(obj, details):
 
 
 @cli.group()
-def worker():
+@click.pass_context
+def worker(ctx):
     """ Start and stop workers. """
-    pass
+    ingest_config_obj(ctx)
 
 
 @worker.command('start', context_settings=dict(ignore_unknown_options=True,))
@@ -309,11 +358,12 @@ def worker_status(obj, filter_queues, details):
 
 @cli.command('monitor')
 @click.option('--details', '-d', is_flag=True, help='Show detailed information.')
-@click.pass_obj
-@config_required
-def monitor(obj, details):
+@click.pass_context
+def monitor(ctx, details):
     """ Show the worker and workflow event stream. """
-    show_colors = obj['show_color']
+    ingest_config_obj(ctx)
+
+    show_colors = ctx.obj['show_color']
 
     event_display = {
         JobEventName.Started: {'color': 'blue', 'label': 'started'},
@@ -333,7 +383,7 @@ def monitor(obj, details):
 
     click.echo('-' * (110 if details else 65))
 
-    for event in workflow_events(obj['config']):
+    for event in workflow_events(ctx.obj['config']):
         evt_disp = event_display[event.event]
         click.echo('{:>{}} {:>{}} {:25} {:16} {:28} {}'.format(
             _style(show_colors, evt_disp['label'], fg=evt_disp['color']),

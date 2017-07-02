@@ -41,20 +41,25 @@ class Config:
         self._config = None
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, *, strict=True):
         """ Create a new Config object from a configuration file.
 
         Args:
             filename (str): The location and name of the configuration file.
+            strict (bool): If true raises a ConfigLoadError when the configuration
+                           cannot be found.
 
         Returns:
             An instance of the Config class.
+
+        Raises:
+            ConfigLoadError: If the configuration cannot be found.
         """
         config = cls()
-        config.load_from_file(filename)
+        config.load_from_file(filename, strict=strict)
         return config
 
-    def load_from_file(self, filename=None):
+    def load_from_file(self, filename=None, *, strict=True):
         """ Load the configuration from a file.
 
         The location of the configuration file can either be specified directly in the
@@ -65,6 +70,11 @@ class Config:
 
         Args:
             filename (str): The location and name of the configuration file.
+            strict (bool): If true raises a ConfigLoadError when the configuration
+                           cannot be found.
+
+        Raises:
+            ConfigLoadError: If the configuration cannot be found.
         """
         self.set_to_default()
 
@@ -79,7 +89,8 @@ class Config:
                     self._update_from_file(
                         expand_env_var('~/{}'.format(LIGHTFLOW_CONFIG_NAME)))
                 else:
-                    raise ConfigLoadError('Could not find the configuration file.')
+                    if strict:
+                        raise ConfigLoadError('Could not find the configuration file.')
             else:
                 self._update_from_file(expand_env_var(os.environ[LIGHTFLOW_CONFIG_ENV]))
 
@@ -199,60 +210,61 @@ class Config:
     def default():
         """ Returns the default configuration. """
         return '''
-    workflows: []
+workflows:
+  - ./examples
 
-    libraries: []
+libraries: []
 
+celery:
+  broker_url: redis://localhost:6379/0
+  result_backend: redis://localhost:6379/0
+  timezone: Australia/Melbourne
+  enable_utc: True
+  worker_concurrency: 8
+  result_expires: 0
+  worker_send_task_events: True
+
+signal:
+  host: localhost
+  port: 6379
+  database: 0
+  polling_time: 0.5
+
+store:
+  host: localhost
+  port: 27017
+  database: lightflow
+
+graph:
+  workflow_polling_time: 0.5
+  dag_polling_time: 0.5
+
+extensions: {}
+
+logging:
+  version: 1
+  disable_existing_loggers: false
+  formatters:
+    verbose:
+      format: '[%(asctime)s][%(levelname)s] %(name)s %(filename)s:%(funcName)s:%(lineno)d | %(message)s'
+      datefmt: '%H:%M:%S'
+    simple:
+      (): 'colorlog.ColoredFormatter'
+      format: '%(log_color)s[%(asctime)s][%(levelname)s] %(blue)s%(processName)s%(reset)s | %(message)s'
+      datefmt: '%H:%M:%S'
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: INFO
+      formatter: simple
+  loggers:
     celery:
-      broker_url: redis://localhost:6379/0
-      result_backend: redis://localhost:6379/0
-      timezone: Australia/Melbourne
-      enable_utc: True
-      worker_concurrency: 8
-      result_expires: 0
-      worker_send_task_events: True
-
-    signal:
-      host: localhost
-      port: 6379
-      database: 0
-      polling_time: 0.5
-
-    store:
-      host: localhost
-      port: 27017
-      database: lightflow
-
-    graph:
-      workflow_polling_time: 0.5
-      dag_polling_time: 0.5
-
-    extensions: {}
-
-    logging:
-      version: 1
-      disable_existing_loggers: false
-      formatters:
-        verbose:
-          format: '[%(asctime)s][%(levelname)s] %(name)s %(filename)s:%(funcName)s:%(lineno)d | %(message)s'
-          datefmt: '%H:%M:%S'
-        simple:
-          (): 'colorlog.ColoredFormatter'
-          format: '%(log_color)s[%(asctime)s][%(levelname)s] %(blue)s%(processName)s%(reset)s | %(message)s'
-          datefmt: '%H:%M:%S'
       handlers:
-        console:
-          class: logging.StreamHandler
-          level: INFO
-          formatter: simple
-      loggers:
-        celery:
-          handlers:
-            - console
-          level: INFO
+        - console
+      level: INFO
 
-        root:
-          handlers:
-            - console
-          level: INFO
+    root:
+      handlers:
+        - console
+      level: INFO
     '''
