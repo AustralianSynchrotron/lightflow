@@ -1,7 +1,5 @@
-Lightflow
-=========
-
-Lightflow is a lightweight, distributed workflow system written in Python.
+Lightflow - a lightweight, distributed workflow system
+======================================================
 
 .. image:: https://travis-ci.org/AustralianSynchrotron/Lightflow.svg?branch=master
     :target: https://travis-ci.org/AustralianSynchrotron/Lightflow
@@ -10,11 +8,9 @@ Lightflow is a lightweight, distributed workflow system written in Python.
     :target: http://lightflow.readthedocs.io/en/latest
     :alt: Documentation Status
 
-Lightflow models a workflow as a set of individual tasks arranged as a directed acyclic graph (DAG).
-This specification encodes the direction that data flows as well as dependencies between tasks.
-Each workflow consists of one or more DAGs. Lightflow employs a worker-based queuing system, in which
-workers consume individual tasks. In order to avoid single points of failure, such as a central daemon
-often found in other workflow tools, the queuing system is also used to manage and monitor workflows and DAGs.
+Lightflow is a Python 3.5+ library and command-line tool for executing workflows,
+composed of individual tasks, in a distributed fashion. It is based on Celery and
+provides task dependencies, data exchange between tasks and an intuitive description of workflows.
 
 
 Dependencies
@@ -33,8 +29,29 @@ Install Lightflow from PyPi::
     pip install lightflow
 
 
-Create a default configuration file:
+Create a default configuration file::
 
-    lightflow config default > lightflow.cfg
+    lightflow config default .
+
+
+Copy the provided example workflows to a local directory::
+
+    lightflow config examples .
+
+
+List all example workflows::
+
+    lightflow workflow list
+
+
+In order to execute a workflow, start a worker that consumes jobs from the workflow, dag and task queues::
+
+    lightflow worker start
+
+
+Send a workflow to the queue. In this example the simple workflow is queued::
+
+    lightflow workflow start simple
+
 
 
