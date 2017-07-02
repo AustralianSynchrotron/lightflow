@@ -1,38 +1,40 @@
 Lightflow
 =========
 
-A lightweight, high performance pipeline system for synchrotrons.
+Lightflow is a lightweight, distributed workflow system written in Python.
 
 .. image:: https://travis-ci.org/AustralianSynchrotron/Lightflow.svg?branch=master
     :target: https://travis-ci.org/AustralianSynchrotron/Lightflow
 
+.. image:: https://readthedocs.org/projects/lightflow/badge/?version=latest
+    :target: http://lightflow.readthedocs.io/en/latest
+    :alt: Documentation Status
 
-Running
--------
-
-::
-
-   docker run -it -d -p 6379:6379 redis
-   docker run -it -d -p 27017:27017 mongo
+Lightflow models a workflow as a set of individual tasks arranged as a directed acyclic graph (DAG).
+This specification encodes the direction that data flows as well as dependencies between tasks.
+Each workflow consists of one or more DAGs. Lightflow employs a worker-based queuing system, in which
+workers consume individual tasks. In order to avoid single points of failure, such as a central daemon
+often found in other workflow tools, the queuing system is also used to manage and monitor workflows and DAGs.
 
 
-Testing
--------
+Dependencies
+------------
 
-To set up a development environment::
+Lightflow is written in Python 3 and requires Python 3.5 or higher. At the time being only Linux is supported.
 
-   pip3 install -r requirements-dev.txt
-   pip3 install -e .
 
-To run the unit tests, flake8 and generate test coverage::
 
-   tox
 
-To run just the unit tests::
+Getting started
+---------------
 
-   pytest
+Install Lightflow from PyPi::
 
-To generate test coverage::
+    pip install lightflow
 
-   tox -e coverage
+
+Create a default configuration file:
+
+    lightflow config default > lightflow.cfg
+
 
