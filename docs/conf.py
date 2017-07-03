@@ -49,8 +49,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Lightflow'
-copyright = '2017, Software EngineeriAustralian Synchrotron Sg group'
-author = 'Software EngineeriAustralian Synchrotron Sg group'
+copyright = '2017, Software Engineering Australian Synchrotron Software Group'
+author = 'Software Engineering Australian Synchrotron Software Group'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -130,7 +130,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'Lightflow.tex', 'Lightflow Documentation',
-     'Software EngineeriAustralian Synchrotron Sg group', 'manual'),
+     'Software Engineering Australian Synchrotron Software Group', 'manual'),
 ]
 
 

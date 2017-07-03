@@ -36,12 +36,14 @@ def config_required(f):
     return update_wrapper(new_func, f)
 
 
-def ingest_config_obj(ctx):
+def ingest_config_obj(ctx, *, silent=True):
     """ Ingest the configuration object into the click context. """
     try:
         ctx.obj['config'] = Config.from_file(ctx.obj['config_path'])
     except ConfigLoadError as err:
         click.echo(_style(ctx.obj['show_color'], str(err), fg='red', bold=True))
+        if not silent:
+            raise click.Abort()
 
 
 @click.group(context_settings=dict(help_option_names=['-h', '--help']))
@@ -84,11 +86,11 @@ def config_default(dest):
 
 
 @config.command('list')
-@click.pass_obj
-@config_required
-def config_list(obj):
+@click.pass_context
+def config_list(ctx):
     """ List the current configuration. """
-    click.echo(json.dumps(obj['config'].to_dict(), indent=4))
+    ingest_config_obj(ctx, silent=False)
+    click.echo(json.dumps(ctx.obj['config'].to_dict(), indent=4))
 
 
 @config.command('examples')
@@ -361,7 +363,7 @@ def worker_status(obj, filter_queues, details):
 @click.pass_context
 def monitor(ctx, details):
     """ Show the worker and workflow event stream. """
-    ingest_config_obj(ctx)
+    ingest_config_obj(ctx, silent=False)
 
     show_colors = ctx.obj['show_color']
 
