@@ -1,13 +1,140 @@
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Lightflow - A lightweight, distributed workflow system</title>
+    <meta charset="utf-8">
+    <title>Lightflow - A lightweight, distributed workflow system</title>
 
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-  <link rel="stylesheet" href="css/lightflow.css">
+    <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/lightflow.css">
 
 </head>
 <body>
-	
+    <main class="hero">
+        <div class="container-fluid">
+            <div class="content">
+                <div class="logo">
+                    <img src="img/LightflowLogo.svg">
+                </div>
+                
+                <strong>Lightflow</strong>
+                <div class="description">
+                    A lightweight, distributed workflow system
+                </div>
+
+                <div class="btn-box">
+                    <a href="https://github.com/AustralianSynchrotron/Lightflow" class="btn btn-default"><i class="fa fa-github"></i>&nbsp;GitHub</a>
+                    <a href="http://lightflow.readthedocs.io/en/latest/" class="btn btn-default"><i class="fa fa-file-text-o"></i>&nbsp;Documentation</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="detail">
+        <div class="content">
+            <section class="container-fluid featurette">
+                <div class="row">
+                    <div class="col-md-4 feature">
+                        <h1>Declarative</h1>
+                        <div class="text">
+                            <p>
+                                Lightflow makes it easy to describe workflows using Python. A carefully crafted API lets you build workflows of any complexity
+                                without hassle.
+                            </p>
+                            <p>
+                                Start with a single file for simple workflows and later scale to multiple files for a more modular setup. Since a workflow
+                                definition is just pure Python, you don't have to learn a new configuration language and you can use your favorite libraries
+                                and modules.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 feature">
+                        <h1>Graph-based</h1>
+                        <div class="text">
+                            <p>
+                                Lightflow uses directed acyclic graphs (DAG) in order to describe the dependencies between the tasks in a workflow.
+                            </p>
+                            <p>
+                                You have full control over the data flow between tasks and you can start DAGs from a task to change your workflow dynamically at runtime.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 feature">
+                        <h1>Distributed</h1>
+                        <div class="text">
+                            <p>
+                                Lightflow uses Celery to distribute the tasks of a workflow to multiple workers. It even employs Celery to run and monitor
+                                the status of your workflow. This removes a single point of failure, such as a central daemon, often found in other workflow tools.
+                            </p>
+                            <p>
+                                You need to pin certain tasks to certain workers? No problem, Lightflow comes with support for custom queues.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <hr class="divider">
+
+            <section class="instruction">
+                <h1>Dependencies</h1>
+                <div class="text">
+                    <h2>Python</h2>
+                    <p>Lightflow is written in Python 3 and requires Python 3.5 or higher.</p>
+
+                    <h2><i class="fa fa-linux"></i>&nbsp;Operating system</h2>
+                    <p>Lightflow is being developed and tested on Linux, with Debian and RedHat being the main platforms.</p>
+
+                    <h2>redis</h2>
+                    <p>
+                        The redis database is required by Lightflow as a communication broker between tasks. It is also used as the default
+                        broker for the Celery queuing system, but could be replaced with any other supported Celery broker.
+                    </p>
+
+                    <h2>MongoDB</h2>
+                    <p>Lightflow makes use of MongoDB for storing persistent data during a workflow run that can be accessed by all tasks.</p>
+                </div>
+            </section>
+
+            <section class="instruction">
+                <h1>Installation</h1>
+                <div class="text">
+                    <p>Lightflow is available from PyPi. Simply install it with:</p>
+                    <pre>pip install lightflow</pre>
+                </div>
+            </section>
+
+            <section class="instruction">
+                <h1>Getting started</h1>
+                <div class="text">
+                    <p>
+                        The following getting started guide assumes a redis database running on <code>localhost</code> and port <code>6379</code>
+                        as well as a MongoDB database running on <code>localhost</code> and port <code>27017</code>.
+                    </p>
+                    <p>
+                        Create a default configuration file and copy the provided example workflows to a local directory of your choice:
+                    </p>
+                    <pre>lightflow config default .</pre>
+                    <pre>lightflow config examples .</pre>
+
+                    <br>
+                    <p>If you like, list all available example workflows:</p>
+                    <pre>lightflow workflow list</pre>
+
+                    <br>
+                    <p>
+                        In order to execute a workflow, start a worker that consumes jobs from the workflow, dag and task queues.
+                        Then start a workflow from the list of available examples. The following example starts the workflow <code>simple</code>:
+                    </p>
+                    <pre>lightflow worker start</pre>
+                    <pre>lightflow workflow start simple</pre>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
 </body>
 </html>

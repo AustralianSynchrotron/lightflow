@@ -1,0 +1,131 @@
+
+body {
+    color: #373737;
+    background: #F0F1F7;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.hero {
+    position: relative;
+    background: #272C3A;
+    color: #E5E5E5;
+    text-align: center;
+    min-height: 300px;
+    margin: 0;
+    padding: 0;
+}
+
+.hero .content {
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 50px 20px 40px 20px;
+}
+
+.hero .content .logo {
+    width: 150px;
+    padding-bottom: 10px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero .content strong {
+    color: #FFFFFF;
+    font-family: 'Raleway', sans-serif;
+    font-size: 72px;
+}
+
+.hero .content .description {
+    color: #E5E5E5;
+    font-size: 18px;
+}
+
+.hero .content .btn-box {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.hero .content .btn {
+    color: #8CE349;
+    background: transparent;
+    border-color: #8CE349;
+    line-height: 1.5;
+    border-radius: 6px;
+    font-size: 20px;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+.hero .content .btn:hover {
+    color: #272C3A;
+    background: #8CE349;
+}
+
+.detail {
+    position: relative;
+    margin: 0;
+    padding: 0;
+}
+
+.detail .content {
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 30px 20px 40px 20px;
+}
+
+.detail .content .featurette {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.detail .content .featurette .feature {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.detail .content .featurette .feature h1 {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.detail .content .featurette .feature .text {
+    margin-top: 15px;   
+}
+
+.detail .content hr {
+    border-top-color: #616C8F;
+    margin: 40px auto;
+    width: 100%;
+    max-width: 600px;
+}
+
+.detail .content .instruction {
+    margin-top: 10px;
+    margin-bottom: 40px;
+}
+
+.detail .content .instruction h1 {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.detail .content .instruction h2 {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.detail .content .instruction .text {
+    margin-top: 15px;
+}
+
+.detail .content .instruction .text pre {
+    margin: 2px 0;
+    background: #272C3A;
+    color: #8CE349;
+}
+
+.detail .content .instruction .text code {
+    background: #F0F1F7;
+    color: #272C3A;
+}
