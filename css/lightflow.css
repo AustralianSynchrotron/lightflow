@@ -2,6 +2,7 @@
 body {
     color: #373737;
     background: #F0F1F7;
+    font-size: 16px;
     font-family: 'Open Sans', sans-serif;
 }
 
@@ -11,6 +12,7 @@ body {
     color: #E5E5E5;
     text-align: center;
     min-height: 300px;
+    width: 100%;
     margin: 0;
     padding: 0;
 }
@@ -19,7 +21,7 @@ body {
     max-width: 960px;
     margin-left: auto;
     margin-right: auto;
-    padding: 50px 20px 40px 20px;
+    padding: 40px 20px 40px 20px;
 }
 
 .hero .content .logo {
@@ -63,6 +65,7 @@ body {
 
 .detail {
     position: relative;
+    width: 100%;
     margin: 0;
     padding: 0;
 }
@@ -85,7 +88,7 @@ body {
 }
 
 .detail .content .featurette .feature h1 {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
 }
 
@@ -106,12 +109,12 @@ body {
 }
 
 .detail .content .instruction h1 {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
 }
 
 .detail .content .instruction h2 {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
 }
 
@@ -123,9 +126,23 @@ body {
     margin: 2px 0;
     background: #272C3A;
     color: #8CE349;
+    font-size: 13px;
 }
 
 .detail .content .instruction .text code {
     background: #F0F1F7;
     color: #272C3A;
+    font-size: 16px;
+}
+
+footer {
+    position: relative;
+    background: #272C3A;
+    color: #919191;
+    text-align: center;
+    font-size: 14px;
+    min-height: 50px;
+    width: 100%;
+    margin: 0;
+    padding: 15px 0 10px 0;
 }

@@ -81,19 +81,19 @@
             <section class="instruction">
                 <h1>Dependencies</h1>
                 <div class="text">
-                    <h2>Python</h2>
-                    <p>Lightflow is written in Python 3 and requires Python 3.5 or higher.</p>
-
                     <h2><i class="fa fa-linux"></i>&nbsp;Operating system</h2>
                     <p>Lightflow is being developed and tested on Linux, with Debian and RedHat being the main platforms.</p>
+                    
+                    <h2><img src="img/PythonLogo.svg" width="15px">&nbsp;Python</h2>
+                    <p>Lightflow is written in Python 3 and requires Python 3.5 or higher.</p>
 
-                    <h2>redis</h2>
+                    <h2><img src="img/RedisLogo.svg" width="15px">&nbsp;redis</h2>
                     <p>
                         The redis database is required by Lightflow as a communication broker between tasks. It is also used as the default
                         broker for the Celery queuing system, but could be replaced with any other supported Celery broker.
                     </p>
 
-                    <h2>MongoDB</h2>
+                    <h2><img src="img/MongoDBLogo.svg" width="10px">&nbsp;MongoDB</h2>
                     <p>Lightflow makes use of MongoDB for storing persistent data during a workflow run that can be accessed by all tasks.</p>
                 </div>
             </section>
@@ -135,6 +135,10 @@
 
         </div>
     </div>
+
+    <footer>
+        Copyright <i class="fa fa-copyright"></i> 2017 Australian Synchrotron Software Engineering Group
+    </footer>
 
 </body>
 </html>
