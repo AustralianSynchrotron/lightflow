@@ -17,9 +17,16 @@
     <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
     <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/lightflow.css">
+    <link rel="stylesheet" href="css/syntax.css">
 
+    <script  src="https://code.jquery.com/jquery-3.2.1.min.js"  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="  crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/python.min.js"></script>
+    <script src="js/lightflow.js"></script>
 </head>
 <body>
     <main class="hero">
@@ -111,8 +118,8 @@
             <section class="instruction">
                 <h1>Installation</h1>
                 <div class="text">
-                    <p>Lightflow is available from PyPi. Simply install it with:</p>
-                    <pre>pip install lightflow</pre>
+                    <p>Lightflow is available from PyPI. Simply install it with:</p>
+                    <pre class="nohighlight">$ pip install lightflow</pre>
                 </div>
             </section>
 
@@ -126,20 +133,410 @@
                     <p>
                         Create a default configuration file and copy the provided example workflows to a local directory of your choice:
                     </p>
-                    <pre>lightflow config default .</pre>
-                    <pre>lightflow config examples .</pre>
+                    <pre class="nohighlight">$ lightflow config default .</pre>
+                    <pre class="nohighlight">$ lightflow config examples .</pre>
 
                     <br>
                     <p>If you like, list all available example workflows:</p>
-                    <pre>lightflow workflow list</pre>
+                    <pre class="nohighlight">$ lightflow workflow list</pre>
 
                     <br>
                     <p>
                         In order to execute a workflow, start a worker that consumes jobs from the workflow, dag and task queues.
                         Then start a workflow from the list of available examples. The following example starts the workflow <code>simple</code>:
                     </p>
-                    <pre>lightflow worker start</pre>
-                    <pre>lightflow workflow start simple</pre>
+                    <pre class="nohighlight">$ lightflow worker start</pre>
+                    <pre class="nohighlight">$ lightflow workflow start simple</pre>
+                </div>
+            </section>
+
+            <section class="instruction">
+                <h1>Example workflows</h1>
+                Lightflow comes with a number of example workflows demonstrating all aspects of the library. This section presents a selection of
+                the examples, illustrating how Lightflow models the basic patterns often found in workflows and pipelines.
+
+                <div class="text">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li role="presentation" class="example-tab active"><a href="#squential" role="tab" data-toggle="tab">Squential</a></li>
+                        <li role="presentation" class="example-tab"><a href="#parallel" role="tab" data-toggle="tab">Parallel</a></li>
+                        <li role="presentation" class="example-tab"><a href="#dataflow" role="tab" data-toggle="tab">Data Flow</a></li>
+                        <li role="presentation" class="example-tab"><a href="#subdag" role="tab" data-toggle="tab">Sub DAG</a></li>
+                        <li role="presentation" class="example-tab"><a href="#datastore" role="tab" data-toggle="tab">Data Store</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div role="tabpanel" class="tab-pane active" id="squential">
+                            <div class="row header">
+                                <div class="col-md-6">
+
+                                </div>
+                                <div class="col-md-6">
+                                    <h2>Sequential</h2>
+                                    <p>
+                                        The sequential workflow pattern is one of the most basic patterns. A number of tasks are executed
+                                        in order, starting with the first task.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="link">
+                                <code>sequence.py - <a href="https://github.com/AustralianSynchrotron/Lightflow/blob/master/examples/sequence.py">GitHub</a></code>
+                            </div>
+                            <pre class="python example-code">
+from lightflow.models import Dag
+from lightflow.tasks import PythonTask
+
+
+# the callback function for the task that stores the value 5
+def put_data(data, store, signal, context):
+    print('Task {task_name} being run in DAG {dag_name} '
+          'for workflow {workflow_name} ({workflow_id}) '
+          'on {worker_hostname}'.format(**context.to_dict()))
+
+    data['value'] = 5
+
+
+# the callback function for the task that prints the data
+def print_value(data, store, signal, context):
+    print('The value is: {}'.format(data['value']))
+
+
+# create the main DAG
+d = Dag('main_dag')
+
+# create the two tasks for storing and retrieving data
+put_task = PythonTask(name='put_task',
+                      callback=put_data)
+
+print_task = PythonTask(name='print_task',
+                        callback=print_value)
+
+# set up the graph of the DAG, in which the put_task has to be executed first,
+# followed by the print_task.
+d.define({
+    put_task: print_task
+})
+                           </pre>
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="parallel">
+                            <div class="row header">
+                                <div class="col-md-6">
+
+                                </div>
+                                <div class="col-md-6">
+                                    <h2>Parallel</h2>
+                                    <p>
+                                        In a parallel setup tasks are executed at the same time.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="link">
+                                <code>parallel.py - <a href="https://github.com/AustralianSynchrotron/Lightflow/blob/master/examples/parallel.py">GitHub</a></code>
+                            </div>
+                            <pre class="python example-code">
+from lightflow.models import Dag, Action
+from lightflow.tasks import PythonTask
+
+
+# the callback function for the task that stores the value 5
+def put_data(data, store, signal, context):
+    print('Task {task_name} being run in DAG {dag_name} '
+          'for workflow {workflow_name} ({workflow_id})'.format(**context.to_dict()))
+
+    data['value'] = 5
+
+
+# the callback function for the branch task that limits the successor tasks to the
+# print tasks in lane 1 and lane 2. The successor tasks can be specified by either their
+# name or the task object itself. Both methods are shown here.
+def branch_with_limit(data, store, signal, context):
+    return Action(data, limit=[lane1_print_task, 'lane2_print_task'])
+
+
+# the callback function for tasks that print the data
+def print_value(data, store, signal, context):
+    print('Task {} and value {}'.format(context.task_name, data['value']))
+
+
+# create the main DAG
+d = Dag('main_dag')
+
+# task for storing the data
+put_task = PythonTask(name='put_task',
+                      callback=put_data)
+
+# task that limits the branching to certain successor tasks
+branch_task = PythonTask(name='branch_task',
+                         callback=branch_with_limit)
+
+# first task, first lane, simply prints the value stored in the put_task
+lane1_print_task = PythonTask(name='lane1_print_task',
+                              callback=print_value)
+
+# first task, second lane, simply prints the value stored in the put_task
+lane2_print_task = PythonTask(name='lane2_print_task',
+                              callback=print_value)
+
+# first task, third lane, simply prints the value stored in the put_task
+lane3_print_task = PythonTask(name='lane3_print_task',
+                              callback=print_value)
+
+# joins all three lanes together and waits for the predecessor tasks to finish processing
+join_task = PythonTask(name='t_join_me',
+                       callback=print_value)
+
+# set up the graph of the DAG as illustrated above. Please note how a list of tasks
+# defines tasks that are run in parallel (branched out).
+d.define({put_task: branch_task,
+          branch_task: [lane1_print_task, lane2_print_task, lane3_print_task],
+          lane1_print_task: join_task,
+          lane2_print_task: join_task,
+          lane3_print_task: join_task})
+
+                            </pre>
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="dataflow">
+                            <div class="row header">
+                                <div class="col-md-6">
+
+                                </div>
+                                <div class="col-md-6">
+                                    <h2>Data Flow</h2>
+                                    <p>
+                                        Almost arbitrary data can flow between tasks. If multiple tasks send data
+                                        to the same task downstream, the data can be labeled with an alias in order
+                                        for the downstream task to be able to pick the right dataset.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="link">
+                                <code>multi_data.py - <a href="https://github.com/AustralianSynchrotron/Lightflow/blob/master/examples/multi_data.py">GitHub</a></code>
+                            </div>
+                            <pre class="python example-code">
+from lightflow.models import Dag
+from lightflow.tasks import PythonTask
+
+
+# store the value 5 under the key 'value'
+def put_data(data, store, signal, context):
+    data['value'] = 5
+
+
+# print the name of the task and the current value
+def print_data(data, store, signal, context):
+    print(context.task_name, 'The value is:', data['value'])
+
+
+# square the current value
+def square_data(data, store, signal, context):
+    data['value'] = data['value']**2
+
+
+# multiply the value from the first dataset and the second dataset. Since the default
+# dataset has never been changed, the default dataset is still the first (index==0)
+# dataset in the list of all datasets. The second dataset is referenced by its index==1.
+def multiply_data(data, store, signal, context):
+    data['value'] = data['value'] * data.get_by_index(1)['value']
+
+
+# subtract two values by using the aliases of the two datasets and different functions
+# for illustration purposes: get_by_alias() and the shorthand notation ([alias])
+def subtract_data(data, store, signal, context):
+    data['value'] = data.get_by_alias('first')['value'] - data('second')['value']
+
+
+# create the main DAG based on the diagram above
+d = Dag('main_dag')
+
+put_task = PythonTask(name='put_task', callback=put_data)
+square_task = PythonTask(name='square_task', callback=square_data)
+multiply_task = PythonTask(name='multiply_task', callback=multiply_data)
+subtract_task = PythonTask(name='subtract_task', callback=subtract_data)
+
+print_task_1 = PythonTask(name='print_task_1', callback=print_data)
+print_task_2 = PythonTask(name='print_task_2', callback=print_data)
+print_task_3 = PythonTask(name='print_task_3', callback=print_data)
+print_task_4 = PythonTask(name='print_task_4', callback=print_data)
+
+
+d.define({put_task: {print_task_1: None,
+                     square_task: None,
+                     multiply_task: None,
+                     subtract_task: 'first'},
+          square_task: [print_task_2, multiply_task],
+          multiply_task: {print_task_3: None,
+                          subtract_task: 'second'},
+          subtract_task: print_task_4})
+                            </pre>
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="subdag">
+                            <div class="row header">
+                                <div class="col-md-6">
+
+                                </div>
+                                <div class="col-md-6">
+                                    <h2>Sub DAGs</h2>
+                                    <p>
+                                        Lightflow allows for more than one DAG to be defined in a workflow and for
+                                        tasks to queue new DAGs. This allows for dynamically changing workflows.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="link">
+                                <code>sub_dag.py - <a href="https://github.com/AustralianSynchrotron/Lightflow/blob/master/examples/sub_dag.py">GitHub</a></code>
+                            </div>
+                            <pre class="python example-code">
+from time import sleep
+import numpy as np
+
+from lightflow.models import Dag
+from lightflow.tasks import PythonTask
+
+
+# the callback function for the init task
+def print_name(data, store, signal, context):
+    print('Task {task_name} being run in DAG {dag_name} '
+          'for workflow {workflow_name} ({workflow_id})'.format(**context.to_dict()))
+
+
+# this callback function starts five dags. For each dag the function waits a second,
+# then creates a numpy array and stores it into the data that is then passed to the
+# sub dag. The dag that should be started can either be given by its name or the dag
+# object itself. The names of the created dags are recorded and the task waits for
+# all created dags to be completed.
+def start_sub_dag(data, store, signal, context):
+    dag_names = []
+    for i in range(5):
+        sleep(1)
+        data['image'] = np.ones((100, 100))
+        started_dag = signal.start_dag(sub_dag, data=data)
+        dag_names.append(started_dag)
+
+    signal.join_dags(dag_names)
+
+
+# this callback function prints the dimensions of the received numpy array
+def sub_dag_print(data, store, signal, context):
+    print('Received an image with dimensions: {}'.format(data['image'].shape))
+
+
+init_task = PythonTask(name='init_task',
+                       callback=print_name)
+
+call_dag_task = PythonTask(name='call_dag_task',
+                           callback=start_sub_dag)
+
+# create the main dag that runs the init task first, followed by the call_dag task.
+main_dag = Dag('main_dag')
+main_dag.define({
+    init_task: call_dag_task
+})
+
+
+# create the tasks for the sub dag that simply prints the shape of the numpy array
+# passed down from the main dag.
+print_task = PythonTask(name='print_task',
+                        callback=sub_dag_print)
+
+# create the sub dag that is being called by the main dag. In order to stop the
+# system from automatically starting the dag when the workflow is run, set the autostart
+# parameter to false.
+sub_dag = Dag('sub_dag', autostart=False)
+
+sub_dag.define({
+    print_task: None
+})
+                            </pre>
+                        </div>
+
+                        <div role="tabpanel" class="tab-pane" id="datastore">
+                            <div class="row header">
+                                <div class="col-md-6">
+
+                                </div>
+                                <div class="col-md-6">
+                                    <h2>Data Store</h2>
+                                    <p>
+                                        Data that should be kept during a workflow run can be saved into the persistent
+                                        data store. This data is deleted as soon as the workflow run ends, but is available
+                                        to all tasks during the lifetime of the workflow.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="link">
+                                <code>data_store.py - <a href="https://github.com/AustralianSynchrotron/Lightflow/blob/master/examples/data_store.py">GitHub</a></code>
+                            </div>
+                            <pre class="python example-code">
+from lightflow.models import Dag
+from lightflow.tasks import PythonTask
+
+import numpy as np
+
+
+# the callback function to store data in the persistent data store. It stores a single
+# integer value in 'number', a single integer value into the hierarchical key
+# 'buffer' -> 'observable' and a numpy array into 'image'. Additionally it adds an integer
+# value to a list in 'sample' -> 'spectra'.
+def store_data(data, store, signal, context):
+    store.set('number', 5)
+    store.set('buffer.observable', 20)
+    store.set('image', np.ones((100, 100)))
+    store.push('sample.spectra', 7)
+
+
+# the callback function for the task that retrieves and prints the 'number' and 'image'
+# values then modifies the 'number' value and creates a new list of 'filenames'.
+def modify_data(data, store, signal, context):
+    number = store.get('number')
+    print('The number is: {}'.format(number))
+
+    img = store.get('image')
+    print('The dimension of the image is: {}'.format(img.shape))
+
+    store.set('number', number * 10)
+    store.push('filenames', 'file_a.spec')
+
+
+# the callback function for the task that adds another filename to the list.
+def add_filename(data, store, signal, context):
+    store.push('filenames', 'file_b.spec')
+
+
+# the callback function for the task that adds a nested list to the list of filenames and
+# then extends the list of filenames with two more entries.
+def add_more_filenames(data, store, signal, context):
+    store.push('filenames', ['nested_a', 'nested_b'])
+    store.extend('filenames', ['file_c.spec', 'file_d.spec'])
+
+
+# create the main DAG
+d = Dag('main_dag')
+
+# create the tasks that call the functions above
+store_task = PythonTask(name='store_task',
+                        callback=store_data)
+
+modify_task = PythonTask(name='modify_task',
+                         callback=modify_data)
+
+add_filename_task = PythonTask(name='add_filename_task',
+                               callback=add_filename)
+
+add_more_filename_task = PythonTask(name='add_more_filename_task',
+                                    callback=add_more_filenames)
+
+# set up the graph of the DAG, in which the store_task and modify_task are called
+# in sequence while the add_filename_task and add_more_filename_task are run in parallel.
+d.define({
+    store_task: modify_task,
+    modify_task: [add_filename_task, add_more_filename_task]
+})
+                            </pre>
+                        </div>
+
+                    </div>
                 </div>
             </section>
 

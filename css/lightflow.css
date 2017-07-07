@@ -118,21 +118,79 @@ body {
     font-weight: 700;
 }
 
+.detail .content .instruction pre {
+    background: #272C3A;
+    color: #8CE349;
+    font-size: 13px;
+    margin: 2px 0;
+    border: 0;
+}
+
+.detail .content .instruction code {
+    background: #F0F1F7;
+    color: #272C3A;
+    font-size: 16px;
+}
+
 .detail .content .instruction .text {
     margin-top: 15px;
 }
 
-.detail .content .instruction .text pre {
-    margin: 2px 0;
+.detail .content .instruction .nav-tabs {
     background: #272C3A;
-    color: #8CE349;
-    font-size: 13px;
+    border-style: solid;
+    border-width: 2px 2px 0 2px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
 }
 
-.detail .content .instruction .text code {
+.detail .content .instruction .nav-tabs > li {
+    margin: 0;
+}
+
+.detail .content .instruction .nav-tabs > li > a {
+    color: #8CE349;
+    background: #272C3A;
+    border: 0;
+}
+
+.detail .content .instruction .nav-tabs > li > a:hover,
+.detail .content .instruction .nav-tabs > li > a:focus {
+    color: #F0F1F7;
+
+}
+
+.detail .content .instruction .nav-tabs > li.active > a,
+.detail .content .instruction .nav-tabs > li.active > a:hover,
+.detail .content .instruction .nav-tabs > li.active > a:focus {
+	color: #272C3A;
+	background: #F0F1F7;
+	border-color: #F0F1F7;
+}
+
+.detail .content .instruction .tab-content {
+    background: #272C3A;
+    border-color: #272C3A;
+    border-style: solid;
+    border-width: 0 1px 0px 1px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.detail .content .instruction .example-code {
+    margin-top: 5px;
+}
+
+.detail .content .instruction .tab-content .header {
     background: #F0F1F7;
-    color: #272C3A;
-    font-size: 16px;
+    margin: 0 1px 1px 1px;
+    padding-bottom: 10px;
+}
+
+.detail .content .instruction .tab-content .link {
+    margin-top: 6px;
+    margin-right: 4px;
+    text-align: right;
 }
 
 footer {
