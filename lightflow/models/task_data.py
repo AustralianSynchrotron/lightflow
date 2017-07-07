@@ -99,6 +99,10 @@ class TaskData:
         """ Delete a field in the dataset. """
         del self._data[key]
 
+    def __contains__(self, item):
+        """ Checks whether the item is present in the dataset """
+        return item in self._data
+
     def __repr__(self):
         """ Return a representation of the object. """
         return '{}({})'.format(self.__class__.__name__, self._data)
@@ -292,6 +296,10 @@ class MultiTaskData:
     def __delitem__(self, key):
         """ Delete a field in the default dataset. """
         del self.default_dataset[key]
+
+    def __contains__(self, item):
+        """ Checks whether the item is present in the dataset """
+        return item in self.default_dataset
 
     def __call__(self, alias):
         """ Shorthand notation for accessing a dataset by its alias. """
