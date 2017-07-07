@@ -1,10 +1,9 @@
-""" Process tasks in parallel with branches and wait for their completion
+""" Select task branches dynamically and wait for their completion
 
-This workflow shows how to run tasks in parallel by branching into multiple lanes. A join
-task waits for the tasks in the lanes to finish. The workflow also demonstrates the
-use of the 'limit' parameter in the returned Action of the branch_task to select which
-successor task, and thus which lane, will be processed. In the example below lane 1 and
-lane 2 will run in parallel, while lane 3 is skipped.
+The workflow also demonstrates the use of the 'limit' parameter in the returned
+Action of the branch_task to select which successor task, and thus which lane,
+will be processed. In the example below lane 1 and lane 2 will run in parallel,
+while lane 3 is skipped.
 
 
 The graph is as following:
