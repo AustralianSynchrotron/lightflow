@@ -42,7 +42,7 @@ class Workflow:
         self._clear_data_store = clear_data_store
 
         self._dags_blueprint = {}
-        self._dags_running = []
+        self._dags_running = {}
         self._workflow_id = None
         self._name = None
         self._parameters = Parameters()
@@ -205,11 +205,11 @@ class Workflow:
                     signal_server.send(Response(success=False, uid=request.uid))
 
             # remove any dags and their result data that finished running
-            for dag in reversed(self._dags_running):
+            for name, dag in list(self._dags_running.items()):
                 if dag.ready():
                     if self._celery_app.conf.result_expires == 0:
                         dag.forget()
-                    self._dags_running.remove(dag)
+                    del self._dags_running[name]
                 elif dag.failed():
                     self._stop_workflow = True
 
@@ -243,13 +243,9 @@ class Workflow:
 
         new_dag = copy.deepcopy(self._dags_blueprint[name])
         new_dag.workflow_name = self.name
-        self._dags_running.append(
-            self._celery_app.send_task(JobExecPath.Dag,
-                                       args=(new_dag, self._workflow_id, data),
-                                       queue=JobType.Dag,
-                                       routing_key=JobType.Dag
-                                       )
-        )
+        self._dags_running[new_dag.name] = self._celery_app.send_task(
+            JobExecPath.Dag, args=(new_dag, self._workflow_id, data),
+            queue=JobType.Dag, routing_key=JobType.Dag)
 
         return new_dag.name
 
@@ -322,9 +318,9 @@ class Workflow:
                                      of dags that should be stopped.
         """
         self._stop_workflow = True
-        for dag in self._dags_running:
-            if dag.info['name'] not in self._stop_dags:
-                self._stop_dags.append(dag.info['name'])
+        for name, dag in self._dags_running.items():
+            if name not in self._stop_dags:
+                self._stop_dags.append(name)
         return Response(success=True, uid=request.uid)
 
     def _handle_join_dags(self, request):
@@ -347,9 +343,7 @@ class Workflow:
         if request.payload['names'] is None:
             send_response = len(self._dags_running) <= 1
         else:
-            running_dag_names = [dag.info['name'] for dag in self._dags_running
-                                 if dag.info is not None]
-            send_response = all([name not in running_dag_names
+            send_response = all([name not in self._dags_running.keys()
                                  for name in request.payload['names']])
 
         if send_response:
