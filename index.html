@@ -157,7 +157,7 @@
 
                 <div class="text">
                     <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation" class="example-tab active"><a href="#squential" role="tab" data-toggle="tab">Squential</a></li>
+                        <li role="presentation" class="example-tab active"><a href="#squential" role="tab" data-toggle="tab">Sequential</a></li>
                         <li role="presentation" class="example-tab"><a href="#parallel" role="tab" data-toggle="tab">Parallel</a></li>
                         <li role="presentation" class="example-tab"><a href="#dataflow" role="tab" data-toggle="tab">Data Flow</a></li>
                         <li role="presentation" class="example-tab"><a href="#subdag" role="tab" data-toggle="tab">Sub DAG</a></li>
@@ -186,34 +186,37 @@ from lightflow.models import Dag
 from lightflow.tasks import PythonTask
 
 
-# the callback function for the task that stores the value 5
-def put_data(data, store, signal, context):
+# the callback function for all tasks
+def inc_number(data, store, signal, context):
     print('Task {task_name} being run in DAG {dag_name} '
           'for workflow {workflow_name} ({workflow_id}) '
           'on {worker_hostname}'.format(**context.to_dict()))
 
-    data['value'] = 5
+    if 'value' not in data:
+        data['value'] = 0
 
-
-# the callback function for the task that prints the data
-def print_value(data, store, signal, context):
-    print('The value is: {}'.format(data['value']))
+    data['value'] = data['value'] + 1
+    print('This is task #{}'.format(data['value']))
 
 
 # create the main DAG
 d = Dag('main_dag')
 
-# create the two tasks for storing and retrieving data
-put_task = PythonTask(name='put_task',
-                      callback=put_data)
+# create the 3 tasks that increment a number
+task_1 = PythonTask(name='task_1',
+                    callback=inc_number)
 
-print_task = PythonTask(name='print_task',
-                        callback=print_value)
+task_2 = PythonTask(name='task_2',
+                    callback=inc_number)
 
-# set up the graph of the DAG, in which the put_task has to be executed first,
-# followed by the print_task.
+task_3 = PythonTask(name='task_3',
+                    callback=inc_number)
+
+
+# set up the graph of the DAG as a linear sequence of tasks
 d.define({
-    put_task: print_task
+    task_1: task_2,
+    task_2: task_3
 })
                            </pre>
                         </div>
@@ -234,65 +237,45 @@ d.define({
                                 <code>parallel.py - <a href="https://github.com/AustralianSynchrotron/Lightflow/blob/master/examples/parallel.py">GitHub</a></code>
                             </div>
                             <pre class="python example-code">
-from lightflow.models import Dag, Action
+from lightflow.models import Dag
 from lightflow.tasks import PythonTask
 
 
-# the callback function for the task that stores the value 5
-def put_data(data, store, signal, context):
+# the callback function for the tasks
+def print_info(data, store, signal, context):
     print('Task {task_name} being run in DAG {dag_name} '
           'for workflow {workflow_name} ({workflow_id})'.format(**context.to_dict()))
-
-    data['value'] = 5
-
-
-# the callback function for the branch task that limits the successor tasks to the
-# print tasks in lane 1 and lane 2. The successor tasks can be specified by either their
-# name or the task object itself. Both methods are shown here.
-def branch_with_limit(data, store, signal, context):
-    return Action(data, limit=[lane1_print_task, 'lane2_print_task'])
-
-
-# the callback function for tasks that print the data
-def print_value(data, store, signal, context):
-    print('Task {} and value {}'.format(context.task_name, data['value']))
 
 
 # create the main DAG
 d = Dag('main_dag')
 
-# task for storing the data
-put_task = PythonTask(name='put_task',
-                      callback=put_data)
-
 # task that limits the branching to certain successor tasks
 branch_task = PythonTask(name='branch_task',
-                         callback=branch_with_limit)
+                         callback=print_info)
 
-# first task, first lane, simply prints the value stored in the put_task
+# first task, first lane
 lane1_print_task = PythonTask(name='lane1_print_task',
-                              callback=print_value)
+                              callback=print_info)
 
-# first task, second lane, simply prints the value stored in the put_task
+# first task, second lane
 lane2_print_task = PythonTask(name='lane2_print_task',
-                              callback=print_value)
+                              callback=print_info)
 
-# first task, third lane, simply prints the value stored in the put_task
+# first task, third lane
 lane3_print_task = PythonTask(name='lane3_print_task',
-                              callback=print_value)
+                              callback=print_info)
 
 # joins all three lanes together and waits for the predecessor tasks to finish processing
 join_task = PythonTask(name='t_join_me',
-                       callback=print_value)
+                       callback=print_info)
 
 # set up the graph of the DAG as illustrated above. Please note how a list of tasks
 # defines tasks that are run in parallel (branched out).
-d.define({put_task: branch_task,
-          branch_task: [lane1_print_task, lane2_print_task, lane3_print_task],
+d.define({branch_task: [lane1_print_task, lane2_print_task, lane3_print_task],
           lane1_print_task: join_task,
           lane2_print_task: join_task,
           lane3_print_task: join_task})
-
                             </pre>
                         </div>
 
