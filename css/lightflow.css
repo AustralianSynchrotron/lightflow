@@ -191,7 +191,7 @@ body {
 .detail .content .instruction .tab-content .header .graph {
     position: relative;
     top: 50%;
-	transform: translateY(-50%);
+    transform: translateY(-50%);
 }
 
 .detail .content .instruction .tab-content .link {
