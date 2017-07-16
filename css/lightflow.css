@@ -182,9 +182,16 @@ body {
 }
 
 .detail .content .instruction .tab-content .header {
+    height: 300px;
     background: #F0F1F7;
     margin: 0 1px 1px 1px;
     padding-bottom: 10px;
+}
+
+.detail .content .instruction .tab-content .header .graph {
+    position: relative;
+    top: 50%;
+	transform: translateY(-50%);
 }
 
 .detail .content .instruction .tab-content .link {
