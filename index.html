@@ -157,7 +157,7 @@
 
                 <div class="text">
                     <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation" class="example-tab active"><a href="#squential" role="tab" data-toggle="tab">Sequential</a></li>
+                        <li role="presentation" class="example-tab active"><a href="#sequential" role="tab" data-toggle="tab">Sequential</a></li>
                         <li role="presentation" class="example-tab"><a href="#parallel" role="tab" data-toggle="tab">Parallel</a></li>
                         <li role="presentation" class="example-tab"><a href="#dataflow" role="tab" data-toggle="tab">Data Flow</a></li>
                         <li role="presentation" class="example-tab"><a href="#subdag" role="tab" data-toggle="tab">Sub DAG</a></li>
@@ -165,7 +165,7 @@
                     </ul>
 
                     <div class="tab-content">
-                        <div role="tabpanel" class="tab-pane active" id="squential">
+                        <div role="tabpanel" class="tab-pane active" id="sequential">
                             <div class="row header">
                                 <div class="col-md-6">
                                     <img src="img/example_sequential.svg">
@@ -175,6 +175,10 @@
                                     <p>
                                         The sequential workflow pattern is one of the most basic patterns. A number of tasks are executed
                                         in order, starting with the first task.
+                                    </p>
+                                    <p>
+                                        In this example, a counter is stored in <code class="data-value">value</code> and initialized in <code>task_1</code>.
+                                        Each task increments the counter, prints its value and passes it on to the next task.
                                     </p>
                                 </div>
                             </div>
@@ -229,7 +233,11 @@ d.define({
                                 <div class="col-md-6">
                                     <h2>Parallel</h2>
                                     <p>
-                                        In a parallel setup tasks are executed at the same time.
+                                        Lightflow runs tasks that can be executed in parallel at the same time.
+                                    </p>
+                                    <p>
+                                        This example starts with the <code>branch_task</code> that fans out into three simple tasks. Once all three tasks
+                                        have completed running, the <code>join_task</code> is executed.
                                     </p>
                                 </div>
                             </div>
@@ -290,6 +298,16 @@ d.define({branch_task: [lane1_print_task, lane2_print_task, lane3_print_task],
                                         Almost arbitrary data can flow between tasks. If multiple tasks send data
                                         to the same task downstream, the data can be labeled with an alias in order
                                         for the downstream task to be able to pick the right dataset.
+                                    </p>
+                                    <p>
+                                        In this example, the <code>put_task</code> stores <code class="data-value">5</code> into <code class="data-value">value</code> and passes
+                                        it on to the <code>print_task_1</code>, <code>square_task</code>, <code>multiply_task</code> and <code>subtract_task</code>.
+                                        The <code>square_task</code> squares the value, prints it and passes it on to the <code>multiply_task</code>.
+                                        The input to the <code>multiply_task</code> are two datasets. Since multiplication is a commutative operation,
+                                        the <code>multiply_task</code> will simply multiply both datasets regardless of their order. The result of the multiplication
+                                        is passed on to the <code>subtract_task</code>. Since the order of the input for the <code>subtract_task</code> matters,
+                                        the data passed from the <code>put_task</code> is given the alias <code class="data-alias">first</code>,
+                                        while the data from the <code>multiply_task</code> is labelled <code class="data-alias">second</code>.
                                     </p>
                                 </div>
                             </div>
@@ -365,6 +383,13 @@ d.define({put_task: {print_task_1: None,
                                         Lightflow allows for more than one DAG to be defined in a workflow and for
                                         tasks to queue new DAGs. This allows for dynamically changing workflows.
                                     </p>
+                                    <p>
+                                        In this example two DAGs are defined. The <code>main_dag</code> that is executed
+                                        at the start of the workflow and the <code>sub_dag</code> that is started dynamically.
+                                        The <code>call_dag_task</code> of the <code>main_dag</code> starts 5 <code>sub_dag</code>
+                                        instances by sending a request to the signal system. For illustration purposes a numpy array
+                                        is being sent with the request.
+                                    </p> 
                                 </div>
                             </div>
                             <div class="link">
@@ -445,6 +470,14 @@ sub_dag.define({
                                         Data that should be kept during a workflow run can be saved into the persistent
                                         data store. This data is deleted as soon as the workflow run ends, but is available
                                         to all tasks during the lifetime of the workflow.
+                                    </p>
+                                    <p>
+                                        The data store provides methods to store and retrieve single values or append values
+                                        to a list. This can even be done asynchronously from different tasks at the same time.
+                                        The key under which the data is being stored supports a hierarchical structure using a dot notation.
+                                    </p>
+                                    <p>
+                                        This example workflow stores different types of data in the persistent data store and modifies them.
                                     </p>
                                 </div>
                             </div>
