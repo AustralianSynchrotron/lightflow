@@ -3,6 +3,7 @@ import json
 import shutil
 from pathlib import Path
 from functools import update_wrapper
+from importlib import import_module
 
 import lightflow
 from lightflow.config import Config, LIGHTFLOW_CONFIG_NAME
@@ -396,6 +397,27 @@ def monitor(ctx, details):
             '{0:.3f}'.format(event.duration) if event.duration is not None else '',
             event.workflow_id if details else '',
             event.hostname if details else ''))
+
+
+@cli.command('ext')
+@click.argument('ext_name', nargs=1)
+@click.argument('ext_args', nargs=-1, type=click.UNPROCESSED)
+@click.pass_obj
+def ext(obj, ext_name, ext_args):
+    """ Run an extension by its name.
+
+    \b
+    EXT_NAME: The name of the extension.
+    EXT_ARGS: Arguments that are passed to the extension.
+    """
+    try:
+        mod = import_module('lightflow_{}.__main__'.format(ext_name))
+        mod.main(ext_args)
+    except ImportError as err:
+        click.echo(_style(obj['show_color'],
+                          'An error occurred when trying to call the extension',
+                          fg='red', bold=True))
+        click.echo('{}'.format(err))
 
 
 def _style(enabled, text, **kwargs):
