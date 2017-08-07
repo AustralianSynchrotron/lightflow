@@ -1,0 +1,57 @@
+package:
+    name: lightflow
+    version: {{ GIT_DESCRIBE_TAG }}
+
+source:
+    path: .
+
+requirements:
+    build:
+        - click
+        - python
+        - setuptools
+        - setuptools_scm
+        - celery
+        - colorlog
+        - networkx
+        - pymongo
+        - pytz
+        - ruamel.yaml
+        - cloudpickle
+        - redis
+        - redis-py
+
+    run:
+        - python
+        - setuptools
+        - mongodb
+        - redis
+        - celery
+        - click
+        - colorlog
+        - networkx
+        - pymongo
+        - pytz
+        - ruamel.yaml
+        - cloudpickle
+        - redis-py
+
+build:
+    entry_points:
+        - lightflow = lightflow.scripts.cli:cli
+    script: python setup.py install
+    number: {{ GIT_DESCRIBE_NUMBER }}
+
+test:
+    requires:
+        - pytest
+    source_files:
+        - tests/*
+    commands:
+        - pytest
+
+about:
+    home: https://github.com/AustralianSynchrotron/Lightflow
+    licence: BSD-3
+    license_file: LICENSE
+    summary: A lightweight, distributed workflow system
