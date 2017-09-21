@@ -43,7 +43,7 @@ setup(
         'celery>=4.0.2',
         'click>=6.7',
         'colorlog>=2.10.0',
-        'networkx>=1.11',
+        'networkx>=1.11,<2',
         'pymongo>=3.4.0',
         'pytz>=2016.10',
         'redis>=2.10.5',
