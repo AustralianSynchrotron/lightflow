@@ -1,8 +1,0 @@
-Monitor
-=======
-
-Events
-------
-
-Inspection
-----------
