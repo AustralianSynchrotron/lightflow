@@ -1,3 +1,5 @@
+.. _quickstart:
+
 Quickstart
 ==========
 
@@ -6,7 +8,7 @@ this quickstart guide and you are on your way to using Lightflow.
 
 This quickstart guide assumes that you have a redis database running on ``localhost`` and port ``6379``,
 a MongoDB database running on ``localhost`` and port ``27017`` as well as Lightflow installed on your system. If you haven't
-installed the database systems and Lightflow yet, no problem, just follow the installation guide.
+installed the database systems and Lightflow yet, no problem, just follow the :ref:`installation` guide.
 
 
 Configuration and examples
