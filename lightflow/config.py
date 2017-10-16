@@ -223,6 +223,7 @@ celery:
   worker_concurrency: 8
   result_expires: 0
   worker_send_task_events: True
+  worker_prefetch_multiplier: 1
 
 signal:
   host: localhost
