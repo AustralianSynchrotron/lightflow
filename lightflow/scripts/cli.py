@@ -11,7 +11,8 @@ from lightflow.version import __version__
 from lightflow.queue.const import JobType, JobEventName, JobStatus
 from lightflow.models.exceptions import (ConfigLoadError,
                                          WorkflowArgumentError,
-                                         WorkflowImportError)
+                                         WorkflowImportError,
+                                         WorkflowDefinitionError)
 
 from lightflow.workers import (start_worker, stop_worker, list_workers)
 from lightflow.workflows import (start_workflow, stop_workflow, list_workflows,
@@ -136,10 +137,15 @@ def workflow(ctx):
 @config_required
 def workflow_list(obj):
     """ List all available workflows. """
-    for wf in list_workflows(config=obj['config']):
-        click.echo('{:23} {}'.format(
-            _style(obj['show_color'], wf.name, bold=True),
-            wf.docstring.split('\n')[0] if wf.docstring is not None else ''))
+    try:
+        for wf in list_workflows(config=obj['config']):
+            click.echo('{:23} {}'.format(
+                _style(obj['show_color'], wf.name, bold=True),
+                wf.docstring.split('\n')[0] if wf.docstring is not None else ''))
+    except WorkflowDefinitionError as e:
+        click.echo(_style(obj['show_color'],
+                          'The graph {} in workflow {} is not a directed acyclic graph'.
+                          format(e.graph_name, e.workflow_name), fg='red', bold=True))
 
 
 @workflow.command('start')
@@ -167,6 +173,10 @@ def workflow_start(obj, keep_data, name, workflow_args):
                           'An error occurred when trying to start the workflow',
                           fg='red', bold=True))
         click.echo('{}'.format(e))
+    except WorkflowDefinitionError as e:
+        click.echo(_style(obj['show_color'],
+                          'The graph {} in workflow {} is not a directed acyclic graph'.
+                          format(e.graph_name, e.workflow_name), fg='red', bold=True))
 
 
 @workflow.command('stop')

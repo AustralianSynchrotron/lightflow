@@ -36,8 +36,27 @@ class WorkflowImportError(RuntimeError):
     pass
 
 
+class WorkflowDefinitionError(RuntimeError):
+    def __init__(self, workflow_name, graph_name):
+        """ Initialize the exception for invalid workflow definitions.
+
+        Args:
+            workflow_name (str): The name of the workflow that contains an invalid
+                                 definition.
+            graph_name (str): The name of the dag that is invalid.
+        """
+        self.workflow_name = workflow_name
+        self.graph_name = graph_name
+
+
 class DirectedAcyclicGraphInvalid(RuntimeError):
-    pass
+    def __init__(self, graph_name):
+        """ Initialize the exception for invalid directed acyclic graphs.
+
+        Args:
+            graph_name (str): The name of the dag that is invalid.
+        """
+        self.graph_name = graph_name
 
 
 class DirectedAcyclicGraphUndefined(RuntimeError):

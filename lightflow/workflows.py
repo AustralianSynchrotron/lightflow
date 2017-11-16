@@ -4,7 +4,8 @@ import glob
 from .models import Workflow
 from .models.signal import Client, Request, SignalConnection
 from .models.exceptions import (WorkflowImportError,
-                                JobEventTypeUnsupported, JobStatInvalid)
+                                JobEventTypeUnsupported, JobStatInvalid,
+                                DirectedAcyclicGraphInvalid, WorkflowDefinitionError)
 
 from .queue.app import create_app
 from .queue.models import JobStats
@@ -31,9 +32,13 @@ def start_workflow(name, config, *, clear_data_store=True, store_args=None):
                                that were not supplied to the workflow.
         WorkflowImportError: If the import of the workflow fails.
     """
-    wf = Workflow.from_name(name,
-                            clear_data_store=clear_data_store,
-                            arguments=store_args)
+    try:
+        wf = Workflow.from_name(name,
+                                clear_data_store=clear_data_store,
+                                arguments=store_args)
+    except DirectedAcyclicGraphInvalid as e:
+        raise WorkflowDefinitionError(workflow_name=name,
+                                      graph_name=e.graph_name)
 
     celery_app = create_app(config)
     result = celery_app.send_task(JobExecPath.Workflow,
@@ -105,6 +110,9 @@ def list_workflows(config):
             try:
                 workflow.load(module_name, validate_arguments=False, strict_dag=True)
                 workflows.append(workflow)
+            except DirectedAcyclicGraphInvalid as e:
+                raise WorkflowDefinitionError(workflow_name=module_name,
+                                              graph_name=e.graph_name)
             except WorkflowImportError:
                 continue
 

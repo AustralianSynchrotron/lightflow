@@ -234,8 +234,7 @@ class Dag:
                         task.clear_celery_result()
                     tasks.remove(task)
 
-    @staticmethod
-    def validate(graph):
+    def validate(self, graph):
         """ Validate the graph by checking whether it is a directed acyclic graph.
 
         Args:
@@ -245,7 +244,7 @@ class Dag:
             DirectedAcyclicGraphInvalid: If the graph is not a valid dag.
         """
         if not nx.is_directed_acyclic_graph(graph):
-            raise DirectedAcyclicGraphInvalid()
+            raise DirectedAcyclicGraphInvalid(graph_name=self._name)
 
     @staticmethod
     def make_graph(schema):
