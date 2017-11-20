@@ -218,8 +218,6 @@ libraries: []
 celery:
   broker_url: redis://localhost:6379/0
   result_backend: redis://localhost:6379/0
-  timezone: Australia/Melbourne
-  enable_utc: True
   worker_concurrency: 8
   result_expires: 0
   worker_send_task_events: True
@@ -248,11 +246,11 @@ logging:
   formatters:
     verbose:
       format: '[%(asctime)s][%(levelname)s] %(name)s %(filename)s:%(funcName)s:%(lineno)d | %(message)s'
-      datefmt: '%H:%M:%S'
+      datefmt: '%d/%m/%Y %H:%M:%S'
     simple:
       (): 'colorlog.ColoredFormatter'
       format: '%(log_color)s[%(asctime)s][%(levelname)s] %(blue)s%(processName)s%(reset)s | %(message)s'
-      datefmt: '%H:%M:%S'
+      datefmt: '%d/%m/%Y %H:%M:%S'
   handlers:
     console:
       class: logging.StreamHandler
