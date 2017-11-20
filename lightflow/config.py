@@ -136,6 +136,11 @@ class Config:
         return self._config.get('celery')
 
     @property
+    def cli(self):
+        """ Return the cli settings """
+        return self._config.get('cli')
+
+    @property
     def extensions(self):
         """ Return the custom settings of extensions """
         if 'extensions' not in self._config:
@@ -237,6 +242,9 @@ store:
 graph:
   workflow_polling_time: 0.5
   dag_polling_time: 0.5
+
+cli:
+  time_format: '%d/%m/%Y %H:%M:%S'
 
 extensions: {}
 

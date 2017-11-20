@@ -155,8 +155,8 @@ class WorkerStats:
 
 class JobStats:
     """ Represents the job (=celery task) information returned from the celery stats. """
-    def __init__(self, name, job_id, job_type, workflow_id, arguments, acknowledged,
-                 func_name, hostname, worker_name, worker_pid, routing_key):
+    def __init__(self, name, job_id, job_type, workflow_id, start_time, arguments,
+                 acknowledged, func_name, hostname, worker_name, worker_pid, routing_key):
         """ Initialize the job stats object.
 
         Args:
@@ -164,6 +164,7 @@ class JobStats:
             job_id (str): The internal ID of the job.
             job_type (str): The type of the job (workflow, dag, task).
             workflow_id (str): The id of the workflow that started this job.
+            start_time (datetime): The time the job was started in UTC.
             arguments (dict): The provided arguments to a workflow.
             acknowledged (bool): True of the job was acknowledged by the message system.
             func_name (str): The name of the function that represents this job.
@@ -176,6 +177,7 @@ class JobStats:
         self.id = job_id
         self.type = job_type
         self.workflow_id = workflow_id
+        self.start_time = start_time
         self.arguments = arguments
         self.acknowledged = acknowledged
         self.func_name = func_name
@@ -207,6 +209,7 @@ class JobStats:
             job_id=job_dict['id'],
             job_type=a_info.get('type', '') if a_info is not None else '',
             workflow_id=a_info.get('workflow_id', '') if a_info is not None else '',
+            start_time=a_info.get('start_time', None) if a_info is not None else None,
             arguments=a_info.get('arguments', {}) if a_info is not None else {},
             acknowledged=job_dict['acknowledged'],
             func_name=job_dict['type'],
@@ -227,6 +230,7 @@ class JobStats:
             'id': self.id,
             'type': self.type,
             'workflow_id': self.workflow_id,
+            'start_time': self.start_time,
             'arguments': self.arguments,
             'acknowledged': self.acknowledged,
             'func_name': self.func_name,

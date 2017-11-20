@@ -59,6 +59,7 @@ def execute_workflow(self, workflow, workflow_id=None):
     self.update_state(meta={'name': workflow.name,
                             'type': JobType.Workflow,
                             'workflow_id': workflow_id,
+                            'start_time': datetime.utcnow(),
                             'arguments': workflow.provided_arguments})
 
     # run the DAGs in the workflow
