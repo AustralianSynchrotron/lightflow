@@ -10,7 +10,7 @@ class PythonTask(BaseTask):
         callback (callable): A reference to the Python method that should be called by
             the task as soon as it is run. It has to have the following definition::
 
-                def (data, store, signal, context)
+                (data, store, signal, context) -> None, Action
 
             with the parameters:
 
@@ -28,7 +28,7 @@ class PythonTask(BaseTask):
         callback_init (callable): An optional callable that is called shortly
             before the task is run. The definition is::
 
-                def (data, store, signal, context)
+                (data, store, signal, context) -> None
 
             with the parameters:
 
@@ -45,7 +45,7 @@ class PythonTask(BaseTask):
             at the end of a task, regardless whether it completed successfully,
             was stopped or was aborted. The definition is::
 
-                def (status, data, store, signal, context)
+                (status, data, store, signal, context) -> None
 
             with the parameters:
 

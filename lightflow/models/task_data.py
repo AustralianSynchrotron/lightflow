@@ -8,14 +8,12 @@ class TaskData:
 
     It behaves like a dictionary but also contains a history of all tasks that have
     contributed to this dataset.
+
+    Args:
+        data (dict): A dictionary with the initial data that should be stored.
+        task_history (list): A list of task names that have contributed to this data.
     """
     def __init__(self, data=None, *, task_history=None):
-        """  Initialize the task data object.
-
-        Args:
-            data (dict): A dictionary with the initial data that should be stored.
-            task_history (list): A list of task names that have contributed to this data.
-        """
         self._data = data if data is not None else {}
         self._task_history = task_history if task_history is not None else []
 
@@ -66,7 +64,7 @@ class TaskData:
 
         Args:
             dataset (TaskData): A reference to the TaskData object that should be merged
-                                on top of the existing object.
+                on top of the existing object.
         """
         def merge_data(source, dest):
             for key, value in source.items():
@@ -120,15 +118,13 @@ class MultiTaskData:
     task. Each dataset can be accessed by its index or by one or more aliases. There is
     a default dataset, which is used whenever the user does not specify the exact dataset
     to work with.
+
+    Args:
+        dataset (TaskData): An initial TaskData dataset.
+        aliases (list): A list of aliases for the initial dataset.
     """
 
     def __init__(self, *, dataset=None, aliases=None):
-        """ Initialize the MultiTaskData object.
-
-        Args:
-            dataset (TaskData): An initial TaskData dataset.
-            aliases (list): A list of aliases for the initial dataset.
-        """
         self._datasets = [] if dataset is None else [dataset]
         self._aliases = {} if aliases is None else {a: 0 for a in aliases}
         self._default_index = 0
@@ -188,9 +184,9 @@ class MultiTaskData:
         the same key.
 
         Args:
-            in_place (bool): Set to True to replace the existing datasets with the
-                             merged one. If set to False, will return a new MultiTaskData
-                             object containing the merged dataset.
+            in_place (bool): Set to ``True`` to replace the existing datasets with the
+                merged one. If set to ``False``, will return a new MultiTaskData
+                object containing the merged dataset.
 
         Returns:
             MultiTaskData: If the in_place flag is set to False.

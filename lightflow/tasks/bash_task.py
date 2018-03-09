@@ -146,7 +146,7 @@ class BashTask(BaseTask):
         callback_process (callable): A callable that is called after the process
             started. The definition is::
 
-                def (pid, data, store, signal, context)
+                (pid, data, store, signal, context) -> None
 
             with the parameters:
 
@@ -163,8 +163,8 @@ class BashTask(BaseTask):
         callback_end (callable): A callable that is called after the process
             completed. The definition is::
 
-                def (returncode, stdout_file, stderr_file,
-                     data, store, signal, context)
+                (returncode, stdout_file, stderr_file,
+                 data, store, signal, context) -> None
 
             with the parameters:
 
@@ -188,7 +188,7 @@ class BashTask(BaseTask):
         callback_stdout (callable): A callable that is called for every line of
             output the process sends to stdout. The definition is::
 
-                def (line, data, store, signal, context)
+                (line, data, store, signal, context) -> None
 
             with the parameters:
                 - **line** (*str*): Single line of the process output as a string.
@@ -204,7 +204,7 @@ class BashTask(BaseTask):
         callback_stderr (callable): A callable that is called for every line of
             output the process sends to stderr. The definition is::
 
-                def (line, data, store, signal, context)
+                (line, data, store, signal, context) -> None
 
             with the parameters:
                 - **line** (*str*): Single line of the process output as a string.
@@ -222,7 +222,7 @@ class BashTask(BaseTask):
         callback_init (callable): An optional callable that is called shortly
             before the task is run. The definition is::
 
-                def (data, store, signal, context)
+                (data, store, signal, context) -> None
 
             with the parameters:
 
@@ -239,7 +239,7 @@ class BashTask(BaseTask):
             at the end of a task, regardless whether it completed successfully,
             was stopped or was aborted. The definition is::
 
-                def (status, data, store, signal, context)
+                (status, data, store, signal, context) -> None
 
             with the parameters:
 
