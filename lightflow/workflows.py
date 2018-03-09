@@ -98,7 +98,7 @@ def list_workflows(config):
             settings are retrieved.
 
     Returns:
-        list: A list of WorkflowStats.
+        list (Workflow): A list of workflows.
     """
     workflows = []
     for path in config.workflows:
@@ -133,7 +133,7 @@ def list_jobs(config, *, status=JobStatus.Active,
             this option will increase the performance.
 
     Returns:
-        list: A list of JobStats.
+        list (JobStats): A list of JobStats.
     """
     celery_app = create_app(config)
 

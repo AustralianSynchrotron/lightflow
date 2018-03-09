@@ -163,8 +163,8 @@ class BashTask(BaseTask):
         callback_end (callable): A callable that is called after the process
             completed. The definition is::
 
-                def (returncode, stdout_file, stderr_file, data, store, signal,\
-                context)
+                def (returncode, stdout_file, stderr_file,
+                     data, store, signal, context)
 
             with the parameters:
 
