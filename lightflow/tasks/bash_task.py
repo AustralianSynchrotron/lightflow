@@ -26,18 +26,17 @@ class BashTaskOutputReader(Thread):
             stdout_file: The file object for the standard output of the process.
             stderr_file: The file object for the standard error of the process.
             callback_stdout: The callback that should be called for every line of the
-                             standard output.
+                standard output.
             callback_stderr: The callback that should be called for every line of the
-                             standard error.
+                standard error.
             refresh_time (float): The time in seconds before checking for new output
-                                  from the process.
+                from the process.
             data (MultiTaskData): The data object that has been passed from the
-                                  predecessor task.
+                predecessor task.
             store (DataStoreDocument): The persistent data store object that allows the
-                                       task to store data for access across the current
-                                       workflow run.
+                task to store data for access across the current workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
-                                 and sending of signals into easy to use methods.
+                and sending of signals into easy to use methods.
             context (TaskContext): The context in which the tasks runs.
         """
         super().__init__()
@@ -97,7 +96,7 @@ class BashTaskOutputReader(Thread):
         Args:
             stream: A file object pointing to the output stream that should be read.
             callback(callable, None): A callback function that is called for each new
-                                      line of output.
+                line of output.
             output_file: A file object to which the full output is written.
 
         Returns:
@@ -121,88 +120,155 @@ class BashTaskOutputReader(Thread):
 
 
 class BashTask(BaseTask):
-    """ The Bash task executes a user-defined bash command or bash file. """
+    """ The Bash task executes a user-defined bash command or bash file.
+
+    All task parameters except the name, callbacks, queue, force_run and
+    propagate_skip can either be their native type or a callable returning
+    the native type.
+
+    Args:
+        name (str): The name of the task.
+        command (function, str): The command or bash file that should be executed.
+        cwd (function, str, None): The working directory for the command.
+        env (function, dict, None): A dictionary of environment variables.
+        user (function, int, None): The user ID of the user with which the command
+            should be executed.
+        group (function, int, None): The group ID of the group with which the command
+            should be executed.
+        stdin (function, str, None): An input string that should be passed on to the
+            process.
+        refresh_time (function, float): The time in seconds the internal output
+            handling waits before checking for new output from the process.
+        capture_stdout (function, bool): Set to ``True`` to capture all standard output
+            in a temporary file.
+        capture_stderr (function, bool): Set to ``True`` to capture all standard errors
+            in a temporary file.
+        callback_process (callable): A callable that is called after the process
+            started. The definition is::
+
+                def (pid, data, store, signal, context)
+
+            with the parameters:
+
+                - **pid** (*int*): The process PID.
+                - **data** (*MultiTaskData*): The data object that has been passed\
+                    from the predecessor task.
+                - **store** (*DataStoreDocument*): The persistent data store object\
+                    that allows the task to store data for access across the current\
+                    workflow run.
+                - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
+                    the construction and sending of signals into easy to use methods.
+                - **context** (*TaskContext*): The context in which the tasks runs.
+
+        callback_end (callable): A callable that is called after the process
+            completed. The definition is::
+
+                def (returncode, stdout_file, stderr_file, data, store, signal,\
+                context)
+
+            with the parameters:
+
+                - **returncode** (*int*): The return code of the process.
+                - **stdout_file**: A file object with the standard output\
+                    if the flag ``capture_stdout`` was set to ``True``,\
+                    otherwise ``None``.
+                - **stderr_file**: A file object with the error output\
+                    if the flag ``capture_stderr`` was set to ``True``
+                    otherwise ``None.``
+                - **data** (*MultiTaskData*): The data object that has been passed\
+                    from the predecessor task.
+                - **store** (*DataStoreDocument*): The persistent data store object\
+                    that allows the task to store data for access across the current\
+                    workflow run.
+                - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
+                    the construction and sending of signals into easy to use methods.
+                - **context** (*TaskContext*): The context in which the tasks runs.
+
+
+        callback_stdout (callable): A callable that is called for every line of
+            output the process sends to stdout. The definition is::
+
+                def (line, data, store, signal, context)
+
+            with the parameters:
+                - **line** (*str*): Single line of the process output as a string.
+                - **data** (*MultiTaskData*): The data object that has been passed\
+                    from the predecessor task.
+                - **store** (*DataStoreDocument*): The persistent data store object\
+                    that allows the task to store data for access across the current\
+                    workflow run.
+                - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
+                    the construction and sending of signals into easy to use methods.
+                - **context** (*TaskContext*): The context in which the tasks runs.
+
+        callback_stderr (callable): A callable that is called for every line of
+            output the process sends to stderr. The definition is::
+
+                def (line, data, store, signal, context)
+
+            with the parameters:
+                - **line** (*str*): Single line of the process output as a string.
+                - **data** (*MultiTaskData*): The data object that has been passed\
+                    from the predecessor task.
+                - **store** (*DataStoreDocument*): The persistent data store object\
+                    that allows the task to store data for access across the current\
+                    workflow run.
+                - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
+                    the construction and sending of signals into easy to use methods.
+                - **context** (*TaskContext*): The context in which the tasks runs.
+
+        queue (str): Name of the queue the task should be scheduled to. Defaults to
+            the general task queue.
+        callback_init (callable): An optional callable that is called shortly
+            before the task is run. The definition is::
+
+                def (data, store, signal, context)
+
+            with the parameters:
+
+                - **data** (*MultiTaskData*): The data object that has been passed\
+                    from the predecessor task.
+                - **store** (*DataStoreDocument*): The persistent data store object\
+                    that allows the task to store data for access across the current\
+                    workflow run.
+                - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
+                    the construction and sending of signals into easy to use methods.
+                - **context** (*TaskContext*): The context in which the tasks runs.
+
+        callback_finally (callable): An optional callable that is always called
+            at the end of a task, regardless whether it completed successfully,
+            was stopped or was aborted. The definition is::
+
+                def (status, data, store, signal, context)
+
+            with the parameters:
+
+                - **status** (*TaskStatus*): The current status of the task. It can\
+                    be one of the following:
+
+                        - ``TaskStatus.Success`` -- task was successful
+                        - ``TaskStatus.Stopped`` -- task was stopped
+                        - ``TaskStatus.Aborted`` -- task was aborted
+                        - ``TaskStatus.Error`` -- task raised an exception
+
+                - **data** (*MultiTaskData*): The data object that has been passed\
+                    from the predecessor task.
+                - **store** (*DataStoreDocument*): The persistent data store object\
+                    that allows the task to store data for access across the current\
+                    workflow run.
+                - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
+                    the construction and sending of signals into easy to use methods.
+                - **context** (*TaskContext*): The context in which the tasks runs.
+
+        force_run (bool): Run the task even if it is flagged to be skipped.
+        propagate_skip (bool): Propagate the skip flag to the next task.
+    """
     def __init__(self, name, command, cwd=None, env=None, user=None, group=None,
                  stdin=None, refresh_time=0.1, capture_stdout=False, capture_stderr=False,
                  callback_process=None, callback_end=None,
                  callback_stdout=None, callback_stderr=None,
                  *, queue=JobType.Task, callback_init=None, callback_finally=None,
                  force_run=False, propagate_skip=True):
-        """ Initialize the Bash task.
-
-        All task parameters except the name, callbacks, queue, force_run and
-        propagate_skip can either be their native type or a callable returning
-        the native type.
-
-        Args:
-            name (str): The name of the task.
-            command (function, str): The command or bash file that should be executed.
-            cwd (function, str, None): The working directory for the command.
-            env (function, dict, None): A dictionary of environment variables.
-            user (function, int, None): The user ID of the user with which the command
-                                        should be executed.
-            group (function, int, None): The group ID of the group with which the command
-                                         should be executed.
-            stdin (function, str, None): An input string that should be passed on to the
-                                         process.
-            refresh_time (function, float): The time in seconds the internal output
-                                            handling waits
-                                  before checking for new output from the process.
-            capture_stdout (function, bool): Set to true to capture all standard output
-                                             in a temporary file.
-            capture_stderr (function, bool): Set to true to capture all standard errors
-                                             in a temporary file.
-            callback_process: A callable that is called after the process started.
-                              The definition is:
-                                def (pid, data, store, signal, context)
-                              where the pid is the process PID, data the task data,
-                              store the workflow data store, signal the task signal and
-                              context the task context.
-            callback_end: A callable that is called after the process completed.
-                          The definition is:
-                            def (returncode, stdout_file, stderr_file, data, store,
-                                 signal, context)
-                          where returncode is the return code of the process and
-                          stdout_file/stderr_file a file object with the standard/error
-                          output if the flag capture_stdout/capture_stderr was set to
-                          True, otherwise None. The remaining parameters are identical
-                          to callback_process.
-            callback_stdout: A callable that is called for every line of output the
-                             process sends to stdout. The definition is:
-                               def (line, data, store, signal, context)
-                             where line is a single line of the output, data the task
-                             data, store the workflow data store, signal the task signal
-                             and context the task context.
-            callback_stderr: A callable that is called for every line of output the
-                             process sends to stderr. The definition is:
-                               def (line, data, store, signal, context)
-                             where line is a single line of the output, data the task
-                             data, store the workflow data store, signal the task signal
-                             and context the task context.
-            queue (str): Name of the queue the task should be scheduled to. Defaults to
-                         the general task queue.
-            callback_init (callable): A callable that is called shortly before the task
-                                      is run. The definition is:
-                                        def (data, store, signal, context)
-                                      where data the task data, store the workflow
-                                      data store, signal the task signal and
-                                      context the task context.
-            callback_finally (callable): A callable that is always called at the end of
-                                         a task, regardless whether it completed
-                                         successfully, was stopped or was aborted.
-                                         The definition is:
-                                           def (status, data, store, signal, context)
-                                         where status specifies whether the task was
-                                           success: TaskStatus.Success
-                                           stopped: TaskStatus.Stopped
-                                           aborted: TaskStatus.Aborted
-                                           raised exception: TaskStatus.Error
-                                         data the task data, store the workflow
-                                         data store, signal the task signal and
-                                         context the task context.
-            force_run (bool): Run the task even if it is flagged to be skipped.
-            propagate_skip (bool): Propagate the skip flag to the next task.
-        """
         super().__init__(name, queue=queue,
                          callback_init=callback_init, callback_finally=callback_finally,
                          force_run=force_run, propagate_skip=propagate_skip)
@@ -229,18 +295,17 @@ class BashTask(BaseTask):
 
         Args:
             data (MultiTaskData): The data object that has been passed from the
-                                  predecessor task.
+                predecessor task.
             store (DataStoreDocument): The persistent data store object that allows the
-                                       task to store data for access across the current
-                                       workflow run.
+                task to store data for access across the current workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
-                                 and sending of signals into easy to use methods.
+                and sending of signals into easy to use methods.
             context (TaskContext): The context in which the tasks runs.
 
         Returns:
-            Action: An Action object containing the data that should be passed on
-                    to the next task and optionally a list of successor tasks that
-                    should be executed.
+            Action (Action): An Action object containing the data that should be passed on
+                to the next task and optionally a list of successor tasks that
+                should be executed.
         """
         params = self.params.eval(data, store, exclude=['command'])
 

@@ -1,2 +1,0 @@
-Making a decision
-=================

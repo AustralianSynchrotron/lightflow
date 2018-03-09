@@ -11,12 +11,12 @@ def start_worker(queues, config, *, name=None, celery_args=None):
     Args:
         queues (list): List of queue names this worker accepts jobs from.
         config (Config): Reference to the configuration object from which the
-                         settings for the worker are retrieved.
+            settings for the worker are retrieved.
         name (string): Unique name for the worker. The hostname template variables from
-                       Celery can be used. If not given, a unique name is created.
+            Celery can be used. If not given, a unique name is created.
         celery_args (list): List of additional Celery worker command line arguments.
-                            Please note that this depends on the version of Celery used
-                            and might change. Use with caution.
+            Please note that this depends on the version of Celery used and might change.
+            Use with caution.
     """
     celery_app = create_app(config)
 
@@ -38,9 +38,8 @@ def stop_worker(config, *, worker_ids=None):
 
     Args:
         config (Config): Reference to the configuration object from which the
-                         settings for the worker are retrieved.
+            settings for the worker are retrieved.
         worker_ids (list): An optional list of ids for the worker that should be stopped.
-
     """
     if worker_ids is not None and not isinstance(worker_ids, list):
         worker_ids = [worker_ids]
@@ -54,9 +53,9 @@ def list_workers(config, *, filter_by_queues=None):
 
     Args:
         config (Config): Reference to the configuration object from which the
-                         settings are retrieved.
+            settings are retrieved.
         filter_by_queues (list): Restrict the returned workers to workers that listen to
-                                 at least one of the queue names in this list.
+            at least one of the queue names in this list.
 
     Returns:
         list: A list of WorkerStats objects.

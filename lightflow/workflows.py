@@ -18,18 +18,18 @@ def start_workflow(name, config, *, clear_data_store=True, store_args=None):
 
     Args:
         name (str): The name of the workflow that should be started. Refers to the
-                    name of the workflow file without the .py extension.
+            name of the workflow file without the .py extension.
         config (Config): Reference to the configuration object from which the
-                         settings for the workflow are retrieved.
+            settings for the workflow are retrieved.
         clear_data_store (bool): Remove any documents created during the workflow
-                                 run in the data store after the run.
+            run in the data store after the run.
         store_args (dict): Dictionary of additional arguments that are ingested into the
-                           data store prior to the execution of the workflow.
+            data store prior to the execution of the workflow.
     Returns:
         str: The ID of the workflow job.
     Raises:
         WorkflowArgumentError: If the workflow requires arguments to be set in store_args
-                               that were not supplied to the workflow.
+            that were not supplied to the workflow.
         WorkflowImportError: If the import of the workflow fails.
     """
     try:
@@ -54,14 +54,14 @@ def stop_workflow(config, *, names=None):
 
     Args:
         config (Config): Reference to the configuration object from which the
-                         settings for the workflow are retrieved.
+            settings for the workflow are retrieved.
         names (list): List of workflow names, workflow ids or workflow job ids for the
-                      workflows that should be stopped. If all workflows should be
-                      stopped, set it to None.
+            workflows that should be stopped. If all workflows should be
+            stopped, set it to None.
 
     Returns:
         tuple: A tuple of the workflow jobs that were successfully stopped and the ones
-               that could not be stopped.
+            that could not be stopped.
     """
     jobs = list_jobs(config, filter_by_type=JobType.Workflow)
 
@@ -95,7 +95,7 @@ def list_workflows(config):
 
     Args:
         config (Config): Reference to the configuration object from which the
-                         settings are retrieved.
+            settings are retrieved.
 
     Returns:
         list: A list of WorkflowStats.
@@ -123,16 +123,14 @@ def list_jobs(config, *, status=JobStatus.Active,
               filter_by_type=None, filter_by_worker=None):
     """ Return a list of Celery jobs.
 
-    filter_by_worker improves performance
-
     Args:
         config (Config): Reference to the configuration object from which the
-                         settings are retrieved.
+            settings are retrieved.
         status (JobStatus): The status of the jobs that should be returned.
         filter_by_type (list): Restrict the returned jobs to the types in this list.
         filter_by_worker (list): Only return jobs that were registered, reserved or are
-                                 running on the workers given in this
-                                 list of worker names.
+            running on the workers given in this list of worker names. Using
+            this option will increase the performance.
 
     Returns:
         list: A list of JobStats.
@@ -184,7 +182,7 @@ def events(config):
 
     Args:
         config (Config): Reference to the configuration object from which the
-                         settings are retrieved.
+            settings are retrieved.
 
     Returns:
         generator: A generator that returns workflow events.

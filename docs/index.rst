@@ -16,11 +16,17 @@ User's Guide
    tutorial/index
 
 
+Tasks
+-----
+.. toctree::
+   :maxdepth: 2
+
+   tasks
 
 
-Indices and tables
-------------------
+API Reference
+-------------
+.. toctree::
+   :maxdepth: 2
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   api

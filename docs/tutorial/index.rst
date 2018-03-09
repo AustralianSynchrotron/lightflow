@@ -14,6 +14,3 @@ of Lightflow, so feel free to jump directly to the step that interests you most.
 
    setup
    simple
-   parallel
-   decision
-

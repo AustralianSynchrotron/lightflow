@@ -1,3 +1,0 @@
-Running in parallel
-===================
-
