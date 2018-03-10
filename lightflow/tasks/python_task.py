@@ -14,9 +14,9 @@ class PythonTask(BaseTask):
 
             with the parameters:
 
-                - **data** (*MultiTaskData*): The data object that has been passed\
+                - **data** (:class:`.MultiTaskData`): The data object that has been passed\
                     from the predecessor task.
-                - **store** (*DataStoreDocument*): The persistent data store object\
+                - **store** (:class:`.DataStoreDocument`): The persistent data store object\
                     that allows the task to store data for access across the current\
                     workflow run.
                 - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
@@ -32,9 +32,9 @@ class PythonTask(BaseTask):
 
             with the parameters:
 
-                - **data** (*MultiTaskData*): The data object that has been passed\
+                - **data** (:class:`.MultiTaskData`): The data object that has been passed\
                     from the predecessor task.
-                - **store** (*DataStoreDocument*): The persistent data store object\
+                - **store** (:class:`.DataStoreDocument`): The persistent data store object\
                     that allows the task to store data for access across the current\
                     workflow run.
                 - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
@@ -57,9 +57,9 @@ class PythonTask(BaseTask):
                         - ``TaskStatus.Aborted`` -- task was aborted
                         - ``TaskStatus.Error`` -- task raised an exception
 
-                - **data** (*MultiTaskData*): The data object that has been passed\
+                - **data** (:class:`.MultiTaskData`): The data object that has been passed\
                     from the predecessor task.
-                - **store** (*DataStoreDocument*): The persistent data store object\
+                - **store** (:class:`.DataStoreDocument`): The persistent data store object\
                     that allows the task to store data for access across the current\
                     workflow run.
                 - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
@@ -81,9 +81,9 @@ class PythonTask(BaseTask):
         """ The main run method of the Python task.
 
         Args:
-            data (MultiTaskData): The data object that has been passed from the
+            data (:class:`.MultiTaskData`): The data object that has been passed from the
                 predecessor task.
-            store (DataStoreDocument): The persistent data store object that allows the
+            store (:class:`.DataStoreDocument`): The persistent data store object that allows the
                 task to store data for access across the current workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                 and sending of signals into easy to use methods.

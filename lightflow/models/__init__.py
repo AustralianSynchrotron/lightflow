@@ -7,7 +7,7 @@ from .task_parameters import TaskParameters
 from .task_signal import TaskSignal
 from .action import Action
 from .task_data import TaskData, MultiTaskData
-from .datastore import DataStore, DataStoreDocumentSection
+from .datastore import DataStore, DataStoreDocumentSection, DataStoreDocument
 from .signal import Server, Client
 from .exceptions import AbortWorkflow, StopTask
 
@@ -22,7 +22,7 @@ __all__ = [
     'TaskSignal',
     'Action',
     'TaskData', 'MultiTaskData',
-    'DataStore', 'DataStoreDocumentSection',
+    'DataStore', 'DataStoreDocumentSection', 'DataStoreDocument',
     'Server', 'Client',
     'AbortWorkflow', 'StopTask',
 ]

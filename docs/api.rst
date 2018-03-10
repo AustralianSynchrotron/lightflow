@@ -45,8 +45,13 @@ to specify the settings in the config file that you would like to change.
    :inherited-members:
 
 
-Task data
+Task Data
 ---------
-
 .. autoclass:: lightflow.models.MultiTaskData
+   :members:
+
+
+Persistent Data Store
+---------------------
+.. autoclass:: lightflow.models.DataStoreDocument
    :members:

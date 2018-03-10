@@ -31,9 +31,9 @@ class BashTaskOutputReader(Thread):
                 standard error.
             refresh_time (float): The time in seconds before checking for new output
                 from the process.
-            data (MultiTaskData): The data object that has been passed from the
+            data (:class:`.MultiTaskData`): The data object that has been passed from the
                 predecessor task.
-            store (DataStoreDocument): The persistent data store object that allows the
+            store (:class:`.DataStoreDocument`): The persistent data store object that allows the
                 task to store data for access across the current workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                 and sending of signals into easy to use methods.
@@ -151,9 +151,9 @@ class BashTask(BaseTask):
             with the parameters:
 
                 - **pid** (*int*): The process PID.
-                - **data** (*MultiTaskData*): The data object that has been passed\
+                - **data** (:class:`.MultiTaskData`): The data object that has been passed\
                     from the predecessor task.
-                - **store** (*DataStoreDocument*): The persistent data store object\
+                - **store** (:class:`.DataStoreDocument`): The persistent data store object\
                     that allows the task to store data for access across the current\
                     workflow run.
                 - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
@@ -175,9 +175,9 @@ class BashTask(BaseTask):
                 - **stderr_file**: A file object with the error output\
                     if the flag ``capture_stderr`` was set to ``True``
                     otherwise ``None.``
-                - **data** (*MultiTaskData*): The data object that has been passed\
+                - **data** (:class:`.MultiTaskData`): The data object that has been passed\
                     from the predecessor task.
-                - **store** (*DataStoreDocument*): The persistent data store object\
+                - **store** (:class:`.DataStoreDocument`): The persistent data store object\
                     that allows the task to store data for access across the current\
                     workflow run.
                 - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
@@ -192,9 +192,9 @@ class BashTask(BaseTask):
 
             with the parameters:
                 - **line** (*str*): Single line of the process output as a string.
-                - **data** (*MultiTaskData*): The data object that has been passed\
+                - **data** (:class:`.MultiTaskData`): The data object that has been passed\
                     from the predecessor task.
-                - **store** (*DataStoreDocument*): The persistent data store object\
+                - **store** (:class:`.DataStoreDocument`): The persistent data store object\
                     that allows the task to store data for access across the current\
                     workflow run.
                 - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
@@ -208,9 +208,9 @@ class BashTask(BaseTask):
 
             with the parameters:
                 - **line** (*str*): Single line of the process output as a string.
-                - **data** (*MultiTaskData*): The data object that has been passed\
+                - **data** (:class:`.MultiTaskData`): The data object that has been passed\
                     from the predecessor task.
-                - **store** (*DataStoreDocument*): The persistent data store object\
+                - **store** (:class:`.DataStoreDocument`): The persistent data store object\
                     that allows the task to store data for access across the current\
                     workflow run.
                 - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
@@ -226,9 +226,9 @@ class BashTask(BaseTask):
 
             with the parameters:
 
-                - **data** (*MultiTaskData*): The data object that has been passed\
+                - **data** (:class:`.MultiTaskData`): The data object that has been passed\
                     from the predecessor task.
-                - **store** (*DataStoreDocument*): The persistent data store object\
+                - **store** (:class:`.DataStoreDocument`): The persistent data store object\
                     that allows the task to store data for access across the current\
                     workflow run.
                 - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
@@ -251,9 +251,9 @@ class BashTask(BaseTask):
                         - ``TaskStatus.Aborted`` -- task was aborted
                         - ``TaskStatus.Error`` -- task raised an exception
 
-                - **data** (*MultiTaskData*): The data object that has been passed\
+                - **data** (:class:`.MultiTaskData`): The data object that has been passed\
                     from the predecessor task.
-                - **store** (*DataStoreDocument*): The persistent data store object\
+                - **store** (:class:`.DataStoreDocument`): The persistent data store object\
                     that allows the task to store data for access across the current\
                     workflow run.
                 - **signal** (*TaskSignal*): The signal object for tasks. It wraps\
@@ -294,9 +294,9 @@ class BashTask(BaseTask):
         """ The main run method of the Python task.
 
         Args:
-            data (MultiTaskData): The data object that has been passed from the
+            data (:class:`.MultiTaskData`): The data object that has been passed from the
                 predecessor task.
-            store (DataStoreDocument): The persistent data store object that allows the
+            store (:class:`.DataStoreDocument`): The persistent data store object that allows the
                 task to store data for access across the current workflow run.
             signal (TaskSignal): The signal object for tasks. It wraps the construction
                 and sending of signals into easy to use methods.
