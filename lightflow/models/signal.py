@@ -8,7 +8,7 @@ SIGNAL_REDIS_PREFIX = 'lightflow'
 
 class SignalConnection:
     """ The connection to the redis signal broker database. """
-    def __init__(self, host, port, database, *, auto_connect=False, polling_time=0.5):
+    def __init__(self, host, port, database, password, *, auto_connect=False, polling_time=0.5):
         """ Initialise the SignalConnection object.
 
         Args:
@@ -21,6 +21,7 @@ class SignalConnection:
         self._host = host
         self._port = port
         self._database = database
+        self._password = password
         self._polling_time = polling_time
 
         self._connection = None
@@ -47,7 +48,8 @@ class SignalConnection:
         self._connection = StrictRedis(
             host=self._host,
             port=self._port,
-            db=self._database)
+            db=self._database,
+            password=self._password)
 
 
 class Request:
