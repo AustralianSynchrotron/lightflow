@@ -231,6 +231,7 @@ celery:
 signal:
   host: localhost
   port: 6379
+  password: NULL
   database: 0
   polling_time: 0.5
 
