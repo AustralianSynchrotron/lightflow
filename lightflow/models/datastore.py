@@ -4,6 +4,7 @@ from bson.binary import Binary
 from bson.objectid import ObjectId
 import pickle
 from gridfs import GridFS
+from urllib.parse import quote_plus
 
 from lightflow.logger import get_logger
 from .mongo_proxy import MongoClientProxy, GridFSProxy
@@ -39,12 +40,22 @@ class DataStore:
         host (str): The host on which the MongoDB server runs.
         port (int): The port on which the MongoDB server listens.
         database (str): The name of the MongoDB collection.
+        username (str): The username for the user logging in to MongoDB.
+        password (str): The password for the user logging in to MongoDB.
+        authSource (str): The name of the database the user information is stored in.
+        authMechanism (str): The authentication mechanism.
         auto_connect (bool): Set to True to connect to the MongoDB database.
     """
-    def __init__(self, host, port, database, *, auto_connect=False):
+    def __init__(self, host, port, database, *, username=None, password=None,
+                 auth_source='admin', auth_mechanism='SCRAM-SHA-1', auto_connect=False):
         self.host = host
         self.port = port
         self.database = database
+
+        self._username = username
+        self._password = password
+        self._auth_source = auth_source
+        self._auth_mechanism = auth_mechanism
 
         self._client = None
         if auto_connect:
@@ -72,7 +83,14 @@ class DataStore:
         Use the MongoProxy library in order to automatically handle AutoReconnect
         exceptions in a gracefull and reliable way.
         """
-        self._client = MongoClientProxy(MongoClient(host=self.host, port=self.port))
+        self._client = MongoClientProxy(MongoClient(
+            host=self.host,
+            port=self.port,
+            username=self._username,
+            password=self._password,
+            authSource=self._auth_source,
+            authMechanism=self._auth_mechanism
+        ))
 
     def disconnect(self):
         """ Disconnect from the MongoDB server. """

@@ -231,7 +231,7 @@ celery:
 signal:
   host: localhost
   port: 6379
-  password: NULL
+  password: null
   database: 0
   polling_time: 0.5
 
@@ -239,6 +239,10 @@ store:
   host: localhost
   port: 27017
   database: lightflow
+  username: null
+  password: null
+  auth_source: admin
+  auth_mechanism: SCRAM-SHA-1
 
 graph:
   workflow_polling_time: 0.5

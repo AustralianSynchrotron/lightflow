@@ -44,7 +44,7 @@ setup(
         'click>=6.7',
         'colorlog>=2.10.0',
         'networkx>=1.11,<2',
-        'pymongo>=3.4.0',
+        'pymongo>=3.6.0',
         'pytz>=2016.10',
         'redis>=2.10.5',
         'ruamel.yaml>=0.14.2',

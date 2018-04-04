@@ -7,17 +7,18 @@ SIGNAL_REDIS_PREFIX = 'lightflow'
 
 
 class SignalConnection:
-    """ The connection to the redis signal broker database. """
-    def __init__(self, host, port, database, password, *, auto_connect=False, polling_time=0.5):
-        """ Initialise the SignalConnection object.
+    """ The connection to the redis signal broker database.
 
-        Args:
-            host (str): The host of the redis database.
-            port (int): The port of the redis database.
-            database (int): The number of the database.
-            auto_connect (bool): Set to True to connect to the redis broker database.
-            polling_time (float): The polling time for signal requests in seconds.
-        """
+    Args:
+        host (str): The host of the redis database.
+        port (int): The port of the redis database.
+        database (int): The number of the database.
+        password (str): Optional password for the redis database.
+        auto_connect (bool): Set to True to connect to the redis broker database.
+        polling_time (float): The polling time for signal requests in seconds.
+    """
+    def __init__(self, host, port, database, *, password=None, auto_connect=False,
+                 polling_time=0.5):
         self._host = host
         self._port = port
         self._database = database
