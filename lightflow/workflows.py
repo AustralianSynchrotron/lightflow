@@ -10,10 +10,11 @@ from .models.exceptions import (WorkflowImportError,
 from .queue.app import create_app
 from .queue.models import JobStats
 from .queue.event import event_stream, create_event_model
-from .queue.const import JobExecPath, JobStatus, JobType
+from .queue.const import JobExecPath, JobStatus, JobType, DefaultJobQueueName
 
 
-def start_workflow(name, config, *, clear_data_store=True, store_args=None):
+def start_workflow(name, config, *, queue=DefaultJobQueueName.Workflow,
+                   clear_data_store=True, store_args=None):
     """ Start a single workflow by sending it to the workflow queue.
 
     Args:
@@ -21,6 +22,7 @@ def start_workflow(name, config, *, clear_data_store=True, store_args=None):
             name of the workflow file without the .py extension.
         config (Config): Reference to the configuration object from which the
             settings for the workflow are retrieved.
+        queue (str): Name of the queue the workflow should be scheduled to.
         clear_data_store (bool): Remove any documents created during the workflow
             run in the data store after the run.
         store_args (dict): Dictionary of additional arguments that are ingested into the
@@ -42,10 +44,7 @@ def start_workflow(name, config, *, clear_data_store=True, store_args=None):
 
     celery_app = create_app(config)
     result = celery_app.send_task(JobExecPath.Workflow,
-                                  args=(wf,),
-                                  queue=JobType.Workflow,
-                                  routing_key=JobType.Workflow
-                                  )
+                                  args=(wf,), queue=queue, routing_key=queue)
     return result.id
 
 
@@ -98,7 +97,7 @@ def list_workflows(config):
             settings are retrieved.
 
     Returns:
-        list (Workflow): A list of workflows.
+        list: A list of workflows.
     """
     workflows = []
     for path in config.workflows:
@@ -133,7 +132,7 @@ def list_jobs(config, *, status=JobStatus.Active,
             this option will increase the performance.
 
     Returns:
-        list (JobStats): A list of JobStats.
+        list: A list of JobStats.
     """
     celery_app = create_app(config)
 

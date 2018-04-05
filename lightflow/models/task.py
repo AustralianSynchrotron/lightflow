@@ -1,7 +1,7 @@
 from .action import Action
 from .task_data import MultiTaskData
 from .exceptions import TaskReturnActionInvalid, AbortWorkflow, StopTask
-from lightflow.queue import JobType
+from lightflow.queue import DefaultJobQueueName
 
 
 class TaskState:
@@ -27,7 +27,7 @@ class BaseTask:
 
     Tasks should inherit from this class and implement the run() method.
     """
-    def __init__(self, name, *, queue=JobType.Task,
+    def __init__(self, name, *, queue=DefaultJobQueueName.Task,
                  callback_init=None, callback_finally=None,
                  force_run=False, propagate_skip=True):
         """ Initialize the base task.

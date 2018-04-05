@@ -24,3 +24,9 @@ class JobEventName:
     Succeeded = 'task-lightflow-succeeded'
     Stopped = 'task-lightflow-stopped'
     Aborted = 'task-lightflow-aborted'
+
+
+class DefaultJobQueueName:
+    Workflow = 'workflow'
+    Dag = 'dag'
+    Task = 'task'

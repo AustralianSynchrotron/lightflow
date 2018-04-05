@@ -9,7 +9,7 @@ from importlib import import_module
 import lightflow
 from lightflow.config import Config, LIGHTFLOW_CONFIG_NAME
 from lightflow.version import __version__
-from lightflow.queue.const import JobType, JobEventName, JobStatus
+from lightflow.queue.const import JobType, JobEventName, JobStatus, DefaultJobQueueName
 from lightflow.models.exceptions import (ConfigLoadError,
                                          WorkflowArgumentError,
                                          WorkflowImportError,
@@ -150,13 +150,16 @@ def workflow_list(obj):
 
 
 @workflow.command('start')
+@click.option('--queue', '-q',
+              default='{}'.format(DefaultJobQueueName.Workflow),
+              help='Name of the queue the workflow should be scheduled to.')
 @click.option('--keep-data', '-k', is_flag=True, default=False,
               help='Do not delete the workflow data.')
 @click.argument('name')
 @click.argument('workflow_args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_obj
 @config_required
-def workflow_start(obj, keep_data, name, workflow_args):
+def workflow_start(obj, queue, keep_data, name, workflow_args):
     """ Send a workflow to the queue.
 
     \b
@@ -166,6 +169,7 @@ def workflow_start(obj, keep_data, name, workflow_args):
     try:
         start_workflow(name=name,
                        config=obj['config'],
+                       queue=queue,
                        clear_data_store=not keep_data,
                        store_args=dict([arg.split('=', maxsplit=1)
                                         for arg in workflow_args]))
@@ -242,36 +246,28 @@ def workflow_status(obj, details):
                 ','.join(['{}={}'.format(k, v) for k, v in job.arguments.items()]))
             )
 
-    # get list of workers that consume workflows to speed up lookup
-    workers = [w.name for w in list_workers(config=obj['config'],
-                                            filter_by_queues=[JobType.Workflow])]
-
     # running jobs
     print_jobs(list_jobs(config=obj['config'],
                          status=JobStatus.Active,
-                         filter_by_type=JobType.Workflow,
-                         filter_by_worker=workers),
+                         filter_by_type=JobType.Workflow),
                label='Running', color='green')
 
     # scheduled jobs
     print_jobs(list_jobs(config=obj['config'],
                          status=JobStatus.Scheduled,
-                         filter_by_type=JobType.Workflow,
-                         filter_by_worker=workers),
+                         filter_by_type=JobType.Workflow),
                label='Scheduled', color='blue')
 
     # registered jobs
     print_jobs(list_jobs(config=obj['config'],
                          status=JobStatus.Registered,
-                         filter_by_type=JobType.Workflow,
-                         filter_by_worker=workers),
+                         filter_by_type=JobType.Workflow),
                label='Registered', color='yellow')
 
     # reserved jobs
     print_jobs(list_jobs(config=obj['config'],
                          status=JobStatus.Reserved,
-                         filter_by_type=JobType.Workflow,
-                         filter_by_worker=workers),
+                         filter_by_type=JobType.Workflow),
                label='Reserved', color='yellow')
 
 
@@ -284,7 +280,9 @@ def worker(ctx):
 
 @worker.command('start', context_settings=dict(ignore_unknown_options=True,))
 @click.option('--queues', '-q',
-              default='{},{},{}'.format(JobType.Workflow, JobType.Dag, JobType.Task),
+              default='{},{},{}'.format(DefaultJobQueueName.Workflow,
+                                        DefaultJobQueueName.Dag,
+                                        DefaultJobQueueName.Task),
               help='Comma separated list of queues to enable for this worker.')
 @click.option('--name', '-n', default=None, help='Name of the worker.')
 @click.argument('celery_args', nargs=-1, type=click.UNPROCESSED)

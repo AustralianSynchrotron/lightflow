@@ -6,7 +6,7 @@ from functools import partial
 from subprocess import Popen, PIPE
 from tempfile import TemporaryFile
 
-from lightflow.queue import JobType
+from lightflow.queue import DefaultJobQueueName
 from lightflow.logger import get_logger
 from lightflow.models import BaseTask, TaskParameters, Action, StopTask, AbortWorkflow
 
@@ -267,8 +267,8 @@ class BashTask(BaseTask):
                  stdin=None, refresh_time=0.1, capture_stdout=False, capture_stderr=False,
                  callback_process=None, callback_end=None,
                  callback_stdout=None, callback_stderr=None,
-                 *, queue=JobType.Task, callback_init=None, callback_finally=None,
-                 force_run=False, propagate_skip=True):
+                 *, queue=DefaultJobQueueName.Task, callback_init=None,
+                 callback_finally=None, force_run=False, propagate_skip=True):
         super().__init__(name, queue=queue,
                          callback_init=callback_init, callback_finally=callback_finally,
                          force_run=force_run, propagate_skip=propagate_skip)

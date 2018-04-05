@@ -11,7 +11,7 @@ from .signal import Response
 from .parameters import Parameters
 from lightflow.logger import get_logger
 from lightflow.queue.app import create_app
-from lightflow.queue.const import JobExecPath, JobType
+from lightflow.queue.const import JobExecPath
 
 MAX_SIGNAL_REQUESTS = 10
 
@@ -245,7 +245,7 @@ class Workflow:
         new_dag.workflow_name = self.name
         self._dags_running[new_dag.name] = self._celery_app.send_task(
             JobExecPath.Dag, args=(new_dag, self._workflow_id, data),
-            queue=JobType.Dag, routing_key=JobType.Dag)
+            queue=new_dag.queue, routing_key=new_dag.queue)
 
         return new_dag.name
 

@@ -4,7 +4,7 @@ from celery import Celery
 from celery.signals import setup_logging
 from functools import partial
 
-from lightflow.queue.const import JobType
+from lightflow.queue.const import DefaultJobQueueName
 from lightflow.queue.pickle import patch_celery
 from lightflow.models.exceptions import ConfigOverwriteError
 
@@ -37,12 +37,7 @@ def create_app(config):
         task_serializer='pickle',
         accept_content=['pickle'],
         result_serializer='pickle',
-        task_default_queue=JobType.Task,
-        task_queues=(
-            Queue(JobType.Task, routing_key=JobType.Task),
-            Queue(JobType.Workflow, routing_key=JobType.Workflow),
-            Queue(JobType.Dag, routing_key=JobType.Dag)
-        )
+        task_default_queue=DefaultJobQueueName.Task
     )
 
     if isinstance(app.conf.include, list):

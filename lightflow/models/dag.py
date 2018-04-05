@@ -8,7 +8,7 @@ from .exceptions import (DirectedAcyclicGraphInvalid, DirectedAcyclicGraphUndefi
                          ConfigNotDefinedError)
 from lightflow.logger import get_logger
 from lightflow.queue.app import create_app
-from lightflow.queue.const import JobExecPath
+from lightflow.queue.const import JobExecPath, DefaultJobQueueName
 
 
 logger = get_logger(__name__)
@@ -26,19 +26,20 @@ class Dag:
     processing of the tasks in the right order by traversing the graph using a
     breadth-first search strategy.
 
-    Please note: this class has to be serialisable (e.g. by pickle)
-    """
-    def __init__(self, name, *, autostart=True, schema=None):
-        """ Initialize the dag.
+    Please note: this class has to be serializable (e.g. by pickle)
 
-        Args:
-            name (str): The name of the dag.
-            autostart (bool): Set to True in order to start the processing of the tasks
-                              upon the start of the workflow.
-            schema (dict): A dictionary with the definition of the task graph.
-        """
+    Args:
+        name (str): The name of the dag.
+        autostart (bool): Set to True in order to start the processing of the tasks
+                          upon the start of the workflow.
+        queue (str): Name of the queue the dag should be scheduled to.
+        schema (dict): A dictionary with the definition of the task graph.
+    """
+    def __init__(self, name, *, autostart=True, queue=DefaultJobQueueName.Dag,
+                 schema=None):
         self._name = name
         self._autostart = autostart
+        self._queue = queue
         self._schema = schema
 
         self._copy_counter = 0
@@ -53,6 +54,11 @@ class Dag:
     def autostart(self):
         """ Return whether the dag is automatically run upon the start of the workflow."""
         return self._autostart
+
+    @property
+    def queue(self):
+        """ Return the name of the queue the dag should be scheduled to."""
+        return self._queue
 
     @property
     def workflow_name(self):
@@ -326,6 +332,6 @@ class Dag:
         """
         self._copy_counter += 1
         new_dag = Dag('{}:{}'.format(self._name, self._copy_counter),
-                      autostart=self._autostart)
+                      autostart=self._autostart, queue=self._queue)
         new_dag._schema = deepcopy(self._schema, memo)
         return new_dag

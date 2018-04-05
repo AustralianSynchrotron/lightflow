@@ -58,7 +58,7 @@ def list_workers(config, *, filter_by_queues=None):
             at least one of the queue names in this list.
 
     Returns:
-        list(WorkerStats): A list of WorkerStats objects.
+        list: A list of WorkerStats objects.
     """
     celery_app = create_app(config)
     worker_stats = celery_app.control.inspect().stats()

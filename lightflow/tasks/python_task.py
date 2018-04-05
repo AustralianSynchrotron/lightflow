@@ -1,5 +1,5 @@
 from lightflow.models import BaseTask, Action
-from lightflow.queue import JobType
+from lightflow.queue import DefaultJobQueueName
 
 
 class PythonTask(BaseTask):
@@ -69,7 +69,7 @@ class PythonTask(BaseTask):
         force_run (bool): Run the task even if it is flagged to be skipped.
         propagate_skip (bool): Propagate the skip flag to the next task.
     """
-    def __init__(self, name, callback=None, *, queue=JobType.Task,
+    def __init__(self, name, callback=None, *, queue=DefaultJobQueueName.Task,
                  callback_init=None, callback_finally=None,
                  force_run=False, propagate_skip=True):
         super().__init__(name, queue=queue,

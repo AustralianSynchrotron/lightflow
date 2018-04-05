@@ -3,7 +3,7 @@ from unittest.mock import Mock, create_autospec, call
 import pytest  # noqa
 
 from lightflow.models.task import BaseTask, TaskState, TaskStatus
-from lightflow.queue import JobType
+from lightflow.queue import DefaultJobQueueName
 from lightflow.models.task_data import MultiTaskData
 from lightflow.models.exceptions import AbortWorkflow, StopTask, TaskReturnActionInvalid
 from lightflow.models.action import Action
@@ -34,7 +34,7 @@ class CeleryResultMock:
 def test_base_task_properties(task):
     assert task.name == 'task-name'
     assert task.state == TaskState.Init
-    assert task.queue == JobType.Task
+    assert task.queue == DefaultJobQueueName.Task
     assert task.has_to_run is False
     assert task.propagate_skip is True
     assert task.is_waiting is False
