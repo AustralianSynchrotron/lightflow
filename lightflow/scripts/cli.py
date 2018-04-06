@@ -395,25 +395,27 @@ def monitor(ctx, details):
     }
 
     click.echo('\n')
-    click.echo('{:>10} {:>12} {:25} {:16} {:28} {}'.format(
+    click.echo('{:>10} {:>12} {:25} {:18} {:16} {:28} {}'.format(
         'Status',
         'Type',
         'Name',
         'Duration (sec)',
+        'Queue' if details else '',
         'Workflow ID' if details else '',
         'Worker' if details else ''))
 
-    click.echo('-' * (110 if details else 65))
+    click.echo('-' * (136 if details else 65))
 
     for event in workflow_events(ctx.obj['config']):
         evt_disp = event_display[event.event]
-        click.echo('{:>{}} {:>{}} {:25} {:16} {:28} {}'.format(
+        click.echo('{:>{}} {:>{}} {:25} {:18} {:16} {:28} {}'.format(
             _style(show_colors, evt_disp['label'], fg=evt_disp['color']),
             20 if show_colors else 10,
             _style(show_colors, event.type, bold=True, fg=JOB_COLOR[event.type]),
             24 if show_colors else 12,
             event.name,
             '{0:.3f}'.format(event.duration) if event.duration is not None else '',
+            event.queue if details else '',
             event.workflow_id if details else '',
             event.hostname if details else ''))
 

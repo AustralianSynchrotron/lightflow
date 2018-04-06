@@ -157,6 +157,7 @@ class JobStats:
         name (str): The name of the job.
         job_id (str): The internal ID of the job.
         job_type (str): The type of the job (workflow, dag, task).
+        queue (str): The name of the queue the job was scheduled to.
         workflow_id (str): The id of the workflow that started this job.
         start_time (datetime): The time the job was started in UTC.
         arguments (dict): The provided arguments to a workflow.
@@ -167,12 +168,13 @@ class JobStats:
         worker_pid (int): The pid of the process this jobs runs on.
         routing_key (str): The routing key for this job.
     """
-    def __init__(self, name, job_id, job_type, workflow_id, start_time, arguments,
+    def __init__(self, name, job_id, job_type, queue, workflow_id, start_time, arguments,
                  acknowledged, func_name, hostname, worker_name, worker_pid, routing_key):
         self.name = name
         self.id = job_id
         self.type = job_type
         self.workflow_id = workflow_id
+        self.queue = queue
         self.start_time = start_time
         self.arguments = arguments
         self.acknowledged = acknowledged
@@ -205,6 +207,7 @@ class JobStats:
             job_id=job_dict['id'],
             job_type=a_info.get('type', '') if a_info is not None else '',
             workflow_id=a_info.get('workflow_id', '') if a_info is not None else '',
+            queue=a_info.get('queue', '') if a_info is not None else '',
             start_time=a_info.get('start_time', None) if a_info is not None else None,
             arguments=a_info.get('arguments', {}) if a_info is not None else {},
             acknowledged=job_dict['acknowledged'],
@@ -226,6 +229,7 @@ class JobStats:
             'id': self.id,
             'type': self.type,
             'workflow_id': self.workflow_id,
+            'queue': self.queue,
             'start_time': self.start_time,
             'arguments': self.arguments,
             'acknowledged': self.acknowledged,
@@ -244,6 +248,7 @@ class JobEvent:
         uuid (str): The internal event id.
         job_type (str): The type of job that caused this event (workflow, dag, task).
         event_type (str): The internal event type name.
+        queue (str): The name of the queue the job was scheduled to.
         hostname (str): The name of the host on which the job is running.
         pid (int): The pid of the process that runs the job.
         name (str): The name of the workflow, dag or task that caused this event.
@@ -251,11 +256,12 @@ class JobEvent:
         event_time (datetime): The time when the event was triggered.
         duration (float, None): The duration it took to execute the job.
     """
-    def __init__(self, uuid, job_type, event_type, hostname, pid,
+    def __init__(self, uuid, job_type, event_type, queue, hostname, pid,
                  name, workflow_id, event_time, duration):
         self.uuid = uuid
         self.type = job_type
         self.event = event_type
+        self.queue = queue
         self.hostname = hostname
         self.pid = pid
         self.name = name
@@ -277,6 +283,7 @@ class JobEvent:
             uuid=event['uuid'],
             job_type=event['job_type'],
             event_type=event['type'],
+            queue=event['queue'],
             hostname=event['hostname'],
             pid=event['pid'],
             name=event['name'],
@@ -288,31 +295,31 @@ class JobEvent:
 
 class JobStartedEvent(JobEvent):
     """ This event is triggered when a new job starts running. """
-    def __init__(self, uuid, job_type, event_type, hostname, pid,
+    def __init__(self, uuid, job_type, event_type, queue, hostname, pid,
                  name, workflow_id, event_time, duration):
-        super().__init__(uuid, job_type, event_type, hostname, pid,
+        super().__init__(uuid, job_type, event_type, queue, hostname, pid,
                          name, workflow_id, event_time, duration)
 
 
 class JobSucceededEvent(JobEvent):
     """ This event is triggered when a job completed successfully. """
-    def __init__(self, uuid, job_type, event_type, hostname, pid,
+    def __init__(self, uuid, job_type, event_type, queue, hostname, pid,
                  name, workflow_id, event_time, duration):
-        super().__init__(uuid, job_type, event_type, hostname, pid,
+        super().__init__(uuid, job_type, event_type, queue, hostname, pid,
                          name, workflow_id, event_time, duration)
 
 
 class JobStoppedEvent(JobEvent):
     """ This event is triggered when a job was stopped. """
-    def __init__(self, uuid, job_type, event_type, hostname, pid,
+    def __init__(self, uuid, job_type, event_type, queue, hostname, pid,
                  name, workflow_id, event_time, duration):
-        super().__init__(uuid, job_type, event_type, hostname, pid,
+        super().__init__(uuid, job_type, event_type, queue, hostname, pid,
                          name, workflow_id, event_time, duration)
 
 
 class JobAbortedEvent(JobEvent):
     """ This event is triggered when a job was aborted. """
-    def __init__(self, uuid, job_type, event_type, hostname, pid,
+    def __init__(self, uuid, job_type, event_type, queue, hostname, pid,
                  name, workflow_id, event_time, duration):
-        super().__init__(uuid, job_type, event_type, hostname, pid,
+        super().__init__(uuid, job_type, event_type, queue, hostname, pid,
                          name, workflow_id, event_time, duration)

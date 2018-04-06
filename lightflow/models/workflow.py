@@ -11,7 +11,7 @@ from .signal import Response
 from .parameters import Parameters
 from lightflow.logger import get_logger
 from lightflow.queue.app import create_app
-from lightflow.queue.const import JobExecPath
+from lightflow.queue.const import JobExecPath, DefaultJobQueueName
 
 MAX_SIGNAL_REQUESTS = 10
 
@@ -31,14 +31,14 @@ class Workflow:
     that should be stopped.
 
     Please note: this class has to be serialisable (e.g. by pickle)
-    """
-    def __init__(self, clear_data_store=True):
-        """ Initialise the workflow.
 
-        Args:
-            clear_data_store (bool): Remove any documents created during the workflow
-                                     run in the data store after the run.
-        """
+    Args:
+        queue (str): Name of the queue the workflow should be scheduled to.
+        clear_data_store (bool): Remove any documents created during the workflow
+                                 run in the data store after the run.
+    """
+    def __init__(self, queue=DefaultJobQueueName.Workflow, clear_data_store=True):
+        self._queue = queue
         self._clear_data_store = clear_data_store
 
         self._dags_blueprint = {}
@@ -56,11 +56,13 @@ class Workflow:
         self._docstring = None
 
     @classmethod
-    def from_name(cls, name, *, clear_data_store=True, arguments=None):
+    def from_name(cls, name, *, queue=DefaultJobQueueName.Workflow,
+                  clear_data_store=True, arguments=None):
         """ Create a workflow object from a workflow script.
 
         Args:
             name (str): The name of the workflow script.
+            queue (str): Name of the queue the workflow should be scheduled to.
             clear_data_store (bool): Remove any documents created during the workflow
                                      run in the data store after the run.
             arguments (dict): Dictionary of additional arguments that are ingested
@@ -69,7 +71,7 @@ class Workflow:
         Returns:
             Workflow: A fully initialised workflow object
         """
-        new_workflow = cls(clear_data_store=clear_data_store)
+        new_workflow = cls(queue=queue, clear_data_store=clear_data_store)
         new_workflow.load(name, arguments=arguments)
         return new_workflow
 
@@ -77,6 +79,11 @@ class Workflow:
     def name(self):
         """ Returns the name of the workflow. """
         return self._name
+
+    @property
+    def queue(self):
+        """ Returns the name queue the workflow should be scheduled to. """
+        return self._queue
 
     @property
     def docstring(self):

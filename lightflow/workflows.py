@@ -36,6 +36,7 @@ def start_workflow(name, config, *, queue=DefaultJobQueueName.Workflow,
     """
     try:
         wf = Workflow.from_name(name,
+                                queue=queue,
                                 clear_data_store=clear_data_store,
                                 arguments=store_args)
     except DirectedAcyclicGraphInvalid as e:

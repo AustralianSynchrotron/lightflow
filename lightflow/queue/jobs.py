@@ -38,6 +38,7 @@ def execute_workflow(self, workflow, workflow_id=None):
     else:
         workflow_id = data_store.add(payload={
                                          'name': workflow.name,
+                                         'queue': workflow.queue,
                                          'start_time': datetime.utcnow()
                                      })
         logger.info('Created workflow ID: {}'.format(workflow_id))
@@ -46,6 +47,7 @@ def execute_workflow(self, workflow, workflow_id=None):
     self.send_event(JobEventName.Started,
                     job_type=JobType.Workflow,
                     name=workflow.name,
+                    queue=workflow.queue,
                     time=datetime.utcnow(),
                     workflow_id=workflow_id,
                     duration=None)
@@ -59,6 +61,7 @@ def execute_workflow(self, workflow, workflow_id=None):
     self.update_state(meta={'name': workflow.name,
                             'type': JobType.Workflow,
                             'workflow_id': workflow_id,
+                            'queue': workflow.queue,
                             'start_time': datetime.utcnow(),
                             'arguments': workflow.provided_arguments})
 
@@ -75,6 +78,7 @@ def execute_workflow(self, workflow, workflow_id=None):
     self.send_event(event_name,
                     job_type=JobType.Workflow,
                     name=workflow.name,
+                    queue=workflow.queue,
                     time=datetime.utcnow(),
                     workflow_id=workflow_id,
                     duration=(datetime.now() - start_time).total_seconds())
@@ -104,12 +108,14 @@ def execute_dag(self, dag, workflow_id, data=None):
     self.send_event(JobEventName.Started,
                     job_type=JobType.Dag,
                     name=dag.name,
+                    queue=dag.queue,
                     time=datetime.utcnow(),
                     workflow_id=workflow_id,
                     duration=None)
 
     # store job specific meta information wth the job
     self.update_state(meta={'name': dag.name,
+                            'queue': dag.queue,
                             'type': JobType.Dag,
                             'workflow_id': workflow_id})
 
@@ -127,6 +133,7 @@ def execute_dag(self, dag, workflow_id, data=None):
     self.send_event(event_name,
                     job_type=JobType.Dag,
                     name=dag.name,
+                    queue=dag.queue,
                     time=datetime.utcnow(),
                     workflow_id=workflow_id,
                     duration=(datetime.now() - start_time).total_seconds())
@@ -180,12 +187,14 @@ def execute_task(self, task, workflow_id, data=None):
         self.send_event(event_type,
                         job_type=JobType.Task,
                         name=task.name,
+                        queue=task.queue,
                         time=datetime.utcnow(),
                         workflow_id=workflow_id,
                         duration=duration)
 
     # store job specific meta information wth the job
     self.update_state(meta={'name': task.name,
+                            'queue': task.queue,
                             'type': JobType.Task,
                             'workflow_id': workflow_id})
 
