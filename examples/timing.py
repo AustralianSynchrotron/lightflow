@@ -18,10 +18,14 @@ def random_sleep(data, store, signal, context):
 
 # the callback function for the task that prints the run times
 def print_times(data, store, signal, context):
-    dag_log = store.get(key='log.{}'.format(context.dag_name),
+    dag_log = store.get(key='log.{}.tasks'.format(context.dag_name),
                         section=DataStoreDocumentSection.Meta)
     for task, fields in dag_log.items():
-        print(task, 'on', fields['worker'], 'took', fields['duration'], 'seconds')
+        # The print task has not finished yet, so there is no duration available
+        if task != context.task_name:
+            print(task, 'on', fields['worker'], 'took', fields['duration'], 'seconds')
+        else:
+            print(task, 'on', fields['worker'], 'is still running')
 
 
 # create the main DAG

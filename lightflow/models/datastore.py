@@ -3,6 +3,7 @@ from pymongo.errors import ConnectionFailure
 from bson.binary import Binary
 from bson.objectid import ObjectId
 import pickle
+from datetime import datetime
 from gridfs import GridFS
 from urllib.parse import quote_plus
 
@@ -358,7 +359,7 @@ class DataStoreDocument:
         Returns:
             object: The encoded value ready to be stored in MongoDB.
         """
-        if isinstance(value, (int, float, str, bool)):
+        if isinstance(value, (int, float, str, bool, datetime)):
             return value
         elif isinstance(value, list):
             return [self._encode_value(item) for item in value]
@@ -388,7 +389,7 @@ class DataStoreDocument:
         Returns:
             object: The decoded value as a valid Python object.
         """
-        if isinstance(value, (int, float, str, bool)):
+        if isinstance(value, (int, float, str, bool, datetime)):
             return value
         elif isinstance(value, list):
             return [self._decode_value(item) for item in value]
