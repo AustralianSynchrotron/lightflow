@@ -151,7 +151,7 @@ def workflow_list(obj):
 
 @workflow.command('start')
 @click.option('--queue', '-q',
-              default='{}'.format(DefaultJobQueueName.Workflow),
+              default=DefaultJobQueueName.Workflow,
               help='Name of the queue the workflow should be scheduled to.')
 @click.option('--keep-data', '-k', is_flag=True, default=False,
               help='Do not delete the workflow data.')
