@@ -87,20 +87,27 @@ class TaskSignal:
         return self._client.send(Request(action='stop_workflow')).success
 
     @property
-    def is_stopped(self):
+    def is_stopped(self, dag_name=None):
         """ Check whether the task received a stop signal from the workflow.
 
         Tasks can use the stop flag to gracefully terminate their work. This is
         particularly important for long running tasks and tasks that employ an
         infinite loop, such as trigger tasks.
 
+        dag_name : str, optional
+            The name of the DAG to query if it is stopped
+
         Returns:
             bool: True if the task should be stopped.
         """
+        # TODO : If DAG name does not exist, what is response?
+        if dag_name is None:
+            dag_name = self._dag_name
+
         resp = self._client.send(
             Request(
                 action='is_dag_stopped',
-                payload={'dag_name': self._dag_name}
+                payload={'dag_name': dag_name}
             )
         )
         return resp.payload['is_stopped']
