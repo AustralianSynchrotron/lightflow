@@ -133,7 +133,7 @@ class Dag:
         for task in nx.topological_sort(graph):
             task.workflow_name = self.workflow_name
             task.dag_name = self.name
-            if len(graph.predecessors(task)) == 0:
+            if len(list(graph.predecessors(task))) == 0:
                 task.state = TaskState.Waiting
                 tasks.append(task)
 
@@ -166,7 +166,7 @@ class Dag:
                     if stopped:
                         task.state = TaskState.Stopped
                     else:
-                        pre_tasks = graph.predecessors(task)
+                        pre_tasks = list(graph.predecessors(task))
                         if all([p.is_completed for p in pre_tasks]):
 
                             # check whether the task should be skipped
