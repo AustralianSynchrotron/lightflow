@@ -1,7 +1,8 @@
 import logging.config
 from kombu import Queue
 from celery import Celery
-from celery.signals import setup_logging
+from celery.result import AsyncResult
+from celery.signals import setup_logging, task_postrun
 from functools import partial
 
 from lightflow.queue.const import DefaultJobQueueName
@@ -24,6 +25,7 @@ def create_app(config):
 
     # configure the celery logging system with the lightflow settings
     setup_logging.connect(partial(_initialize_logging, config), weak=False)
+    task_postrun.connect(partial(_cleanup_workflow, config), weak=False)
 
     # patch Celery to use cloudpickle instead of pickle for serialisation
     patch_celery()
@@ -60,6 +62,23 @@ def _initialize_logging(config, **kwargs):
     Args:
         config (Config): Reference to the configuration object from which the
                          logging settings are retrieved.
-        **kwargs: Keyword arguments from the hook
+        **kwargs: Keyword arguments from the hook.
     """
     logging.config.dictConfig(config.logging)
+
+
+def _cleanup_workflow(config, task_id, args, **kwargs):
+    """ Cleanup the results of a workflow when it finished.
+
+    Connects to the postrun signal of Celery. If the signal was sent by a workflow,
+    remove the result from the result backend.
+
+    Args:
+        task_id (str): The id of the task.
+        args (tuple): The arguments the task was started with.
+        **kwargs: Keyword arguments from the hook.
+    """
+    from lightflow.models import Workflow
+    if isinstance(args[0], Workflow):
+        if config.celery['result_expires'] == 0:
+            AsyncResult(task_id).forget()

@@ -1,5 +1,5 @@
 import celery
-from datetime import datetime, timezone
+from datetime import datetime
 from functools import partial
 
 from lightflow.logger import get_logger
