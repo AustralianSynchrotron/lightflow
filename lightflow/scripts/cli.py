@@ -11,6 +11,7 @@ from lightflow.config import Config, LIGHTFLOW_CONFIG_NAME
 from lightflow.version import __version__
 from lightflow.queue.const import JobType, JobEventName, JobStatus, DefaultJobQueueName
 from lightflow.models.exceptions import (ConfigLoadError,
+                                         DataStoreNotConnected,
                                          WorkflowArgumentError,
                                          WorkflowImportError,
                                          WorkflowDefinitionError)
@@ -294,10 +295,15 @@ def worker_start(obj, queues, name, celery_args):
     \b
     CELERY_ARGS: Additional Celery worker command line arguments.
     """
-    start_worker(queues=queues.split(','),
-                 config=obj['config'],
-                 name=name,
-                 celery_args=celery_args)
+    try:
+        start_worker(queues=queues.split(','),
+                     config=obj['config'],
+                     name=name,
+                     celery_args=celery_args)
+    except DataStoreNotConnected:
+        click.echo(_style(obj['show_color'],
+                          'Cannot connect to the Data Store server. Is the server running?',
+                          fg='red', bold=True))
 
 
 @worker.command('stop')

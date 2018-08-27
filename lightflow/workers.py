@@ -1,11 +1,13 @@
 from uuid import uuid4
 
+from .models.datastore import DataStore
+
 from .queue.app import create_app
 from .queue.worker import WorkerLifecycle
 from .queue.models import WorkerStats, QueueStats
 
 
-def start_worker(queues, config, *, name=None, celery_args=None):
+def start_worker(queues, config, *, name=None, celery_args=None, check_datastore=True):
     """ Start a worker process.
 
     Args:
@@ -17,8 +19,15 @@ def start_worker(queues, config, *, name=None, celery_args=None):
         celery_args (list): List of additional Celery worker command line arguments.
             Please note that this depends on the version of Celery used and might change.
             Use with caution.
+        check_datastore (bool): Set to True to check whether the data store is available
+            prior to starting the worker.
     """
     celery_app = create_app(config)
+
+    if check_datastore:
+        with DataStore(**config.data_store,
+                       auto_connect=True, handle_reconnect=False) as ds:
+            celery_app.user_options['datastore_info'] = ds.server_info
 
     argv = [
         'worker',

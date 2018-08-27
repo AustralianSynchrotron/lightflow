@@ -45,13 +45,15 @@ class DataStore:
         password (str): The password for the user logging in to MongoDB.
         auth_source (str): The name of the database the user information is stored in.
         auth_mechanism (str): The authentication mechanism.
-        auto_connect (bool): Set to True to connect to the MongoDB database.
         connect_timeout (int): The timeout in ms after which a connection
             attempt is ended.
+        auto_connect (bool): Set to True to connect to the MongoDB database immediately.
+        handle_reconnect (bool): Set to True to automatically reconnect to MongoDB should
+            the connection be lost.
     """
     def __init__(self, host, port, database, *, username=None, password=None,
-                 auth_source='admin', auth_mechanism='SCRAM-SHA-1', auto_connect=False,
-                 connect_timeout=30000):
+                 auth_source='admin', auth_mechanism='SCRAM-SHA-1', connect_timeout=30000,
+                 auto_connect=False, handle_reconnect=True):
         self.host = host
         self.port = port
         self.database = database
@@ -62,6 +64,7 @@ class DataStore:
         self._auth_mechanism = auth_mechanism
 
         self._connect_timeout = connect_timeout
+        self._handle_reconnect = handle_reconnect
 
         self._client = None
         if auto_connect:
@@ -97,9 +100,9 @@ class DataStore:
         """ Establishes a connection to the MongoDB server.
 
         Use the MongoProxy library in order to automatically handle AutoReconnect
-        exceptions in a gracefull and reliable way.
+        exceptions in a graceful and reliable way.
         """
-        self._client = MongoClientProxy(MongoClient(
+        self._client = MongoClient(
             host=self.host,
             port=self.port,
             username=self._username,
@@ -107,12 +110,27 @@ class DataStore:
             authSource=self._auth_source,
             authMechanism=self._auth_mechanism,
             serverSelectionTimeoutMS=self._connect_timeout
-        ))
+        )
+
+        if self._handle_reconnect:
+            self._client = MongoClientProxy(self._client)
 
     def disconnect(self):
         """ Disconnect from the MongoDB server. """
         if self._client is not None:
             self._client.close()
+
+    @property
+    def server_info(self):
+        """ Returns the information of the connected MongoDB server.
+
+        Returns:
+            bool: ``True`` if a document with the specified workflow id exists.
+        """
+        try:
+            return self._client.server_info()
+        except ConnectionFailure:
+            raise DataStoreNotConnected()
 
     def exists(self, workflow_id):
         """ Checks whether a document with the specified workflow id already exists.
