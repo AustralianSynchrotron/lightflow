@@ -67,6 +67,16 @@ class DataStore:
         if auto_connect:
             self.connect()
 
+    def __enter__(self):
+        """ Connects to MongoDB automatically when used as context manager """
+        if not self.is_connected:
+            self.connect()
+        return self
+
+    def __exit__(self, *args):
+        """ Disconnects from MongoDB automatically when used as context manager """
+        self.disconnect()
+
     @property
     def is_connected(self):
         """ Returns the connection status of the data store.
