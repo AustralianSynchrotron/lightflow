@@ -43,12 +43,15 @@ class DataStore:
         database (str): The name of the MongoDB collection.
         username (str): The username for the user logging in to MongoDB.
         password (str): The password for the user logging in to MongoDB.
-        authSource (str): The name of the database the user information is stored in.
-        authMechanism (str): The authentication mechanism.
+        auth_source (str): The name of the database the user information is stored in.
+        auth_mechanism (str): The authentication mechanism.
         auto_connect (bool): Set to True to connect to the MongoDB database.
+        connect_timeout (int): The timeout in ms after which a connection
+            attempt is ended.
     """
     def __init__(self, host, port, database, *, username=None, password=None,
-                 auth_source='admin', auth_mechanism='SCRAM-SHA-1', auto_connect=False):
+                 auth_source='admin', auth_mechanism='SCRAM-SHA-1', auto_connect=False,
+                 connect_timeout=30000):
         self.host = host
         self.port = port
         self.database = database
@@ -57,6 +60,8 @@ class DataStore:
         self._password = password
         self._auth_source = auth_source
         self._auth_mechanism = auth_mechanism
+
+        self._connect_timeout = connect_timeout
 
         self._client = None
         if auto_connect:
@@ -90,7 +95,8 @@ class DataStore:
             username=self._username,
             password=self._password,
             authSource=self._auth_source,
-            authMechanism=self._auth_mechanism
+            authMechanism=self._auth_mechanism,
+            serverSelectionTimeoutMS=self._connect_timeout
         ))
 
     def disconnect(self):

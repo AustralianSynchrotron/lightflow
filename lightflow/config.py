@@ -243,6 +243,7 @@ store:
   password: null
   auth_source: admin
   auth_mechanism: SCRAM-SHA-1
+  connect_timeout: 30000
 
 graph:
   workflow_polling_time: 0.5
