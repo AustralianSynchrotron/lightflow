@@ -40,15 +40,15 @@ setup(
     packages=find_packages(exclude=['tests']),
 
     install_requires=[
-        'celery>=4.0.2',
-        'click>=6.7',
-        'colorlog>=2.10.0',
-        'networkx',
-        'pymongo>=3.6.0',
-        'pytz>=2016.10',
-        'redis>=2.10.5',
-        'ruamel.yaml>=0.14.2',
-        'cloudpickle>=0.2.2'
+        'celery>=4.2.1',
+        'Click>=7.0',
+        'colorlog>=4.0.2',
+        'networkx>=2.2',
+        'pymongo>=3.7.2',
+        'pytz>=2018.7',
+        'redis>=3.0.1',
+        'ruamel.yaml>=0.15.83',
+        'cloudpickle>=0.6.1'
     ],
 
     entry_points={
