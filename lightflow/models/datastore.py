@@ -52,7 +52,7 @@ class DataStore:
             the connection be lost.
     """
     def __init__(self, host, port, database, *, username=None, password=None,
-                 auth_source='admin', auth_mechanism='SCRAM-SHA-1', connect_timeout=30000,
+                 auth_source='admin', auth_mechanism=None, connect_timeout=30000,
                  auto_connect=False, handle_reconnect=True):
         self.host = host
         self.port = port
@@ -102,15 +102,19 @@ class DataStore:
         Use the MongoProxy library in order to automatically handle AutoReconnect
         exceptions in a graceful and reliable way.
         """
-        self._client = MongoClient(
-            host=self.host,
-            port=self.port,
-            username=self._username,
-            password=self._password,
-            authSource=self._auth_source,
-            authMechanism=self._auth_mechanism,
-            serverSelectionTimeoutMS=self._connect_timeout
-        )
+        mongodb_args = {
+            'host': self.host,
+            'port': self.port,
+            'username': self._username,
+            'password': self._password,
+            'authSource': self._auth_source,
+            'serverSelectionTimeoutMS': self._connect_timeout
+        }
+
+        if self._auth_mechanism is not None:
+            mongodb_args['authMechanism'] = self._auth_mechanism
+
+        self._client = MongoClient(**mongodb_args)
 
         if self._handle_reconnect:
             self._client = MongoClientProxy(self._client)
